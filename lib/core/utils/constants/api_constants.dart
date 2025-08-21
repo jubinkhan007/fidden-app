@@ -12,8 +12,8 @@ class AppUrls {
   static const String socialLogin = '$_baseUrl/accounts/login/google/';
 
   // User
-  static const String getMyProfile = '$_baseUrl/users/me';
-  static const String updateProfile = '$_baseUrl/users/update-profile';
+  static const String getMyProfile = '$_baseUrl/accounts/profile/';
+  static const String updateProfile = '$_baseUrl/accounts/profile/';
   static const String activeBooking = '$_baseUrl/booking/users?status=pending';
   static const String completeBooking =
       '$_baseUrl/booking/users?status=completed';
@@ -25,12 +25,11 @@ class AppUrls {
 
   // Seller
   static const String getMyService = '$_baseUrl/service/my-service';
-  static const String getMBusinessProfile =
-      '$_baseUrl/business-profile/my-business';
+  static const String getMBusinessProfile = '$_baseUrl/api/shop/';
   static const String getAllMostRecommendedBusinessProfile =
       '$_baseUrl/business-profile?rate=4';
   static const String businessProfile = '$_baseUrl/business-profile/create';
-  static editBusinessProfile(String id) => '$_baseUrl/business-profile/$id';
+  static editBusinessProfile(String id) => '$_baseUrl/api/shop/$id/';
   static getSingleService(String id) => '$_baseUrl/service/single/$id';
   static updateService(String id) => '$_baseUrl/service/$id';
 

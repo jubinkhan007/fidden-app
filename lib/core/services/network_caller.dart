@@ -6,8 +6,9 @@ import 'package:http/http.dart';
 import '../models/response_data.dart';
 import 'Auth_service.dart';
 
+// lib/core/services/network_caller.dart
 class NetworkCaller {
-  final int timeoutDuration = 10;
+  final int timeoutDuration = 30;
 
   Future<ResponseData> getRequest(String endpoint, {String? token}) async {
     log('GET Request: $endpoint');
@@ -15,7 +16,7 @@ class NetworkCaller {
       final Response response = await get(
         Uri.parse(endpoint),
         headers: {
-          'Authorization': token ?? '',
+          'Authorization': 'Bearer ${token ?? ''}',
           'Content-type': 'application/json',
         },
       ).timeout(Duration(seconds: timeoutDuration));
@@ -37,7 +38,7 @@ class NetworkCaller {
       final Response response = await post(
         Uri.parse(endpoint),
         headers: {
-          'Authorization': token ?? '',
+          'Authorization': 'Bearer ${token ?? ''}',
           'Content-type': 'application/json',
         },
         body: jsonEncode(body),
@@ -60,7 +61,7 @@ class NetworkCaller {
       final Response response = await put(
         Uri.parse(endpoint),
         headers: {
-          'Authorization': token ?? '',
+          'Authorization': 'Bearer ${token ?? ''}',
           'Content-type': 'application/json',
         },
         body: jsonEncode(body),
@@ -77,7 +78,7 @@ class NetworkCaller {
       final Response response = await delete(
         Uri.parse(endpoint),
         headers: {
-          'Authorization': token ?? '',
+          'Authorization': 'Bearer ${token ?? ''}',
           'Content-type': 'application/json',
         },
       ).timeout(Duration(seconds: timeoutDuration));

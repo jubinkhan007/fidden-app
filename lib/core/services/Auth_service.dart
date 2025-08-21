@@ -34,7 +34,7 @@ class AuthService {
   ) async {
     try {
       await _preferences.setString(_accessTokenKey, accessToken);
-      await _preferences.setString(_refreshTokenKey, accessToken);
+      await _preferences.setString(_refreshTokenKey, refreshToken);
       await _preferences.setString(_roleKey, role);
       _accessToken = accessToken;
       _refreshToken = refreshToken;

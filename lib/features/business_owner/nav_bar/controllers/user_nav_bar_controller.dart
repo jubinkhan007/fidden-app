@@ -9,7 +9,7 @@ import 'package:get/get.dart';
 // import '../../../user/profile/presentation/screens/profile_screen.dart';
 // import '../../booking/screen/booking_screen.dart';
 // import '../../home/screens/business_owner_home_screen.dart';
-// import '../../profile/screens/business_owner_profile_screen.dart';
+import '../../profile/screens/business_owner_profile_screen.dart';
 
 class BusinessOwnerNavBarController extends GetxController {
   final _selectedIndex = 0.obs;
@@ -20,11 +20,11 @@ class BusinessOwnerNavBarController extends GetxController {
     _selectedIndex.value = index;
   }
 
-  // final List<Widget> screens = [
-  //   BusinessOwnerHomeScreen (),
-  //   BusinessOwnerBookingScreen(),
-  //   BusinessOwnerProfileScreen()
-  // ];
+  final List<Widget> screens = [
+    //   BusinessOwnerHomeScreen (),
+    //   BusinessOwnerBookingScreen(),
+    BusinessOwnerProfileScreen(),
+  ];
 
   final List<String> labels = const ['Home', "Booking", 'Profile'];
 

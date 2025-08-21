@@ -8,7 +8,7 @@ import 'package:fidden/core/utils/constants/icon_path.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-//import '../../profile/presentation/screens/profile_screen.dart';
+import '../../profile/presentation/screens/profile_screen.dart';
 
 class UserNavBarController extends GetxController {
   final _selectedIndex = 0.obs;
@@ -19,7 +19,9 @@ class UserNavBarController extends GetxController {
     _selectedIndex.value = index;
   }
 
-  //final List<Widget> screens = [HomeScreen(), BookingScreen(), ProfileScreen()];
+  final List<Widget> screens = [
+    /*HomeScreen(), BookingScreen(),*/ ProfileScreen(),
+  ];
 
   final List<String> labels = const ['Home', "Booking", 'Profile'];
 

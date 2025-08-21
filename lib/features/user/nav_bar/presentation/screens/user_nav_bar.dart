@@ -9,11 +9,11 @@ class UserNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // body: GetX<UserNavBarController>(
-      //   init: UserNavBarController(),
-      //   builder: (driverNavBarController) =>
-      //       driverNavBarController.screens[driverNavBarController.currentIndex],
-      // ),
+      body: GetX<UserNavBarController>(
+        init: UserNavBarController(),
+        builder: (driverNavBarController) =>
+            driverNavBarController.screens[driverNavBarController.currentIndex],
+      ),
       bottomNavigationBar: GetX<UserNavBarController>(
         builder: (navController) {
           return BottomNavigationBar(

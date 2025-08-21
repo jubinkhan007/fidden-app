@@ -7,7 +7,7 @@ import '../../features/splash/controller/splash_controller.dart';
 //import '../../features/user/booking/controller/booking_controller.dart';
 //import '../../features/user/home/controller/home_controller.dart';
 import '../../features/user/nav_bar/controllers/user_nav_bar_controller.dart';
-//import '../../features/user/profile/controller/profile_controller.dart';
+import '../../features/user/profile/controller/profile_controller.dart';
 
 class ControllerBinder extends Bindings {
   @override
@@ -28,10 +28,7 @@ class ControllerBinder extends Bindings {
     //   fenix: true,
     // );
     Get.lazyPut<LoginController>(() => LoginController(), fenix: true);
-    // Get.lazyPut<ProfileController >(
-    //       () => ProfileController (),
-    //   fenix: true,
-    // );
+    Get.lazyPut<ProfileController>(() => ProfileController(), fenix: true);
     // Get.lazyPut<BusinessOwnerController >(
     //       () => BusinessOwnerController (),
     //   fenix: true,
@@ -46,8 +43,8 @@ class ControllerBinder extends Bindings {
     //   fenix: true,
     // );
 
-    // Get.lazyPut<BusinessOwnerController >(
-    //       () => BusinessOwnerController (),
+    // Get.lazyPut<BusinessOwnerController>(
+    //   () => BusinessOwnerController(),
     //   fenix: true,
     // );
   }

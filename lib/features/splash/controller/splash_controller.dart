@@ -12,18 +12,15 @@ import '../../business_owner/nav_bar/presentation/screens/user_nav_bar.dart';
 import '../../user/nav_bar/presentation/screens/user_nav_bar.dart';
 import '../presentation/screens/onboarding_screen_one.dart';
 
-
 class SplashController extends GetxController {
-
   void navigateToOnboardingScreen() {
-
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (AuthService.hasSeenOnboarding()) {
         if (AuthService.hasToken()) {
           final userRole = AuthService.role?.trim().toUpperCase();
           debugPrint(userRole.toString());
 
-          if (userRole == "CUSTOMER") {
+          if (userRole == "USER") {
             Get.offAll(() => UserNavBar());
           } else {
             Get.offAll(() => BusinessOwnerNavBar());
@@ -31,7 +28,7 @@ class SplashController extends GetxController {
         } else {
           // Onboarding seen but no token — go to common screen (login/register)
           Get.offAll(
-                () => LoginScreen(),
+            () => LoginScreen(),
             transition: Transition.fade,
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
@@ -40,7 +37,7 @@ class SplashController extends GetxController {
       } else {
         // Onboarding not seen — show onboarding first
         Get.offAll(
-              () => const OnBoardingScreenOne(),
+          () => const OnBoardingScreenOne(),
           transition: Transition.fade,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
@@ -49,10 +46,6 @@ class SplashController extends GetxController {
     });
   }
 
-
-
-
-
   // @override
   // void onInit() {
   //   // TODO: implement onInit
@@ -60,27 +53,22 @@ class SplashController extends GetxController {
   //   navigateToOnboardingScreen();
   // }
 
-
   @override
   void onInit() {
     super.onInit();
-
 
     if (Platform.isIOS) {
       fetchLocationForIOS();
     } else if (Platform.isAndroid) {
       fetchLocationForAndroid();
     }
-
   }
 
   static var latitude = 0.0.obs;
-  static var  longitude = 0.0.obs;
+  static var longitude = 0.0.obs;
   static var address = ''.obs;
 
   final LocationService _locationService = LocationService();
-
-
 
   Future<void> fetchLocationForIOS() async {
     await _fetchLocation();
@@ -116,7 +104,8 @@ class SplashController extends GetxController {
 
     try {
       Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
       latitude.value = position.latitude;
       longitude.value = position.longitude;
@@ -125,24 +114,26 @@ class SplashController extends GetxController {
       debugPrint('Longitude: ${longitude.value}');
 
       List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude, position.longitude);
+        position.latitude,
+        position.longitude,
+      );
 
       if (placemarks.isNotEmpty) {
         Placemark placemark = placemarks.first;
 
         String fullAddress = [
           //placemark.name,
-
           placemark.administrativeArea,
 
           placemark.country,
-        ]
-            .where((element) => element != null && element.isNotEmpty)
-            .join(', ');
+        ].where((element) => element != null && element.isNotEmpty).join(', ');
 
         address.value = fullAddress; // ✅ Assigning full address to observable
         _locationService.setLocation(
-            latitude.value, longitude.value, fullAddress);
+          latitude.value,
+          longitude.value,
+          fullAddress,
+        );
 
         navigateToOnboardingScreen();
         debugPrint('Address: $fullAddress');
@@ -153,5 +144,4 @@ class SplashController extends GetxController {
       debugPrint('Error fetching location: $e');
     }
   }
-
 }

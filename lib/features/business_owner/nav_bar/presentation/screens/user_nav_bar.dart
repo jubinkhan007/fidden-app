@@ -10,11 +10,11 @@ class BusinessOwnerNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // body: GetX<BusinessOwnerNavBarController>(
-      //   init: BusinessOwnerNavBarController(),
-      //   builder: (driverNavBarController) =>
-      //       driverNavBarController.screens[driverNavBarController.currentIndex],
-      // ),
+      body: GetX<BusinessOwnerNavBarController>(
+        init: BusinessOwnerNavBarController(),
+        builder: (driverNavBarController) =>
+            driverNavBarController.screens[driverNavBarController.currentIndex],
+      ),
       bottomNavigationBar: GetX<BusinessOwnerNavBarController>(
         builder: (navController) {
           return BottomNavigationBar(

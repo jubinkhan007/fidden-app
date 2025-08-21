@@ -1,3 +1,4 @@
+import 'package:fidden/features/user/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:get/get.dart';
 import '../features/auth/presentation/screens/login/forget_email_screen.dart';
 import '../features/auth/presentation/screens/login/login_screen.dart';
@@ -57,7 +58,7 @@ class AppRoute {
       page: () => VerificationSuccessFullScreen(),
     ),
 
-    // GetPage(name: editProfileScreen, page: () => EditProfileScreen()),
+    GetPage(name: editProfileScreen, page: () => EditProfileScreen()),
     // GetPage(name: termsAndConditionScreen, page: () => TermsAndConditionScreen()),
     // GetPage(name: notificationScreen, page: () => NotificationScreen()),
     // GetPage(name: searchResultScreen, page: () => SearchResultScreen()),
