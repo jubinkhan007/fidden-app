@@ -245,30 +245,38 @@ class AddServiceController extends GetxController {
         AuthService.accessToken,
       );
 
-      if (response.isSuccess) {
-        AppSnackBar.showSuccess('Service deleted successfully!');
-
-        // refresh list first so AllServiceScreen shows updated data
-        final businessController = Get.find<BusinessOwnerController>();
-        await businessController.fetchAllMyService();
-
-        // 1) close the dialog if it’s still open
-        if (Get.isDialogOpen ?? false) {
-          Get.back();
-        }
-
-        // 2) leave EditServiceScreen and land on AllServiceScreen
-        // (forces the stack to that route if it exists, or recreates it)
-        Get.offNamedUntil(
-          '/all-services',
-          (route) => route.settings.name == '/all-services' || route.isFirst,
-        );
-
-        return true;
-      } else {
+      if (!response.isSuccess) {
         AppSnackBar.showError(response.errorMessage);
         return false;
       }
+
+      AppSnackBar.showSuccess('Service deleted successfully!');
+
+      // 1) Close the confirm dialog if it’s still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      // 2) Pop back to an existing AllServiceScreen if present; otherwise push it
+      var poppedToList = false;
+      Get.until((route) {
+        if (route.settings.name == '/all-services') {
+          poppedToList = true;
+          return true; // stop popping here (we’re on AllServiceScreen)
+        }
+        return false; // keep popping
+      });
+
+      if (!poppedToList) {
+        // No existing AllServiceScreen in stack → navigate to it
+        Get.offNamed('/all-services');
+      }
+
+      // 3) Refresh the list exactly once
+      final business = Get.find<BusinessOwnerController>();
+      business.fetchAllMyService();
+
+      return true;
     } catch (e) {
       Get.snackbar('Error', 'An error occurred: $e');
       return false;
