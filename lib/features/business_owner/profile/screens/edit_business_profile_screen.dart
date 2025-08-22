@@ -82,6 +82,13 @@ class _EditBusinessOwnerProfileScreenState
           fontSize: getWidth(24),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Manage services',
+            icon: const Icon(Icons.design_services_outlined),
+            onPressed: () => Get.toNamed('/all-services'),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: getWidth(24)),
@@ -368,15 +375,15 @@ class _EditBusinessOwnerProfileScreenState
                           capacity: capacityTEController.text,
                           id: widget.id.toString(),
                           openDays: controller1.openDays.toList(),
-                          closeDays: _allDays
-                              .where((d) => !controller1.openDays.contains(d))
-                              .toList(),
-                          startAt: controller1.startTime.value, // "hh:mm AM/PM"
+                          closeDays: const [
+                            // or compute if needed
+                          ],
+                          startAt: controller1.startTime.value,
                           closeAt: controller1.endTime.value,
                         );
                       },
                       child: Text(
-                        "Save",
+                        "Save & Continue",
                         style: TextStyle(
                           fontSize: getWidth(18),
                           fontWeight: FontWeight.w700,

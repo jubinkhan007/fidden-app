@@ -13,17 +13,18 @@ class CustomText extends StatelessWidget {
   final TextDecoration? decoration;
   final Color? decorationColor;
   final TextAlign? textAlign;
-  const CustomText(
-      {super.key,
-      required this.text,
-      this.maxLines,
-      this.textOverflow,
-      this.fontSize,
-      this.color,
-      this.fontWeight,
-      this.decoration,
-      this.decorationColor,
-      this.textAlign});
+  const CustomText({
+    super.key,
+    required this.text,
+    this.maxLines,
+    this.textOverflow,
+    this.fontSize,
+    this.color,
+    this.fontWeight,
+    this.decoration,
+    this.decorationColor,
+    this.textAlign,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -31,11 +32,12 @@ class CustomText extends StatelessWidget {
       text,
       textAlign: textAlign,
       style: GoogleFonts.raleway(
-          decorationColor: decorationColor ?? AppColors.textPrimary,
-          fontSize: fontSize ?? getWidth(16),
-          //color: color ?? AppColors.textPrimary,
-          fontWeight: fontWeight ?? FontWeight.w600,
-          color: color),
+        decorationColor: decorationColor ?? AppColors.textPrimary,
+        fontSize: fontSize ?? getWidth(16),
+        //color: color ?? AppColors.textPrimary,
+        fontWeight: fontWeight ?? FontWeight.w600,
+        color: color ?? AppColors.textPrimary,
+      ),
       overflow: textOverflow,
       maxLines: maxLines,
     );

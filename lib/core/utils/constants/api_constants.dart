@@ -24,20 +24,24 @@ class AppUrls {
       '$_baseUrl/find-near-by?myLat=$lat&myLon=$lon';
 
   // Seller
-  static const String getMyService = '$_baseUrl/service/my-service';
+  static const String getMyService = '$_baseUrl/api/services/';
   static const String getMBusinessProfile = '$_baseUrl/api/shop/';
   static const String getAllMostRecommendedBusinessProfile =
       '$_baseUrl/business-profile?rate=4';
   static const String businessProfile = '$_baseUrl/business-profile/create';
   static editBusinessProfile(String id) => '$_baseUrl/api/shop/$id/';
-  static getSingleService(String id) => '$_baseUrl/service/single/$id';
-  static updateService(String id) => '$_baseUrl/service/$id';
+  static getSingleService(String id) => '$_baseUrl/api/services/$id/';
+  static updateService(String id) => '$_baseUrl/api/services/$id/';
 
   // Service
-  static const String createService = '$_baseUrl/service/create';
+  static const String createService = '$_baseUrl/api/services/';
   static const String offerService = '$_baseUrl/service/offer';
   static getCustomerForm(String bookingId) =>
       '$_baseUrl/customer-form/$bookingId';
+  static deleteService(String id) => '$_baseUrl/api/services/$id/';
+
+  //categories
+  static const String getCategories = '$_baseUrl/api/categories/';
 
   // booking
   static getServiceTime({required String businessId, required String date}) =>

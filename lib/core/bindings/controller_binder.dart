@@ -1,3 +1,4 @@
+import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
 import 'package:get/get.dart';
 
 import '../../features/auth/controller/login_controller.dart';
@@ -43,9 +44,9 @@ class ControllerBinder extends Bindings {
     //   fenix: true,
     // );
 
-    // Get.lazyPut<BusinessOwnerController>(
-    //   () => BusinessOwnerController(),
-    //   fenix: true,
-    // );
+    Get.lazyPut<BusinessOwnerController>(
+      () => BusinessOwnerController(),
+      fenix: true,
+    );
   }
 }

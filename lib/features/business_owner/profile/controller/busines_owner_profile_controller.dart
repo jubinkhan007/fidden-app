@@ -378,6 +378,9 @@ class BusinessOwnerProfileController extends GetxController {
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         AppSnackBar.showSuccess("Business Profile updated successfully!");
         await fetchProfileDetails();
+        // ✅ forward navigation – replace current screen in the stack
+        Get.offNamed('/all-services'); // or Get.off(() => AllServiceScreen());
+        return;
       } else {
         AppSnackBar.showError('Update failed (${resp.statusCode}).');
       }

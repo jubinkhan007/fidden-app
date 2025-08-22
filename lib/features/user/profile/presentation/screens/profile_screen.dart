@@ -59,7 +59,9 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   SizedBox(height: getHeight(18)),
                   CustomText(
-                    text: controller.profileDetails.value.data?.name ?? "",
+                    text:
+                        controller.profileDetails.value.data?.name ??
+                        "Anonymous User",
                     color: Color(0xff232323),
                     fontSize: getWidth(26),
                     fontWeight: FontWeight.w600,

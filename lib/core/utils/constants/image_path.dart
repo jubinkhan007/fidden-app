@@ -2,6 +2,8 @@ class ImagePath {
   static const String _basePath = 'assets/images';
   static const String splashLogo = '$_basePath/splash_logo.png';
   static const String splashBackground = '$_basePath/splash_screen.png';
+  static const String servicePlaceholder =
+      '$_basePath/services_placeholder.png';
   static const String onBoardingLogo = '$_basePath/on_boarding_screen_logo.png';
   static const String successFullPasswordChangeImage =
       '$_basePath/success_full_password_change.png';
