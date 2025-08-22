@@ -190,6 +190,37 @@ class AddServiceController extends GetxController {
     }
   }
 
+  Future<void> toggleServiceStatus(String id) async {
+    inProgress.value = true;
+    final currentStatus = singleServiceDetails.value.isActive ?? false;
+    final Map<String, String> requestBody = {
+      "title": singleServiceDetails.value.title ?? '',
+      "price": singleServiceDetails.value.price ?? '',
+      "discount_price": singleServiceDetails.value.discountPrice ?? '',
+      "description": singleServiceDetails.value.description ?? '',
+      "category": singleServiceDetails.value.category?.toString() ?? '1',
+      "duration": singleServiceDetails.value.duration?.toString() ?? '',
+      "capacity": singleServiceDetails.value.capacity?.toString() ?? '',
+      "is_active": (!currentStatus).toString(),
+    };
+
+    try {
+      await _sendPutRequestWithHeadersAndImagesOnly(
+        AppUrls.updateService(id),
+        null, // No image change for status toggle
+        AuthService.accessToken,
+        requestBody,
+      );
+    } catch (e) {
+      log('Error updating service status: $e');
+      AppSnackBar.showError(
+        'Failed to update service status. Please try again.',
+      );
+    } finally {
+      inProgress.value = false;
+    }
+  }
+
   Future<void> _sendPutRequestWithHeadersAndImagesOnly(
     String url,
     String? imagePath,
@@ -226,7 +257,10 @@ class AddServiceController extends GetxController {
         AppSnackBar.showSuccess('Service updated successfully!');
         final businessController = Get.find<BusinessOwnerController>();
         await businessController.fetchAllMyService();
-        Get.back();
+        await fetchService(singleServiceDetails.value.id.toString());
+        if (Get.isDialogOpen ?? false) {
+          Get.back();
+        }
       } else {
         var errorResponse = await response.stream.bytesToString();
         log('Response error: $errorResponse');
@@ -237,7 +271,7 @@ class AddServiceController extends GetxController {
     }
   }
 
-  Future<bool> deleteService(String id) async {
+  Future<void> deleteService(String id) async {
     inProgress.value = true;
     try {
       final response = await NetworkCaller().deleteRequest(
@@ -245,41 +279,17 @@ class AddServiceController extends GetxController {
         AuthService.accessToken,
       );
 
-      if (!response.isSuccess) {
+      if (response.isSuccess) {
+        AppSnackBar.showSuccess('Service deleted successfully!');
+        final businessController = Get.find<BusinessOwnerController>();
+        await businessController.fetchAllMyService();
+        Get.back(); // Pop the dialog
+        Get.back(); // Pop the EditServiceScreen
+      } else {
         AppSnackBar.showError(response.errorMessage);
-        return false;
       }
-
-      AppSnackBar.showSuccess('Service deleted successfully!');
-
-      // 1) Close the confirm dialog if it’s still open
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-
-      // 2) Pop back to an existing AllServiceScreen if present; otherwise push it
-      var poppedToList = false;
-      Get.until((route) {
-        if (route.settings.name == '/all-services') {
-          poppedToList = true;
-          return true; // stop popping here (we’re on AllServiceScreen)
-        }
-        return false; // keep popping
-      });
-
-      if (!poppedToList) {
-        // No existing AllServiceScreen in stack → navigate to it
-        Get.offNamed('/all-services');
-      }
-
-      // 3) Refresh the list exactly once
-      final business = Get.find<BusinessOwnerController>();
-      business.fetchAllMyService();
-
-      return true;
     } catch (e) {
       Get.snackbar('Error', 'An error occurred: $e');
-      return false;
     } finally {
       inProgress.value = false;
     }

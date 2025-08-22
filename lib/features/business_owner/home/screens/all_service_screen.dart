@@ -92,13 +92,37 @@ class AllServiceScreen extends StatelessWidget {
                       leading: SizedBox(
                         height: getHeight(50),
                         width: getWidth(50),
-                        child: CircleAvatar(
-                          backgroundImage:
-                              (service.serviceImg != null &&
-                                  service.serviceImg!.isNotEmpty)
-                              ? NetworkImage(service.serviceImg!)
-                              : AssetImage(ImagePath.servicePlaceholder)
-                                    as ImageProvider,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundImage:
+                                  (service.serviceImg != null &&
+                                      service.serviceImg!.isNotEmpty)
+                                  ? NetworkImage(service.serviceImg!)
+                                  : AssetImage(ImagePath.servicePlaceholder)
+                                        as ImageProvider,
+                            ),
+                            if (service.isActive != null)
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: service.isActive!
+                                        ? Colors.green
+                                        : Colors.red,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       title: CustomText(

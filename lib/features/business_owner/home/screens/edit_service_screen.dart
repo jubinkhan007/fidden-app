@@ -65,19 +65,29 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         title: const Text('Edit Service'),
         centerTitle: true,
         actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'delete') {
-                _showDeleteConfirmationDialog();
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'delete',
-                child: Text('Delete'),
-              ),
-            ],
-          ),
+          Obx(() {
+            final isActive =
+                controller.singleServiceDetails.value.isActive ?? false;
+            return PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'delete') {
+                  _showDeleteConfirmationDialog();
+                } else if (value == 'toggle_status') {
+                  controller.toggleServiceStatus(widget.id);
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'toggle_status',
+                  child: Text(isActive ? 'Deactivate' : 'Activate'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Text('Delete'),
+                ),
+              ],
+            );
+          }),
         ],
       ),
       body: SingleChildScrollView(
@@ -206,8 +216,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
       textConfirm: "Delete",
       textCancel: "Cancel",
       confirmTextColor: Colors.white,
-      onConfirm: () async {
-        await controller.deleteService(widget.id); // no Get.back() here
+      onConfirm: () {
+        controller.deleteService(widget.id);
       },
     );
   }
