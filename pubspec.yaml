@@ -50,6 +50,8 @@ dependencies:
   intl: ^0.20.2
   shimmer: ^3.0.0
   google_maps_flutter: ^2.12.3
+  smooth_page_indicator: ^1.2.1
+  signature: ^6.3.0
 
 dev_dependencies:
   flutter_test:

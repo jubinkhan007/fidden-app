@@ -173,74 +173,58 @@ class BusinessOwnerProfileController extends GetxController {
   }
 
   Future<void> createBusinessProfile({
-    required businessName,
-    required businessAddress,
+    required String businessName,
+    required String businessAddress,
     required String aboutUs,
+    required String capacity,
   }) async {
     isLoading.value = true;
-    if (startDay.value.isEmpty ||
-        endDay.value.isEmpty ||
-        startTime.value.isEmpty ||
-        endTime.value.isEmpty) {
-      // Fallback to profile values if no new values are selected
-      startDay.value = startDay.value.isEmpty
-          ? profileDetails.value.data?.startDay ?? ""
-          : startDay.value;
-      endDay.value = endDay.value.isEmpty
-          ? profileDetails.value.data?.endDay ?? ""
-          : endDay.value;
-      startTime.value = startTime.value.isEmpty
-          ? profileDetails.value.data?.startTime ?? ""
-          : startTime.value;
-      endTime.value = endTime.value.isEmpty
-          ? profileDetails.value.data?.endTime ?? ""
-          : endTime.value;
-
-      // If still empty after fallback, show an error or message
-      if (startDay.value.isEmpty ||
-          endDay.value.isEmpty ||
-          startTime.value.isEmpty ||
-          endTime.value.isEmpty) {
-        AppSnackBar.showError("Please select start and end days and times.");
-
-        return; // Exit the function if fields are still empty after fallback
-      }
-    }
-
-    // Prepare request body
-    final Map<String, dynamic> requestBody = {
-      "businessName": businessName,
-      "businessAddress": businessAddress,
-      "details": aboutUs,
-      "latitude": double.tryParse(lat.value) ?? 0.0,
-      "longitude": double.tryParse(long.value) ?? 0.0,
-      "startDay": startDay.value.isEmpty
-          ? profileDetails.value.data?.startDay ?? "Monday"
-          : startDay.value,
-      "endDay": endDay.value.isEmpty
-          ? profileDetails.value.data?.endDay ?? "Friday"
-          : endDay.value,
-      "startTime": startTime.value.isEmpty
-          ? profileDetails.value.data?.startTime ?? "09:00 a.m."
-          : startTime.value,
-      "endTime": endTime.value.isEmpty
-          ? profileDetails.value.data?.endTime ?? "08:00 p.m."
-          : endTime.value,
-    };
-    debugPrint(requestBody.toString());
-
     try {
-      await _sendPutRequestWithHeadersAndImagesOnly1(
-        AppUrls.businessProfile,
-        requestBody,
-        imagePath.value,
-        AuthService.accessToken,
+      final uiStart = startTime.value.isNotEmpty
+          ? startTime.value
+          : (profileDetails.value.data?.startTime ?? '09:00 AM');
+
+      final uiClose = endTime.value.isNotEmpty
+          ? endTime.value
+          : (profileDetails.value.data?.endTime ?? '06:00 PM');
+
+      const allDays = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
+      final closed = allDays.where((d) => !openDays.contains(d)).toList();
+
+      final resp = await ShopApi.createShopWithImage(
+        name: businessName,
+        address: businessAddress,
+        aboutUs: aboutUs,
+        capacity: int.tryParse(capacity) ?? 0,
+        startAtUi: uiStart,
+        closeAtUi: uiClose,
+        closeDays: closed.map((e) => e.toLowerCase()).toList(),
+        latitude: lat.value.isEmpty ? null : lat.value,
+        longitude: long.value.isEmpty ? null : long.value,
+        imagePath: imagePath.value.isEmpty ? null : imagePath.value,
+        token: AuthService.accessToken ?? '',
       );
+
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        AppSnackBar.showSuccess("Business Profile created successfully!");
+        await fetchProfileDetails();
+        Get.offNamed('/all-services');
+      } else {
+        final body = await resp.stream.bytesToString();
+        log('Create profile failed: ${resp.statusCode}, body: $body');
+        AppSnackBar.showError('Create failed (${resp.statusCode}).');
+      }
     } catch (e) {
-      log('Error updating profile: $e');
-      AppSnackBar.showError(
-        "Failed to create business profile. Please try again.",
-      );
+      log('Create profile error: $e');
+      AppSnackBar.showError('Failed to create business profile.');
     } finally {
       isLoading.value = false;
     }

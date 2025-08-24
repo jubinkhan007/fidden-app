@@ -12,8 +12,8 @@ class BusinessOwnerNavBar extends StatelessWidget {
     return Scaffold(
       body: GetX<BusinessOwnerNavBarController>(
         init: BusinessOwnerNavBarController(),
-        builder: (driverNavBarController) =>
-            driverNavBarController.screens[driverNavBarController.currentIndex],
+        builder: (driverNavBarController) => driverNavBarController
+            .screens[driverNavBarController!.currentIndex],
       ),
       bottomNavigationBar: GetX<BusinessOwnerNavBarController>(
         builder: (navController) {
@@ -27,7 +27,7 @@ class BusinessOwnerNavBar extends StatelessWidget {
             items: List.generate(navController.activeIcons.length, (index) {
               return BottomNavigationBarItem(
                 backgroundColor: Colors.white,
-                icon: navController.currentIndex == index
+                icon: navController!.currentIndex == index
                     ? navController.activeIcons[index]
                     : navController.inActiveIcons[index],
                 label: navController.labels[index],

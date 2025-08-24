@@ -1,3 +1,5 @@
+//lib/core/bindings/controller_binder.dart
+
 import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
 import 'package:get/get.dart';
 

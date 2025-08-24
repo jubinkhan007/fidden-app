@@ -19,6 +19,71 @@ class ShopApi {
     return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
   }
 
+  static Future<http.StreamedResponse> createShopWithImage({
+    required String name,
+    required String address,
+    required String aboutUs,
+    required int capacity,
+    required String startAtUi,
+    required String closeAtUi,
+    required List<String> closeDays,
+    String? latitude,
+    String? longitude,
+    String? imagePath,
+    required String token,
+  }) async {
+    final startAt = toApiTime(startAtUi);
+    final closeAt = toApiTime(closeAtUi);
+
+    String? location;
+    final lat = double.tryParse(latitude ?? '');
+    final lon = double.tryParse(longitude ?? '');
+    if (lat != null && lon != null) {
+      location = '$lat,$lon';
+    }
+
+    final url = Uri.parse(
+      'https://fidden-service-provider.onrender.com/api/shop/',
+    );
+
+    final req = http.MultipartRequest('POST', url);
+    req.headers['Authorization'] = 'Bearer $token';
+
+    req.fields['name'] = name;
+    req.fields['address'] = address;
+    req.fields['about_us'] = aboutUs;
+    req.fields['capacity'] = capacity.toString();
+    req.fields['start_at'] = startAt;
+    req.fields['close_at'] = closeAt;
+    if (location != null) req.fields['location'] = location;
+    req.fields['close_days'] = jsonEncode(
+      closeDays.map((e) => e.toLowerCase()).toList(),
+    );
+
+    if (imagePath != null && imagePath.isNotEmpty) {
+      req.files.add(
+        await http.MultipartFile.fromPath(
+          'shop_img',
+          imagePath,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+    }
+
+    log('Uploading multipart to $url');
+    log('Fields: ${req.fields}');
+    final streamed = await req.send();
+    final body = await streamed.stream.bytesToString();
+    log('Status: ${streamed.statusCode}');
+    log('Body: $body');
+    return http.StreamedResponse(
+      Stream.fromIterable([body.codeUnits]),
+      streamed.statusCode,
+      headers: streamed.headers,
+      reasonPhrase: streamed.reasonPhrase,
+    );
+  }
+
   static Future<http.StreamedResponse> updateShopWithImage({
     required String id, // "1"
     required String name,

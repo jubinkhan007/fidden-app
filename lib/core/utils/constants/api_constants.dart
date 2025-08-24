@@ -28,7 +28,7 @@ class AppUrls {
   static const String getMBusinessProfile = '$_baseUrl/api/shop/';
   static const String getAllMostRecommendedBusinessProfile =
       '$_baseUrl/business-profile?rate=4';
-  static const String businessProfile = '$_baseUrl/business-profile/create';
+  static const String businessProfile = '$_baseUrl/api/shop/';
   static editBusinessProfile(String id) => '$_baseUrl/api/shop/$id/';
   static getSingleService(String id) => '$_baseUrl/api/services/$id/';
   static updateService(String id) => '$_baseUrl/api/services/$id/';
