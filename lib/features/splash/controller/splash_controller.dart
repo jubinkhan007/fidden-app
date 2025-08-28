@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import '../../../core/services/Auth_service.dart';
 
-import '../../../core/services/location_service.dart';
 import '../../auth/presentation/screens/login/login_screen.dart';
 import '../../business_owner/nav_bar/presentation/screens/user_nav_bar.dart';
 import '../../user/nav_bar/presentation/screens/user_nav_bar.dart';
@@ -46,37 +45,19 @@ class SplashController extends GetxController {
     });
   }
 
-  // @override
-  // void onInit() {
-  //   // TODO: implement onInit
-  //   super.onInit();
-  //   navigateToOnboardingScreen();
-  // }
-
   @override
   void onInit() {
     super.onInit();
 
-    if (Platform.isIOS) {
-      fetchLocationForIOS();
-    } else if (Platform.isAndroid) {
-      fetchLocationForAndroid();
-    }
+    // After getting location, navigate
+    _fetchLocation().then((_) {
+      navigateToOnboardingScreen();
+    });
   }
 
   static var latitude = 0.0.obs;
   static var longitude = 0.0.obs;
   static var address = ''.obs;
-
-  final LocationService _locationService = LocationService();
-
-  Future<void> fetchLocationForIOS() async {
-    await _fetchLocation();
-  }
-
-  Future<void> fetchLocationForAndroid() async {
-    await _fetchLocation();
-  }
 
   Future<void> _fetchLocation() async {
     bool serviceEnabled;
@@ -122,20 +103,11 @@ class SplashController extends GetxController {
         Placemark placemark = placemarks.first;
 
         String fullAddress = [
-          //placemark.name,
           placemark.administrativeArea,
-
           placemark.country,
         ].where((element) => element != null && element.isNotEmpty).join(', ');
 
-        address.value = fullAddress; // ✅ Assigning full address to observable
-        _locationService.setLocation(
-          latitude.value,
-          longitude.value,
-          fullAddress,
-        );
-
-        navigateToOnboardingScreen();
+        address.value = fullAddress;
         debugPrint('Address: $fullAddress');
       } else {
         debugPrint('No placemarks found for the location.');

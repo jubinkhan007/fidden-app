@@ -1,5 +1,8 @@
 // lib/main.dart
 import 'dart:math' as math;
+import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
+import 'package:fidden/features/user/shops/presentation/screens/all_shops_screen.dart';
+import 'package:fidden/features/user/shops/services/presentation/screens/all_services_screen.dart';
 import 'package:flutter/material.dart';
 
 class SalonApp extends StatelessWidget {
@@ -428,7 +431,11 @@ class _TrendingServices extends StatelessWidget {
           'Trending Services',
           r: r,
           actionLabel: 'See All',
-          onTap: () {},
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AllServicesScreen()),
+            );
+          },
         ),
         SizedBox(
           height: r.h(280),
@@ -772,8 +779,12 @@ class _RecentBooking extends StatelessWidget {
 class _PopularShops extends StatelessWidget {
   const _PopularShops({required this.r});
   final R r;
+
   @override
   Widget build(BuildContext context) {
+    // mock ids to demonstrate navigation; replace with real ids from your data source
+    final shopIds = ['1', '2', '3', '4', '5'];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -781,7 +792,11 @@ class _PopularShops extends StatelessWidget {
           'Popular Shops',
           r: r,
           actionLabel: 'See All',
-          onTap: () {},
+          onTap: () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const AllShopsScreen()));
+          },
         ),
         SizedBox(
           height: r.h(130),
@@ -789,7 +804,17 @@ class _PopularShops extends StatelessWidget {
             shrinkWrap: true,
             padding: EdgeInsets.symmetric(horizontal: r.w(20)),
             scrollDirection: Axis.horizontal,
-            itemBuilder: (_, i) => _ShopItem(index: i),
+            itemBuilder: (_, i) => _ShopItem(
+              index: i,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ShopDetailsScreen(id: shopIds[i % shopIds.length]),
+                  ),
+                );
+              },
+            ),
             separatorBuilder: (_, __) => SizedBox(width: r.w(22)),
             itemCount: 5,
           ),
@@ -800,62 +825,74 @@ class _PopularShops extends StatelessWidget {
 }
 
 class _ShopItem extends StatelessWidget {
-  const _ShopItem({required this.index});
+  const _ShopItem({required this.index, required this.onTap});
   final int index;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     final r = R.of(context);
     final names = ['Glow & Go', 'FreshCuts', 'NailFix', 'Beauty', 'Deem port'];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: r.w(64),
-          height: r.w(64),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10),
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: r.w(64),
+            height: r.w(64),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                ),
+              ],
+              image: const DecorationImage(
+                image: NetworkImage(
+                  'https://avatars.githubusercontent.com/u/9919?s=200&v=4',
+                ),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          SizedBox(height: r.h(8)),
+          SizedBox(
+            width: r.w(86),
+            child: Text(
+              names[index % names.length],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: r.sp(14), fontWeight: FontWeight.w700),
+            ),
+          ),
+          SizedBox(height: r.h(4)),
+          Row(
+            children: [
+              Icon(Icons.star, size: r.w(14), color: const Color(0xFFF7B500)),
+              SizedBox(width: r.w(4)),
+              Text(
+                '5.0',
+                style: TextStyle(
+                  fontSize: r.sp(12),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(width: r.w(4)),
+              Text(
+                '(58)',
+                style: TextStyle(
+                  fontSize: r.sp(12),
+                  color: const Color(0xFF6B6F7C),
+                ),
+              ),
             ],
-            image: const DecorationImage(
-              image: NetworkImage(
-                'https://avatars.githubusercontent.com/u/9919?s=200&v=4',
-              ),
-              fit: BoxFit.cover,
-            ),
           ),
-        ),
-        SizedBox(height: r.h(8)),
-        SizedBox(
-          width: r.w(86),
-          child: Text(
-            names[index % names.length],
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: r.sp(14), fontWeight: FontWeight.w700),
-          ),
-        ),
-        SizedBox(height: r.h(4)),
-        Row(
-          children: [
-            Icon(Icons.star, size: r.w(14), color: const Color(0xFFF7B500)),
-            SizedBox(width: r.w(4)),
-            Text(
-              '5.0',
-              style: TextStyle(fontSize: r.sp(12), fontWeight: FontWeight.w700),
-            ),
-            SizedBox(width: r.w(4)),
-            Text(
-              '(58)',
-              style: TextStyle(
-                fontSize: r.sp(12),
-                color: const Color(0xFF6B6F7C),
-              ),
-            ),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

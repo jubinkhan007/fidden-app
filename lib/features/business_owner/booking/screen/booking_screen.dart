@@ -19,6 +19,8 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
     final controller = Get.put(BusinessOwnerController());
     return Scaffold(
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         title: Text('All Booking'),
         centerTitle: true,

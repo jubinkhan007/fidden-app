@@ -1,5 +1,6 @@
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/utils/constants/image_path.dart';
+import 'package:fidden/features/business_owner/home/screens/edit_service_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/reminder_screen.dart';
 import 'package:fidden/features/splash/controller/splash_controller.dart';
 import 'package:fidden/features/user/booking/presentation/screens/view_waiver_form_screen.dart';
@@ -503,31 +504,65 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
 
 Widget _buildServiceSelection(BusinessOwnerController controller) {
   return SizedBox(
-    height: getHeight(100),
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      itemCount: controller.allServiceList.length,
-      separatorBuilder: (context, index) => SizedBox(width: getWidth(8)),
-      itemBuilder: (context, index) {
-        final service = controller.allServiceList[index];
-        return Column(
-          children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundImage: NetworkImage(service.serviceImg ?? ''),
-            ),
-            SizedBox(height: 5),
-            Text(
-              service.title ?? "",
-              style: TextStyle(
-                fontSize: getWidth(14),
-                fontWeight: FontWeight.w400,
-                overflow: TextOverflow.ellipsis,
+    height: getHeight(110),
+    child: MediaQuery.removePadding(
+      context: Get.context!, // or pass BuildContext into the function
+      removeLeft: true,
+      removeRight: true,
+      child: ListView.separated(
+        padding: EdgeInsets.zero,
+        scrollDirection: Axis.horizontal,
+        itemCount: controller.allServiceList.length,
+        separatorBuilder: (context, index) => SizedBox(width: getWidth(8)),
+        itemBuilder: (context, index) {
+          final service = controller.allServiceList[index];
+          final id = (service.id ?? service.id ?? '').toString();
+
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(getWidth(12)),
+              onTap: () {
+                if (id.isEmpty || id == 'null') {
+                  Get.snackbar('Oops', 'Missing service id');
+                  return;
+                }
+                Get.to(() => EditServiceScreen(id: id));
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: getWidth(0)),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: getWidth(30),
+                      backgroundImage:
+                          (service.serviceImg != null &&
+                              service.serviceImg!.isNotEmpty)
+                          ? NetworkImage(service.serviceImg!)
+                          : const AssetImage(ImagePath.profileImage)
+                                as ImageProvider,
+                    ),
+                    SizedBox(height: getHeight(6)),
+                    SizedBox(
+                      width: getWidth(90),
+                      child: Text(
+                        service.title ?? "",
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: getWidth(14),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        );
-      },
+          );
+        },
+      ),
     ),
   );
 }

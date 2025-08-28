@@ -2,7 +2,8 @@ class AppUrls {
   AppUrls._();
 
   //static const String _baseUrl = 'http://10.0.20.64:5010/api/v1';
-  static const String _baseUrl = 'https://fidden-service-provider.onrender.com';
+  static const String _baseUrl =
+      'https://fidden-service-provider-1.onrender.com';
   static const String createAccount = '$_baseUrl/accounts/register/';
   static const String forgotEmail = '$_baseUrl/accounts/request-reset/';
   static const String verifyOtp = '$_baseUrl/accounts/verify-otp/';
@@ -18,6 +19,8 @@ class AppUrls {
   static const String completeBooking =
       '$_baseUrl/booking/users?status=completed';
   static const String createReview = '$_baseUrl/review/create';
+  static const String allShops =
+      '$_baseUrl/api/users/shops/'; // ✅ Added this line
 
   // User
   static getNearByService({required String lat, required String lon}) =>
@@ -40,8 +43,12 @@ class AppUrls {
       '$_baseUrl/customer-form/$bookingId';
   static deleteService(String id) => '$_baseUrl/api/services/$id/';
 
+  static String shopDetails(String id) =>
+      '$_baseUrl/api/users/shops/details/$id';
+
   //categories
   static const String getCategories = '$_baseUrl/api/categories/';
+  static const String allServices = '$_baseUrl/api/users/services/';
 
   // booking
   static getServiceTime({required String businessId, required String date}) =>

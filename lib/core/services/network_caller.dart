@@ -1,26 +1,57 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'package:http/http.dart' as http;
-import 'package:http/http.dart';
+import 'package:http/http.dart'
+    as http; // Use the standard http package with an alias
 import '../models/response_data.dart';
 import 'Auth_service.dart';
 
-// lib/core/services/network_caller.dart
 class NetworkCaller {
   final int timeoutDuration = 30;
 
   Future<ResponseData> getRequest(String endpoint, {String? token}) async {
     log('GET Request: $endpoint');
     try {
-      final Response response = await get(
-        Uri.parse(endpoint),
-        headers: {
-          if (token != null && token.isNotEmpty)
-            'Authorization': 'Bearer $token',
-          'Content-type': 'application/json',
-        },
-      ).timeout(Duration(seconds: timeoutDuration));
+      final http.Response response = await http
+          .get(
+            // Use the 'http' alias
+            Uri.parse(endpoint),
+            headers: {
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+              'Content-type': 'application/json',
+            },
+          )
+          .timeout(Duration(seconds: timeoutDuration));
+      return _handleResponse(response);
+    } catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // ✅ New method for GET with a body
+  Future<ResponseData> getRequestWithBody(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+  }) async {
+    log('GET Request with body: $endpoint');
+    log('Request Body: ${jsonEncode(body)}');
+    try {
+      // Use the Request class from the http package
+      final request = http.Request('GET', Uri.parse(endpoint));
+      request.headers.addAll({
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      });
+      if (body != null) {
+        request.body = jsonEncode(body);
+      }
+
+      final streamedResponse = await request.send();
+      // Use the Response class from the http package
+      final response = await http.Response.fromStream(streamedResponse);
+
       return _handleResponse(response);
     } catch (e) {
       return _handleError(e);
@@ -36,15 +67,18 @@ class NetworkCaller {
     log('Request Body: ${jsonEncode(body)}');
 
     try {
-      final Response response = await post(
-        Uri.parse(endpoint),
-        headers: {
-          if (token != null && token.isNotEmpty)
-            'Authorization': 'Bearer $token',
-          'Content-type': 'application/json',
-        },
-        body: jsonEncode(body),
-      ).timeout(Duration(seconds: timeoutDuration));
+      final http.Response response = await http
+          .post(
+            // Use the 'http' alias
+            Uri.parse(endpoint),
+            headers: {
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+              'Content-type': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(Duration(seconds: timeoutDuration));
       return _handleResponse(response);
     } catch (e) {
       return _handleError(e);
@@ -60,15 +94,18 @@ class NetworkCaller {
     log('Request Body: ${jsonEncode(body)}');
 
     try {
-      final Response response = await put(
-        Uri.parse(endpoint),
-        headers: {
-          if (token != null && token.isNotEmpty)
-            'Authorization': 'Bearer $token',
-          'Content-type': 'application/json',
-        },
-        body: jsonEncode(body),
-      ).timeout(Duration(seconds: timeoutDuration));
+      final http.Response response = await http
+          .put(
+            // Use the 'http' alias
+            Uri.parse(endpoint),
+            headers: {
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+              'Content-type': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(Duration(seconds: timeoutDuration));
       return _handleResponse(response);
     } catch (e) {
       return _handleError(e);
@@ -78,14 +115,17 @@ class NetworkCaller {
   Future<ResponseData> deleteRequest(String endpoint, String? token) async {
     log('DELETE Request: $endpoint');
     try {
-      final Response response = await delete(
-        Uri.parse(endpoint),
-        headers: {
-          if (token != null && token.isNotEmpty)
-            'Authorization': 'Bearer $token',
-          'Content-type': 'application/json',
-        },
-      ).timeout(Duration(seconds: timeoutDuration));
+      final http.Response response = await http
+          .delete(
+            // Use the 'http' alias
+            Uri.parse(endpoint),
+            headers: {
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
+              'Content-type': 'application/json',
+            },
+          )
+          .timeout(Duration(seconds: timeoutDuration));
       return _handleResponse(response);
     } catch (e) {
       return _handleError(e);
@@ -163,7 +203,6 @@ class NetworkCaller {
           );
         case 500:
           AuthService.logoutUser();
-          log(AuthService.accessToken.toString());
           return ResponseData(
             isSuccess: false,
             statusCode: response.statusCode,

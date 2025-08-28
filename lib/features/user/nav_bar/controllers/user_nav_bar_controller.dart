@@ -2,6 +2,7 @@
 
 import 'package:fidden/core/utils/constants/app_sizes.dart';
 import 'package:fidden/core/utils/constants/icon_path.dart';
+import 'package:fidden/features/user/booking/presentation/screens/booking_screen.dart';
 import 'package:fidden/features/user/home/presentation/screen/home_screen.dart';
 // import 'package:fidden/features/user/booking/presentation/screens/booking_screen.dart';
 // import 'package:fidden/features/user/home/presentation/screens/home_screen.dart';
@@ -20,10 +21,7 @@ class UserNavBarController extends GetxController {
     _selectedIndex.value = index;
   }
 
-  final List<Widget> screens = [
-    HomeScreen(),
-    /*BookingScreen(),*/ ProfileScreen(),
-  ];
+  final List<Widget> screens = [HomeScreen(), BookingScreen(), ProfileScreen()];
 
   final List<String> labels = const ['Home', "Booking", 'Profile'];
 
