@@ -1,6 +1,10 @@
+// lib/features/user/shops/services/presentation/screens/all_services_screen.dart
+
 import 'package:fidden/core/commom/widgets/custom_text.dart';
-import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
+import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:fidden/features/user/shops/services/controller/all_services_controller.dart';
+import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart'; // Import the details screen
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
@@ -44,19 +48,18 @@ class AllServicesScreen extends StatelessWidget {
             child: _SearchBar(
               controller: controller.searchController,
               onChanged: (q) {
-                // Hook to your debounce/search logic if available
-                // controller.search(q);
+                // The controller's listener already handles the debounce logic
               },
               onFilterTap: () {
                 // Hook up a bottom sheet or filter page
-                // showModalBottomSheet(...);
               },
             ),
           ),
           const SizedBox(height: 8),
           Expanded(
             child: Obx(() {
-              if (controller.isLoading.value) {
+              if (controller.isLoading.value &&
+                  (controller.allServices.value.results ?? []).isEmpty) {
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   itemCount: 6,
@@ -91,9 +94,12 @@ class AllServicesScreen extends StatelessWidget {
                   final rating = (service.avgRating ?? 0).toDouble();
                   final reviewCount = service.reviewCount ?? 0;
 
-                  // price handling (supports discount vs price)
-                  final hasDiscount = (service.discountPrice != null);
-                  final displayPrice = service.discountPrice ?? service.price;
+                  final hasDiscount =
+                      (service.discountPrice != null &&
+                      service.discountPrice != "0.00");
+                  final displayPrice = hasDiscount
+                      ? service.discountPrice
+                      : service.price;
                   final originalPrice = hasDiscount ? service.price : null;
 
                   return _ServiceCard(
@@ -107,11 +113,13 @@ class AllServicesScreen extends StatelessWidget {
                     originalPrice: originalPrice?.toString(),
                     isFavorite: service.isFavorite ?? false,
                     badge: service.badge,
+                    // --- 🚀 CHANGE IS HERE ---
                     onTap: () {
-                      if (service.shopId != null) {
+                      if (service.id != null) {
+                        // Navigate to the Service Details Screen
                         Get.to(
-                          () =>
-                              ShopDetailsScreen(id: service.shopId!.toString()),
+                          () => ServiceDetailsScreen(serviceId: service.id!),
+                          transition: Transition.cupertino,
                         );
                       }
                     },
@@ -130,7 +138,7 @@ class AllServicesScreen extends StatelessWidget {
   }
 }
 
-/// Modern pill search with a filter button
+/// pill search with a filter button
 class _SearchBar extends StatelessWidget {
   const _SearchBar({
     required this.controller,
@@ -385,7 +393,8 @@ class _ServiceCard extends StatelessWidget {
                         Row(
                           children: [
                             Text(
-                              'View',
+                              // --- 🚀 CHANGE IS HERE ---
+                              'View Service', // Changed from 'View Shop'
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: Colors.black.withOpacity(0.85),

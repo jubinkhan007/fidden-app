@@ -19,8 +19,9 @@ class AppUrls {
   static const String completeBooking =
       '$_baseUrl/booking/users?status=completed';
   static const String createReview = '$_baseUrl/review/create';
-  static const String allShops =
-      '$_baseUrl/api/users/shops/'; // ✅ Added this line
+  static const String allShops = '$_baseUrl/api/users/shops/';
+  static const String serviceDetails =
+      '$_baseUrl/api/shops'; // ✅ Added this line
 
   // User
   static getNearByService({required String lat, required String lon}) =>
@@ -48,7 +49,7 @@ class AppUrls {
 
   //categories
   static const String getCategories = '$_baseUrl/api/categories/';
-  static const String allServices = '$_baseUrl/api/users/services/';
+  static const String allServices = '$_baseUrl/api/users/services';
 
   // booking
   static getServiceTime({required String businessId, required String date}) =>
