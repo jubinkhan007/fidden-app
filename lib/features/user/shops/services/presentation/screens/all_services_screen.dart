@@ -4,6 +4,7 @@ import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:fidden/features/user/shops/services/controller/all_services_controller.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart'; // Import the details screen
+import 'package:fidden/features/user/shops/services/presentation/screens/service_filter_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -50,8 +51,27 @@ class AllServicesScreen extends StatelessWidget {
               onChanged: (q) {
                 // The controller's listener already handles the debounce logic
               },
-              onFilterTap: () {
-                // Hook up a bottom sheet or filter page
+              onFilterTap: () async {
+                final f = controller.filters; // RxMap<String, dynamic>
+
+                final Map<String, dynamic>? result = await Get.to(
+                  () => ServiceFilterScreen(
+                    initialCategoryId: f['category'] as int?,
+                    initialMinPrice: f['min_price'] as int?,
+                    initialMaxPrice: f['max_price'] as int?,
+                    initialDuration: f['duration'] as int?,
+                    initialDistance: f['distance'] as int?,
+                    initialRating: (f['rating'] as num?)?.toDouble(),
+                    // optional slider bounds:
+                    sliderMin: 0,
+                    sliderMax: 500,
+                  ),
+                  transition: Transition.downToUp,
+                );
+
+                if (result != null) {
+                  controller.applyFilters(result);
+                }
               },
             ),
           ),
