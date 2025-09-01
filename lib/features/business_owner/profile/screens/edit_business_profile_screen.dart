@@ -15,6 +15,7 @@ import '../../../../core/utils/constants/icon_path.dart';
 import '../../../../core/utils/constants/image_path.dart';
 import '../controller/busines_owner_profile_controller.dart';
 import 'map_screen.dart';
+import 'package:fidden/core/services/location_service.dart';
 
 class EditBusinessOwnerProfileScreen extends StatefulWidget {
   final String? id;
@@ -118,7 +119,7 @@ class _EditBusinessOwnerProfileScreenState
                                           ?.image !=
                                       null
                                 ? NetworkImage(
-                                    "${controller1.profileDetails.value.data?.image}?v=${DateTime.now().millisecondsSinceEpoch}",
+                                    "${controller1.profileDetails.value.data?.image}",
                                   )
                                 : const AssetImage(ImagePath.profileImage)
                                       as ImageProvider,
@@ -168,9 +169,49 @@ class _EditBusinessOwnerProfileScreenState
                     readOnly: true,
                     suffixIcon: GestureDetector(
                       onTap: () async {
+                        // --- 🚀 MODIFIED LOGIC STARTS HERE ---
+                        LatLng? initialPosition;
+                        final existingAddress = locationTEController.text
+                            .trim();
+
+                        if (existingAddress.isNotEmpty) {
+                          try {
+                            // If address exists, convert it to coordinates
+                            List<Location> locations =
+                                await locationFromAddress(existingAddress);
+                            if (locations.isNotEmpty) {
+                              initialPosition = LatLng(
+                                locations.first.latitude,
+                                locations.first.longitude,
+                              );
+                            }
+                          } catch (e) {
+                            // Handle case where address can't be found
+                            print("Could not geocode address: $e");
+                          }
+                        } else {
+                          // If no address, get user's current location
+                          try {
+                            final position = await LocationService()
+                                .getCurrentPosition();
+                            if (position != null) {
+                              initialPosition = LatLng(
+                                position.latitude,
+                                position.longitude,
+                              );
+                            }
+                          } catch (e) {
+                            print("Could not get current location: $e");
+                          }
+                        }
+
+                        // Open map with the determined initial position
                         LatLng? selectedLocation = await Get.to(
-                          () => MapScreenProfile(),
+                          () => MapScreenProfile(
+                            initialPosition: initialPosition,
+                          ),
                         );
+
                         if (selectedLocation != null) {
                           String address = await _getAddressFromLatLng(
                             selectedLocation,
@@ -181,6 +222,7 @@ class _EditBusinessOwnerProfileScreenState
                           controller1.long.value = selectedLocation.longitude
                               .toString();
                         }
+                        // --- MODIFIED LOGIC ENDS HERE ---
                       },
                       child: const Icon(
                         Icons.location_on_outlined,

@@ -1,3 +1,4 @@
+// lib/features/business_owner/home/controller/add_service_controller.dart
 import 'dart:convert';
 import 'dart:developer';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
@@ -91,14 +92,28 @@ class AddServiceController extends GetxController {
 
   Future<void> createService() async {
     inProgress.value = true;
+
+    // --- 🚀 CHANGE IS HERE ---
+    final price = priceTEController.text;
+    final discountPriceText = discountPriceTEController.text;
+    final currentStatus = singleServiceDetails.value.isActive ?? true;
+
+    // Use price if discount is empty or zero
+    final effectiveDiscountPrice =
+        (discountPriceText.isEmpty || double.tryParse(discountPriceText) == 0)
+        ? price
+        : discountPriceText;
+    // --- END CHANGE ---
+
     final Map<String, String> requestBody = {
       "title": titleTEController.text,
-      "price": priceTEController.text,
-      "discount_price": discountPriceTEController.text,
+      "price": price,
+      "discount_price": effectiveDiscountPrice, // Use the new value
       "description": descriptionTEController.text,
       "category": selectedCategoryId.value.toString(),
       "duration": durationTEController.text,
       "capacity": capacityTEController.text,
+      "is_active": "true",
     };
 
     try {
@@ -165,14 +180,28 @@ class AddServiceController extends GetxController {
 
   Future<void> updateService({required String id}) async {
     inProgress.value = true;
+
+    // --- 🚀 CHANGE IS HERE ---
+    final price = priceTEController.text;
+    final discountPriceText = discountPriceTEController.text;
+    final currentStatus = singleServiceDetails.value.isActive ?? true;
+
+    // Use price if discount is empty or zero
+    final effectiveDiscountPrice =
+        (discountPriceText.isEmpty || double.tryParse(discountPriceText) == 0)
+        ? price
+        : discountPriceText;
+    // --- END CHANGE ---
+
     final Map<String, String> requestBody = {
       "title": titleTEController.text,
-      "price": priceTEController.text,
-      "discount_price": discountPriceTEController.text,
+      "price": price,
+      "discount_price": effectiveDiscountPrice, // Use the new value
       "description": descriptionTEController.text,
       "category": singleServiceDetails.value.category?.toString() ?? '1',
       "duration": durationTEController.text,
       "capacity": capacityTEController.text,
+      "is_active": currentStatus.toString(),
     };
 
     try {
@@ -192,7 +221,7 @@ class AddServiceController extends GetxController {
 
   Future<void> toggleServiceStatus(String id) async {
     inProgress.value = true;
-    final currentStatus = singleServiceDetails.value.isActive ?? false;
+    final currentStatus = singleServiceDetails.value.isActive ?? true;
     final Map<String, String> requestBody = {
       "title": singleServiceDetails.value.title ?? '',
       "price": singleServiceDetails.value.price ?? '',
@@ -276,7 +305,7 @@ class AddServiceController extends GetxController {
     try {
       final response = await NetworkCaller().deleteRequest(
         AppUrls.deleteService(id),
-        AuthService.accessToken,
+        token: AuthService.accessToken,
       );
 
       if (response.isSuccess) {

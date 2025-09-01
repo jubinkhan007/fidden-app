@@ -23,18 +23,43 @@ class AllServicesController extends GetxController {
       .obs; // category, min_price, max_price, duration, distance, rating...
   final RxnString sortKey =
       RxnString(); // e.g. distance | rating | reviews | price_asc | price_desc | new
+  final _currentCategoryId = RxnInt();
 
   // Location for distance sort/filter (optional)
   final LocationService _locationService = LocationService();
   final isLocationAvailable = false.obs;
   Position? _position;
+  final int? categoryId;
+  AllServicesController({this.categoryId});
 
   @override
   void onInit() {
     _initLocation(); // non-blocking
+    if (categoryId != null) {
+      filters['category'] = categoryId;
+    }
     fetchAllServices(); // initial load (no filters)
     searchController.addListener(_onSearchChanged);
     super.onInit();
+  }
+
+  void filterByCategory(int? newCategoryId) {
+    // Only refetch if the category has actually changed
+    if (_currentCategoryId.value == newCategoryId) {
+      return;
+    }
+    _currentCategoryId.value = newCategoryId;
+
+    // Clear old filters and search for a clean state
+    filters.clear();
+    searchController.clear();
+
+    if (newCategoryId != null) {
+      filters['category'] = newCategoryId;
+    }
+
+    // Fetch data with the updated filters
+    _fetch();
   }
 
   @override
@@ -123,7 +148,7 @@ class AllServicesController extends GetxController {
 
     // Distance buckets (in km)
     final distance = filters['distance']; // e.g., 30 | 60 | 90 | 999
-    if (distance != null) q['radius_km'] = '$distance';
+    if (distance != null) q['max_distance'] = '$distance';
 
     // Rating threshold
     final rating = filters['rating']; // e.g., 4.5 | 4.0 | 3.5

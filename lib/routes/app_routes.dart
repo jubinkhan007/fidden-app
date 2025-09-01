@@ -1,5 +1,6 @@
 import 'package:fidden/features/business_owner/home/screens/all_service_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/edit_profile_screen.dart';
+import 'package:fidden/features/user/wishlist/presentation/screens/wishlist_screen.dart';
 import 'package:get/get.dart';
 import '../features/auth/presentation/screens/login/forget_email_screen.dart';
 import '../features/auth/presentation/screens/login/login_screen.dart';
@@ -23,6 +24,7 @@ class AppRoute {
   static String onboarding = "/onboarding";
 
   static String landingScreen = "/landingScreen";
+  static String wishListScreen = "/wishListScreen";
 
   static String loginScreen = "/loginScreen";
   static String signUpScreen = "/signUpScreen";
@@ -46,6 +48,7 @@ class AppRoute {
     GetPage(name: onboarding, page: () => OnBoardingScreen()),
     GetPage(name: loginScreen, page: () => LoginScreen()),
     GetPage(name: forgetEmailScreen, page: () => ForgetEmailScreen()),
+    GetPage(name: wishListScreen, page: () => const WishlistScreen()),
     //GetPage(name: verifyOTPScreen, page: () => VerifyOtpScreen()),
     //GetPage(name: newPasswordScreen, page: () => NewPasswordScreen()),
     GetPage(

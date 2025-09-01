@@ -7,15 +7,15 @@ AllShopsModel allShopsModelFromJson(String str) =>
 String allShopsModelToJson(AllShopsModel data) => json.encode(data.toJson());
 
 class AllShopsModel {
-  List<Shop> shops;
+  List<Shop> shops; // Changed from List<Shop>?
   String? next;
   String? previous;
 
   AllShopsModel({this.shops = const [], this.next, this.previous});
 
   factory AllShopsModel.fromJson(Map<String, dynamic> json) {
-    // Accept either "shops" or "results" (DRF pagination)
-    final rawList = (json['shops'] ?? json['results']) as List<dynamic>?;
+    // This is the key part: look for "results"
+    final rawList = json['results'] as List<dynamic>?;
 
     return AllShopsModel(
       shops: rawList == null
@@ -29,7 +29,8 @@ class AllShopsModel {
   }
 
   Map<String, dynamic> toJson() => {
-    "shops": shops.map((x) => x.toJson()).toList(),
+    // Use "results" for consistency with the API
+    "results": shops.map((x) => x.toJson()).toList(),
     "next": next,
     "previous": previous,
   };
@@ -44,9 +45,8 @@ class Shop {
   int? reviewCount;
   double? distance;
   String? shop_img;
-
   String? badge;
-  bool? isFavorite;
+  bool? isFavorite; // Add this line
 
   Shop({
     this.id,
@@ -58,7 +58,7 @@ class Shop {
     this.distance,
     this.shop_img,
     this.badge,
-    this.isFavorite,
+    this.isFavorite, // Add this line
   });
 
   factory Shop.fromJson(Map<String, dynamic> json) => Shop(
@@ -71,7 +71,7 @@ class Shop {
     distance: (json["distance"] as num?)?.toDouble(),
     shop_img: json["shop_img"],
     badge: json["badge"],
-    isFavorite: json["is_favorite"],
+    isFavorite: json["is_favorite"], // Add this line
   );
 
   Map<String, dynamic> toJson() => {
@@ -84,6 +84,6 @@ class Shop {
     "distance": distance,
     "shop_img": shop_img,
     "badge": badge,
-    "is_favorite": isFavorite,
+    "is_favorite": isFavorite, // Add this line
   };
 }

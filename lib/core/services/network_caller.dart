@@ -112,20 +112,27 @@ class NetworkCaller {
     }
   }
 
-  Future<ResponseData> deleteRequest(String endpoint, String? token) async {
+  // services/network_caller.dart
+  Future<ResponseData> deleteRequest(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+  }) async {
     log('DELETE Request: $endpoint');
+    log('Request Body: ${jsonEncode(body)}');
     try {
-      final http.Response response = await http
-          .delete(
-            // Use the 'http' alias
-            Uri.parse(endpoint),
-            headers: {
-              if (token != null && token.isNotEmpty)
-                'Authorization': 'Bearer $token',
-              'Content-type': 'application/json',
-            },
-          )
-          .timeout(Duration(seconds: timeoutDuration));
+      // Use Request so we can send a body with DELETE
+      final req = http.Request('DELETE', Uri.parse(endpoint));
+      req.headers.addAll({
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      });
+      if (body != null) req.body = jsonEncode(body);
+
+      final streamed = await req.send().timeout(
+        Duration(seconds: timeoutDuration),
+      );
+      final response = await http.Response.fromStream(streamed);
       return _handleResponse(response);
     } catch (e) {
       return _handleError(e);
@@ -137,95 +144,95 @@ class NetworkCaller {
     log('Response Status: ${response.statusCode}');
     log('Response Body: ${response.body}');
 
-    try {
-      final decodedResponse = jsonDecode(response.body);
-      switch (response.statusCode) {
-        case 200:
-        case 201:
-          return ResponseData(
-            isSuccess: true,
-            statusCode: response.statusCode,
-            responseData: decodedResponse,
-            errorMessage: '',
-          );
-        case 204:
-          return ResponseData(
-            isSuccess: true,
-            statusCode: response.statusCode,
-            responseData: null,
-            errorMessage: '',
-          );
+    final code = response.statusCode;
+    final raw = response.body;
 
-        case 401:
-          await AuthService.logoutUser();
-          return ResponseData(
-            isSuccess: false,
-            statusCode: response.statusCode,
-            errorMessage: 'You are not authorized. Please log in to continue.',
-            responseData: null,
-          );
-        case 403:
-          return ResponseData(
-            isSuccess: false,
-            statusCode: response.statusCode,
-            errorMessage: 'You do not have permission to access this resource.',
-            responseData: null,
-          );
-        case 404:
-          return ResponseData(
-            isSuccess: false,
-            statusCode: response.statusCode,
-            errorMessage: 'The resource you are looking for was not found.',
-            responseData: null,
-          );
-        case 409:
-          return ResponseData(
-            isSuccess: false,
-            statusCode: response.statusCode,
-            errorMessage: 'User already exists.',
-            responseData: null,
-          );
-
-        case 400:
-          return ResponseData(
-            isSuccess: false,
-            statusCode: response.statusCode,
-            errorMessage: 'User not found.',
-            responseData: null,
-          );
-        case 417:
-          return ResponseData(
-            isSuccess: false,
-            statusCode: response.statusCode,
-            errorMessage:
-                'We sent you an onboarding URL. Please check your email.',
-            responseData: null,
-          );
-        case 500:
-          AuthService.logoutUser();
-          return ResponseData(
-            isSuccess: false,
-            statusCode: response.statusCode,
-            errorMessage: 'Internal server error. Please try again later.',
-            responseData: null,
-          );
-        default:
-          return ResponseData(
-            isSuccess: false,
-            statusCode: response.statusCode,
-            errorMessage:
-                decodedResponse['error'] ??
-                'Something went wrong. Please try again.',
-            responseData: null,
-          );
-      }
-    } catch (e) {
+    // ✅ 204 or empty body: don’t decode
+    if (code == 204 || raw.trim().isEmpty) {
       return ResponseData(
-        isSuccess: false,
-        statusCode: response.statusCode,
-        errorMessage: 'Failed to process the response. Please try again later.',
+        isSuccess: code >= 200 && code < 300,
+        statusCode: code,
         responseData: null,
+        errorMessage: '',
       );
+    }
+
+    // Try to decode JSON only when present
+    dynamic decoded = raw;
+    try {
+      final ct = response.headers['content-type'] ?? '';
+      if (ct.contains('application/json')) decoded = jsonDecode(raw);
+    } catch (_) {
+      // leave decoded as raw string
+    }
+
+    // Success range
+    if (code >= 200 && code < 300) {
+      return ResponseData(
+        isSuccess: true,
+        statusCode: code,
+        responseData: decoded,
+        errorMessage: '',
+      );
+    }
+
+    // Auth / common errors
+    switch (code) {
+      case 401:
+        await AuthService.logoutUser();
+        return ResponseData(
+          isSuccess: false,
+          statusCode: code,
+          errorMessage: 'You are not authorized. Please log in to continue.',
+          responseData: null,
+        );
+      case 403:
+        return ResponseData(
+          isSuccess: false,
+          statusCode: code,
+          errorMessage: 'You do not have permission to access this resource.',
+          responseData: null,
+        );
+      case 404:
+        return ResponseData(
+          isSuccess: false,
+          statusCode: code,
+          errorMessage: 'The resource you are looking for was not found.',
+          responseData: null,
+        );
+      case 409:
+        return ResponseData(
+          isSuccess: false,
+          statusCode: code,
+          errorMessage: 'User already exists.',
+          responseData: null,
+        );
+      case 400:
+        return ResponseData(
+          isSuccess: false,
+          statusCode: code,
+          errorMessage: 'Bad request.',
+          responseData: null,
+        );
+      case 500:
+        return ResponseData(
+          isSuccess: false,
+          statusCode: code,
+          errorMessage: 'Internal server error. Please try again later.',
+          responseData: null,
+        );
+      default:
+        final msg = (decoded is Map && decoded['detail'] != null)
+            ? decoded['detail'].toString()
+            : (decoded is Map && decoded['error'] != null)
+            ? decoded['error'].toString()
+            : 'Something went wrong. Please try again.';
+        return ResponseData(
+          isSuccess: false,
+          statusCode: code,
+          errorMessage: msg,
+          responseData: null,
+        );
     }
   }
 

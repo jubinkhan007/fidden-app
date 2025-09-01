@@ -1,35 +1,134 @@
 import 'dart:convert';
-
+import 'package:fidden/core/commom/widgets/app_snackbar.dart';
+import 'package:fidden/features/user/home/data/promotion_offers_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../../booking/presentation/screens/shop_model.dart';
+import '../data/category_model.dart';
 import '../data/get_offer_service_model.dart';
 import '../data/most_recommended_business_profile_model.dart';
 import '../data/nearest_bar_bar_single_details.dart';
 import '../data/nearest_barbar_model.dart';
+import '../data/trending_service_model.dart';
+import '../../shops/data/all_shops_model.dart';
 
 class HomeController extends GetxController {
+  // --- Existing Properties ---
   final PageController pageController = PageController();
   final PageController pageController1 = PageController();
-
   var searchText = ''.obs;
-  RxList<ShopModel> searchResults =
-      <ShopModel>[].obs; // Replace ShopModel with your actual model
+  RxList<ShopModel> searchResults = <ShopModel>[].obs;
+  TextEditingController minDistanceController = TextEditingController();
+  TextEditingController maxDistanceController = TextEditingController();
+  final TextEditingController searchTEC = TextEditingController();
+  var isLoading = false.obs;
+  var nearestBarBarDetails = GetNearestBarbar().obs;
+  var singleNearestBarBarDetails = AllBaBarSearchModel().obs;
+  var allRecommendedBusinessProfileDetails =
+      GetAllRecommendedBusinessProfileModel().obs;
+  var allOfferServiceDetails = GetOfferServiceModel().obs;
+
+  // --- New Properties for Home Screen ---
+  var promotions = <PromotionModel>[].obs;
+  var categories = <CategoryModel>[].obs;
+  var trendingServices = TrendingServiceModel().obs;
+  var popularShops = AllShopsModel().obs;
 
   @override
   void onInit() {
     super.onInit();
+    // Fetch all data for the home screen
+    fetchAllHomeData();
+
+    // Keep existing search debounce logic
     debounce(
       searchText,
       (_) => fetchSearchResults(),
-      time: Duration(milliseconds: 500),
+      time: const Duration(milliseconds: 500),
     );
   }
 
+  // --- New Master Fetch Method ---
+  Future<void> fetchAllHomeData() async {
+    isLoading.value = true;
+    await Future.wait([
+      fetchPromotions(),
+      fetchCategories(),
+      fetchTrendingServices(),
+      fetchPopularShops(),
+    ]);
+    isLoading.value = false;
+  }
+
+  // --- New Individual Fetch Methods ---
+  Future<void> fetchPromotions() async {
+    try {
+      final response = await NetworkCaller().getRequest(
+        AppUrls.promotions,
+        token: AuthService.accessToken,
+      );
+      if (response.isSuccess) {
+        // API returns a list directly
+        promotions.value = List<PromotionModel>.from(
+          response.responseData.map((item) => PromotionModel.fromJson(item)),
+        );
+      }
+    } catch (e) {
+      AppSnackBar.showError('Could not fetch promotions: $e');
+    }
+  }
+
+  Future<void> fetchCategories() async {
+    try {
+      final response = await NetworkCaller().getRequest(
+        AppUrls.categories,
+        token: AuthService.accessToken,
+      );
+      if (response.isSuccess) {
+        // API returns a list directly
+        categories.value = List<CategoryModel>.from(
+          response.responseData.map((item) => CategoryModel.fromJson(item)),
+        );
+      }
+    } catch (e) {
+      AppSnackBar.showError('Could not fetch categories: $e');
+    }
+  }
+
+  Future<void> fetchTrendingServices() async {
+    try {
+      final response = await NetworkCaller().getRequest(
+        AppUrls.trendingServices,
+        token: AuthService.accessToken,
+      );
+      if (response.isSuccess) {
+        trendingServices.value = TrendingServiceModel.fromJson(
+          response.responseData,
+        );
+      }
+    } catch (e) {
+      AppSnackBar.showError('Could not fetch trending services: $e');
+    }
+  }
+
+  Future<void> fetchPopularShops() async {
+    try {
+      final response = await NetworkCaller().getRequest(
+        AppUrls.popularShops,
+        token: AuthService.accessToken,
+      );
+      if (response.isSuccess) {
+        popularShops.value = AllShopsModel.fromJson(response.responseData);
+      }
+    } catch (e) {
+      AppSnackBar.showError('Could not fetch popular shops: $e');
+    }
+  }
+
+  // --- Existing Methods (Unchanged) ---
   void updateSearch(String value) {
     searchText.value = value;
   }
@@ -45,14 +144,12 @@ class HomeController extends GetxController {
       searchResults.clear();
       return;
     }
-
     isLoading.value = true;
     try {
       final response = await NetworkCaller().getRequest(
         "${AppUrls.searchBusinessProfile}?search=${searchText.value}",
         token: AuthService.accessToken,
       );
-
       if (response.isSuccess &&
           response.responseData is Map<String, dynamic> &&
           response.responseData['data'] is List) {
@@ -70,18 +167,6 @@ class HomeController extends GetxController {
     }
   }
 
-  TextEditingController minDistanceController = TextEditingController();
-  TextEditingController maxDistanceController = TextEditingController();
-  final TextEditingController searchTEC = TextEditingController();
-
-  var isLoading = false.obs;
-  var nearestBarBarDetails = GetNearestBarbar().obs;
-  var singleNearestBarBarDetails = AllBaBarSearchModel().obs;
-  var allRecommendedBusinessProfileDetails =
-      GetAllRecommendedBusinessProfileModel().obs;
-  var allOfferServiceDetails = GetOfferServiceModel().obs;
-
-  // Function to fetch course details
   Future<void> fetchNearest({required String lat, required String lon}) async {
     isLoading.value = true;
     try {
@@ -89,9 +174,7 @@ class HomeController extends GetxController {
         AppUrls.getNearByService(lat: lat, lon: lon),
         token: AuthService.accessToken,
       );
-
       if (response.isSuccess) {
-        // Check if responseData is a String or Map
         if (response.responseData is Map<String, dynamic>) {
           nearestBarBarDetails.value = GetNearestBarbar.fromJson(
             response.responseData,
@@ -101,7 +184,6 @@ class HomeController extends GetxController {
         }
       }
     } catch (e) {
-      // Handle exceptions
       Get.snackbar('Error', 'An error occurred: $e');
     } finally {
       isLoading.value = false;
@@ -112,26 +194,19 @@ class HomeController extends GetxController {
     isLoading.value = true;
     try {
       final response = await NetworkCaller().getRequest(
-        AppUrls.editBusinessProfile(id),
+        AppUrls.shopDetails(id), // Corrected to use the right endpoint
         token: AuthService.accessToken,
       );
-
       if (response.isSuccess) {
-        // Check if responseData is a String or Map
         if (response.responseData is Map<String, dynamic>) {
-          final value = singleNearestBarBarDetails.value =
-              AllBaBarSearchModel.fromJson(response.responseData);
-          final model = AllBaBarSearchModel.fromJson(response.responseData);
-          debugPrint(
-            const JsonEncoder.withIndent('  ').convert(response.responseData),
+          singleNearestBarBarDetails.value = AllBaBarSearchModel.fromJson(
+            response.responseData,
           );
         } else {
           throw Exception('Unexpected response data format');
         }
       }
     } catch (e) {
-      // Handle exceptions
-
       debugPrint('An error occurred: $e');
     } finally {
       isLoading.value = false;
@@ -145,9 +220,7 @@ class HomeController extends GetxController {
         AppUrls.getAllMostRecommendedBusinessProfile,
         token: AuthService.accessToken,
       );
-
       if (response.isSuccess) {
-        // Check if responseData is a String or Map
         if (response.responseData is Map<String, dynamic>) {
           allRecommendedBusinessProfileDetails.value =
               GetAllRecommendedBusinessProfileModel.fromJson(
@@ -158,7 +231,6 @@ class HomeController extends GetxController {
         }
       }
     } catch (e) {
-      // Handle exceptions
       debugPrint('An error occurred: $e');
     } finally {
       isLoading.value = false;
@@ -172,9 +244,7 @@ class HomeController extends GetxController {
         AppUrls.offerService,
         token: AuthService.accessToken,
       );
-
       if (response.isSuccess) {
-        // Check if responseData is a String or Map
         if (response.responseData is Map<String, dynamic>) {
           allOfferServiceDetails.value = GetOfferServiceModel.fromJson(
             response.responseData,
@@ -184,7 +254,6 @@ class HomeController extends GetxController {
         }
       }
     } catch (e) {
-      // Handle exceptions
       debugPrint('An error occurred: $e');
     } finally {
       isLoading.value = false;

@@ -5,6 +5,9 @@ import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:fidden/features/user/shops/services/controller/all_services_controller.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart'; // Import the details screen
 import 'package:fidden/features/user/shops/services/presentation/screens/service_filter_screen.dart';
+import 'package:fidden/features/user/shops/widgets/fav_button.dart';
+import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
+import 'package:fidden/features/user/wishlist/data/wishlist_models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,11 +18,18 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../../../../../core/utils/constants/app_sizes.dart';
 
 class AllServicesScreen extends StatelessWidget {
-  const AllServicesScreen({super.key});
+  const AllServicesScreen({super.key, this.categoryId, this.categoryName});
+  final int? categoryId;
+  final String? categoryName;
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(AllServicesController());
+
+    // This callback ensures the controller's state is updated every time this screen is shown.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.filterByCategory(categoryId);
+    });
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -34,8 +44,9 @@ class AllServicesScreen extends StatelessWidget {
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        // --- 🚀 DYNAMICALLY SET TITLE ---
         title: CustomText(
-          text: "All Services",
+          text: categoryName ?? "All Services", // Use category name if provided
           fontSize: getWidth(20),
           fontWeight: FontWeight.w700,
         ),
@@ -123,6 +134,7 @@ class AllServicesScreen extends StatelessWidget {
                   final originalPrice = hasDiscount ? service.price : null;
 
                   return _ServiceCard(
+                    service: service,
                     heroTag: 'service_${service.id ?? index}',
                     imageUrl: imageUrl,
                     title: service.title ?? '',
@@ -133,7 +145,6 @@ class AllServicesScreen extends StatelessWidget {
                     originalPrice: originalPrice?.toString(),
                     isFavorite: service.isFavorite ?? false,
                     badge: service.badge,
-                    // --- 🚀 CHANGE IS HERE ---
                     onTap: () {
                       if (service.id != null) {
                         // Navigate to the Service Details Screen
@@ -225,6 +236,7 @@ class _SearchBar extends StatelessWidget {
 /// Modern service card
 class _ServiceCard extends StatelessWidget {
   const _ServiceCard({
+    required this.service,
     required this.heroTag,
     required this.imageUrl,
     required this.title,
@@ -239,6 +251,7 @@ class _ServiceCard extends StatelessWidget {
     this.badge,
   });
 
+  final dynamic service;
   final String heroTag;
   final String imageUrl;
   final String title;
@@ -254,6 +267,9 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final wishlistController =
+        Get.find<WishlistController>(); // 🚀 Get the controller
+
     return Material(
       color: Colors.transparent,
       child: Ink(
@@ -332,10 +348,26 @@ class _ServiceCard extends StatelessWidget {
                   Positioned(
                     top: 12,
                     right: 12,
-                    child: _FavButton(
-                      isActive: isFavorite,
-                      onTap: onFavoriteToggle,
-                    ),
+                    child: Obx(() {
+                      final isFavorite = wishlistController.isServiceFavorite(
+                        service.id!,
+                      );
+                      return FavButton(
+                        isActive: isFavorite,
+                        onTap: () {
+                          final favoriteService = FavoriteService(
+                            id: service.id,
+                            title: service.title,
+                            price: service.price,
+                            serviceImg: service.serviceImg,
+                            shopAddress: service.shopAddress,
+                          );
+                          wishlistController.toggleServiceFavoriteByServiceId(
+                            service.id,
+                          );
+                        },
+                      );
+                    }),
                   ),
 
                   // Price pill bottom-right
@@ -446,10 +478,20 @@ class _PricePill extends StatelessWidget {
   final String price;
   final String? originalPrice;
 
+  // Safe numeric parser: strips currency/commas & parses
+  double? _toDouble(String? s) {
+    if (s == null) return null;
+    final cleaned = s.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    return double.tryParse(cleaned);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasOriginal =
-        originalPrice != null && originalPrice!.trim().isNotEmpty;
+    final p = _toDouble(price);
+    final o = _toDouble(originalPrice);
+
+    // show original only when it's a valid number and strictly greater than price
+    final showOriginal = (p != null && o != null && o > p);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -460,10 +502,11 @@ class _PricePill extends StatelessWidget {
       child: Row(
         children: [
           Text(
+            // keep original string for display, or format p if you prefer
             '\$$price',
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
           ),
-          if (hasOriginal) ...[
+          if (showOriginal) ...[
             const SizedBox(width: 8),
             Text(
               '\$$originalPrice',
@@ -481,32 +524,6 @@ class _PricePill extends StatelessWidget {
 }
 
 /// Floating favorite button
-class _FavButton extends StatelessWidget {
-  const _FavButton({required this.isActive, required this.onTap});
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withOpacity(0.9),
-      shape: const CircleBorder(),
-      elevation: 2,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Icon(
-            isActive ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            color: isActive ? Colors.red : Colors.black,
-            size: 22,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Soft badge chip
 class _ChipBadge extends StatelessWidget {

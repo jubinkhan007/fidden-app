@@ -6,6 +6,8 @@ ShopDetailsModel shopDetailsModelFromJson(String str) =>
 String shopDetailsModelToJson(ShopDetailsModel data) =>
     json.encode(data.toJson());
 
+
+
 class ShopDetailsModel {
   int? id;
   String? name;

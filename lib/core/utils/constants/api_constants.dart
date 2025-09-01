@@ -23,6 +23,11 @@ class AppUrls {
   static const String serviceDetails =
       '$_baseUrl/api/shops'; // ✅ Added this line
 
+  static const String promoOffers = '$_baseUrl/promo-offers';
+
+  //wishList
+  static const String shopWishlist = '$_baseUrl/api/users/favorite-shop/';
+  static const String serviceWishlist = '$_baseUrl/api/users/service-wishlist/';
   // User
   static getNearByService({required String lat, required String lon}) =>
       '$_baseUrl/find-near-by?myLat=$lat&myLon=$lon';
@@ -50,6 +55,12 @@ class AppUrls {
   //categories
   static const String getCategories = '$_baseUrl/api/categories/';
   static const String allServices = '$_baseUrl/api/users/services';
+
+  //User-Home_Screen
+  static const String promotions = '$_baseUrl/api/promotions/';
+  static const String trendingServices = '$_baseUrl/api/users/services/?top=2';
+  static const String popularShops = '$_baseUrl/api/users/shops/?top=2';
+  static const String categories = '$_baseUrl/api/categories/';
 
   // booking
   static getServiceTime({required String businessId, required String date}) =>

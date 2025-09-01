@@ -47,6 +47,10 @@ class ServiceDetailsController extends GetxController {
   String fmtTimeLocal(DateTime utc) =>
       DateFormat('h:mm a').format(utc.toLocal());
 
+  // Helper to check if two dates are the same day
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   Future<void> fetchServiceDetails() async {
     isLoadingDetails.value = true;
     try {
@@ -94,7 +98,37 @@ class ServiceDetailsController extends GetxController {
 
       if (res.isSuccess && res.responseData is Map<String, dynamic>) {
         final parsed = SlotsResponse.fromJson(res.responseData);
-        slots.assignAll(parsed.slots);
+        final now = DateTime.now();
+        List<SlotItem> processedSlots = parsed.slots;
+
+        // If the selected date is today, check for past time slots
+        if (_isSameDay(date, now)) {
+          processedSlots = parsed.slots.map((slot) {
+            // If the slot is already unavailable from the backend, keep it that way.
+            if (!slot.available) {
+              return slot;
+            }
+
+            // Check if the slot's start time is in the past.
+            if (slot.startTimeUtc.toLocal().isBefore(now)) {
+              // It's in the past, so we override `available` to false.
+              // Since SlotItem is immutable, we must create a new one.
+              return SlotItem(
+                id: slot.id,
+                shop: slot.shop,
+                service: slot.service,
+                startTimeUtc: slot.startTimeUtc,
+                endTimeUtc: slot.endTimeUtc,
+                capacityLeft: slot.capacityLeft,
+                available: false, // Mark as unavailable
+              );
+            }
+            // Otherwise, it's an available slot in the future.
+            return slot;
+          }).toList();
+        }
+
+        slots.assignAll(processedSlots);
       } else {
         AppSnackBar.showError(res.errorMessage ?? 'Failed to load slots.');
       }

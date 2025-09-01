@@ -7,34 +7,53 @@ import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:fidden/features/user/shops/data/all_shops_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:geolocator/geolocator.dart';
 
 class AllShopsController extends GetxController {
-  var isLoading = false.obs;
-  var allShops = AllShopsModel().obs;
-  var isLocationAvailable = false.obs;
+  final isLoading = false.obs;
+  final allShops = AllShopsModel().obs;
+  final isLocationAvailable = false.obs;
+
+  // ✅ persistent category filter
+  final selectedCategoryId = Rxn<int>();
+  final selectedCategoryName = RxnString();
 
   final LocationService _locationService = LocationService();
 
+  // Don’t auto-fetch here; let the screen decide (so we can set category first)
   @override
   void onInit() {
-    fetchAllShops(); // initial load
     super.onInit();
+  }
+
+  void setCategory({int? id, String? name}) {
+    selectedCategoryId.value = id;
+    selectedCategoryName.value = name;
+  }
+
+  void clearCategory() {
+    selectedCategoryId.value = null;
+    selectedCategoryName.value = null;
   }
 
   Future<void> fetchAllShops({String? query}) async {
     isLoading.value = true;
-
     try {
       final token = AuthService.accessToken;
       final networkCaller = NetworkCaller();
 
-      // Build query string with search
-      final uri = Uri.parse(AppUrls.allShops).replace(
-        queryParameters: (query != null && query.isNotEmpty)
-            ? {'search': query.trim()}
-            : null,
-      );
+      // Build query string with search + category
+      final qp = <String, String>{};
+      if (query != null && query.trim().isNotEmpty) {
+        qp['search'] = query.trim();
+      }
+      if (selectedCategoryId.value != null) {
+        // 👇 match your backend’s expected key (e.g. category_id / category / service_category)
+        qp['category_id'] = selectedCategoryId.value!.toString();
+      }
+
+      final uri = Uri.parse(
+        AppUrls.allShops,
+      ).replace(queryParameters: qp.isEmpty ? null : qp);
 
       Map<String, dynamic>? body;
 
@@ -72,6 +91,6 @@ class AllShopsController extends GetxController {
     }
   }
 
-  // Convenience search method
+  // Search should keep the category filter intact
   Future<void> searchShops(String q) => fetchAllShops(query: q);
 }

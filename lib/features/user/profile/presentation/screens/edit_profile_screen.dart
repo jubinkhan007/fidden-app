@@ -91,7 +91,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   null
                             ? NetworkImage(
                                 // Also apply cache busting here
-                                "${controller.profileDetails.value.data?.image}?v=${DateTime.now().millisecondsSinceEpoch}",
+                                "${controller.profileDetails.value.data?.image}",
                               )
                             : const AssetImage(ImagePath.profileImage)
                                   as ImageProvider,

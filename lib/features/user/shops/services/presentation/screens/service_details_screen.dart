@@ -103,33 +103,57 @@ class ServiceDetailsScreen extends StatelessWidget {
                           // Price
                           Row(
                             children: [
-                              CustomText(
-                                text:
-                                    '\$${(d?.discountPrice ?? d?.price ?? '0')}',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              if (d?.discountPrice != null &&
-                                  (d!.price?.isNotEmpty ?? false)) ...[
-                                const SizedBox(width: 10),
-                                Text(
-                                  '\$${d.price}',
-                                  style: TextStyle(
-                                    decoration: TextDecoration.lineThrough,
-                                    color: Colors.grey.shade600,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                              // helper to parse "12.00", "$12", "12" safely
+                              // (you can lift this out of build if you prefer)
+                              ...() {
+                                double? _toDouble(String? s) {
+                                  if (s == null) return null;
+                                  final cleaned = s.replaceAll(
+                                    RegExp(r'[^0-9.\-]'),
+                                    '',
+                                  );
+                                  return double.tryParse(cleaned);
+                                }
+
+                                final currentStr =
+                                    (d?.discountPrice != null &&
+                                        d!.discountPrice!.trim().isNotEmpty)
+                                    ? d.discountPrice
+                                    : d?.price;
+                                final current = _toDouble(currentStr) ?? 0.0;
+                                final original = _toDouble(d?.price);
+
+                                final showOriginal =
+                                    (original != null && original > current);
+
+                                return [
+                                  CustomText(
+                                    text: '\$${currentStr ?? '0'}',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
                                   ),
-                                ),
-                              ],
-                              const SizedBox(width: 6),
-                              Text(
-                                '/ session',
-                                style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                                  if (showOriginal) ...[
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      '\$${d!.price}',
+                                      style: TextStyle(
+                                        decoration: TextDecoration.lineThrough,
+                                        color: Colors.grey.shade600,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '/ session',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ];
+                              }(),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -157,15 +181,21 @@ class ServiceDetailsScreen extends StatelessWidget {
                             fontWeight: FontWeight.w800,
                           ),
                           const SizedBox(height: 10),
-                          Text(
-                            d?.description ?? '—',
+                          _ExpandableText(
+                            text: d?.description ?? '—',
+                            maxLines: 5, // tweak as you like
                             style: TextStyle(
                               color: Colors.grey.shade800,
                               fontSize: 15,
                               height: 1.45,
                               fontWeight: FontWeight.w500,
                             ),
+                            linkStyle: TextStyle(
+                              color: Get.theme.primaryColor,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
+
                           const SizedBox(height: 14),
 
                           // Duration
@@ -200,7 +230,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                           SizedBox(
                             height: 60,
                             child: Obx(() {
-                              // 👇 Force dependency here so Obx rebuilds on date change
+                              // Force dependency here so Obx rebuilds on date change
                               final selected = c.selectedDate.value;
                               final days = c.next7Days;
 
@@ -587,6 +617,74 @@ class _SlotsShimmer extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ExpandableText extends StatefulWidget {
+  const _ExpandableText({
+    required this.text,
+    this.maxLines = 5,
+    required this.style,
+    this.linkStyle,
+  });
+
+  final String text;
+  final int maxLines;
+  final TextStyle style;
+  final TextStyle? linkStyle;
+
+  @override
+  State<_ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<_ExpandableText>
+    with TickerProviderStateMixin {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // measure overflow
+    final tp = TextPainter(
+      text: TextSpan(text: widget.text, style: widget.style),
+      maxLines: widget.maxLines,
+      textDirection: Directionality.of(context),
+    )..layout(maxWidth: MediaQuery.of(context).size.width);
+
+    final overflows = tp.didExceedMaxLines;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          child: Text(
+            widget.text,
+            maxLines: _expanded ? null : widget.maxLines,
+            overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            style: widget.style,
+          ),
+        ),
+        if (overflows)
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () => setState(() => _expanded = !_expanded),
+            child: Text(
+              _expanded ? 'Show Less' : 'Show More',
+              style:
+                  widget.linkStyle ??
+                  TextStyle(
+                    color: Color(0xff111827),
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ),
+      ],
     );
   }
 }

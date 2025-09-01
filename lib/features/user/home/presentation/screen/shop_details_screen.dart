@@ -5,10 +5,17 @@ import 'package:fidden/core/utils/constants/icon_path.dart';
 import 'package:fidden/core/utils/constants/image_path.dart';
 import 'package:fidden/features/user/home/controller/shop_details_controller.dart';
 import 'package:fidden/features/user/shops/data/shop_details_model.dart';
+import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
+import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
+import 'package:fidden/features/user/wishlist/data/wishlist_models.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import 'book_appoint_ment_screen.dart';
+
+const fallbackImg =
+    'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0';
 
 class ShopDetailsScreen extends StatelessWidget {
   final String id;
@@ -27,6 +34,7 @@ class ShopDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(ShopDetailsController());
+    final wishlistController = Get.find<WishlistController>(); //the controller
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.fetchShopDetails(id);
@@ -66,18 +74,64 @@ class ShopDetailsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ---- Header photo ----
+              // ---- Header photo with overlaid icons ----
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: getWidth(24)),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 10,
-                    child: Image.network(
-                      data.shopImg ?? '',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(color: _divider),
-                    ),
+                  child: Stack(
+                    // Wrap with Stack to overlay widgets
+                    children: [
+                      AspectRatio(
+                        aspectRatio: 16 / 10,
+                        child: Image.network(
+                          data.shopImg ?? fallbackImg,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              Container(color: _divider),
+                        ),
+                      ),
+                      // -- Positioned icons on the top right --
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Row(
+                          children: [
+                            // --- WRAP WITH OBX ---
+                            Obx(() {
+                              final isFavorite = wishlistController
+                                  .isShopFavorite(data.id ?? 0);
+                              return _buildIcon(
+                                isFavorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border_rounded,
+                                onTap: () {
+                                  if (data.id != null) {
+                                    // Create a temporary shop object to pass
+                                    final shop = FavoriteShop(
+                                      id: data.id,
+                                      name: data.name,
+                                      address: data.address,
+                                      shopImg: data.shopImg,
+                                    );
+                                    wishlistController.toggleShopFavorite(shop);
+                                  }
+                                },
+                                isFavorite: isFavorite,
+                              );
+                            }),
+                            // --- END OBX ---
+                            SizedBox(width: getWidth(8)),
+                            _buildIcon(
+                              Icons.ios_share_rounded,
+                              onTap: () {
+                                /* Share logic */
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -241,6 +295,29 @@ class ShopDetailsScreen extends StatelessWidget {
       ),
     );
   }
+
+  // Helper widget to build the icons
+  Widget _buildIcon(
+    IconData icon, {
+    required VoidCallback onTap,
+    bool isFavorite = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.45),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          color: isFavorite ? Colors.redAccent : Colors.white,
+          size: 20,
+        ),
+      ),
+    );
+  }
 }
 
 // --------------------------- Widgets ---------------------------
@@ -304,7 +381,7 @@ class _TabChip extends StatelessWidget {
   }
 }
 
-class _AboutSection extends StatelessWidget {
+class _AboutSection extends StatefulWidget {
   final ShopDetailsModel data;
   final Color titleColor, bodyColor, divider;
 
@@ -316,62 +393,130 @@ class _AboutSection extends StatelessWidget {
   });
 
   @override
+  State<_AboutSection> createState() => _AboutSectionState();
+}
+
+class _AboutSectionState extends State<_AboutSection> {
+  bool _isExpanded = false;
+  final int _maxLines = 3; // Max lines to show when collapsed
+
+  // Helper function to format the time
+  String _formatTime(String? timeString) {
+    if (timeString == null || timeString.isEmpty) {
+      return 'N/A';
+    }
+    try {
+      final timeParts = timeString.split(':');
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      final now = DateTime.now();
+      final dateTime = DateTime(now.year, now.month, now.day, hour, minute);
+      return DateFormat('h:mm a').format(dateTime);
+    } catch (e) {
+      return timeString;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CustomText(
-          text: "About Us",
-          fontSize: getWidth(17),
-          fontWeight: FontWeight.w600,
-          color: titleColor,
-        ),
-        SizedBox(height: getHeight(8)),
-        Text(
-          data.aboutUs ?? '',
-          style: TextStyle(
-            fontSize: getWidth(14),
-            color: bodyColor,
-            height: 1.45,
-          ),
-        ),
-        SizedBox(height: getHeight(18)),
-        CustomText(
-          text: "Opening Hours",
-          fontSize: getWidth(17),
-          fontWeight: FontWeight.w600,
-          color: titleColor,
-        ),
-        SizedBox(height: getHeight(10)),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final aboutUsText = widget.data.aboutUs ?? '';
+    // Use a LayoutBuilder to check if the text will actually overflow
+    final textSpan = TextSpan(
+      text: aboutUsText,
+      style: TextStyle(fontSize: getWidth(14)),
+    );
+    final textPainter = TextPainter(
+      text: textSpan,
+      maxLines: _maxLines,
+      textDirection: Directionality.of(context),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        textPainter.layout(maxWidth: constraints.maxWidth);
+        final isTextOverflowing = textPainter.didExceedMaxLines;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              // This logic needs to be adapted if start/end days are not available
-              "Monday - Sunday", // Placeholder
-              style: TextStyle(
-                fontSize: getWidth(14),
-                fontWeight: FontWeight.w500,
+            CustomText(
+              text: "About Us",
+              fontSize: getWidth(17),
+              fontWeight: FontWeight.w600,
+              color: widget.titleColor,
+            ),
+            SizedBox(height: getHeight(8)),
+            // Animated text section
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                aboutUsText,
+                maxLines: _isExpanded ? null : _maxLines,
+                overflow: _isExpanded
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: getWidth(14),
+                  color: widget.bodyColor,
+                  height: 1.45,
+                ),
               ),
             ),
-            Text(
-              "${data.startAt ?? ''} - ${data.closeAt ?? ''}",
-              style: TextStyle(
-                fontSize: getWidth(14),
-                fontWeight: FontWeight.w500,
+            // Show More/Less button
+            if (isTextOverflowing)
+              TextButton(
+                style: ButtonStyle(
+                  padding: WidgetStateProperty.all(
+                    EdgeInsets.fromLTRB(0, 5, 0, 0),
+                  ),
+                  minimumSize: WidgetStateProperty.all(Size(0, 0)),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isExpanded = !_isExpanded;
+                  });
+                },
+                child: Text(
+                  _isExpanded ? "Show Less" : "Show More",
+                  style: TextStyle(color: Get.theme.primaryColor),
+                ),
               ),
+            SizedBox(height: getHeight(18)),
+            CustomText(
+              text: "Opening Hours",
+              fontSize: getWidth(17),
+              fontWeight: FontWeight.w600,
+              color: widget.titleColor,
+            ),
+            SizedBox(height: getHeight(10)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Monday - Sunday", // Placeholder
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                Text(
+                  "${_formatTime(widget.data.startAt)} - ${_formatTime(widget.data.closeAt)}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: getHeight(16)),
+            Divider(color: widget.divider, height: 1),
+            SizedBox(height: getHeight(16)),
+            _ServiceSection(
+              services: widget.data.services ?? [],
+              priceColor: widget.titleColor,
+              subtitleColor: widget.bodyColor,
             ),
           ],
-        ),
-        SizedBox(height: getHeight(16)),
-        Divider(color: divider, height: 1),
-        SizedBox(height: getHeight(16)),
-        _ServiceSection(
-          services: data.services ?? [],
-          priceColor: titleColor,
-          subtitleColor: bodyColor,
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -386,6 +531,15 @@ class _ServiceSection extends StatelessWidget {
     required this.priceColor,
     required this.subtitleColor,
   });
+
+  void _openServiceDetails(Service s) {
+    final id = s.id;
+    if (id != null) {
+      Get.to(() => ServiceDetailsScreen(serviceId: id));
+    } else {
+      Get.snackbar('Unavailable', 'This service has no ID.');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -420,55 +574,72 @@ class _ServiceSection extends StatelessWidget {
             final price = (s.discountPrice != null && s.discountPrice! > 0)
                 ? s.discountPrice
                 : s.price;
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: getWidth(28),
-                      backgroundImage: NetworkImage(s.serviceImg ?? ''),
-                      backgroundColor: const Color(0xffE5E7EB),
-                    ),
-                    SizedBox(width: getWidth(12)),
-                    SizedBox(
-                      width: getWidth(200),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+
+            // safe image provider (avoid empty-string NetworkImage)
+            final ImageProvider avatarImage =
+                (s.serviceImg != null && s.serviceImg!.isNotEmpty)
+                ? NetworkImage(s.serviceImg!)
+                : const AssetImage(ImagePath.profileImage);
+
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _openServiceDetails(s),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: getHeight(6)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            s.title ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: getWidth(16),
-                              fontWeight: FontWeight.w600,
-                            ),
+                          CircleAvatar(
+                            radius: getWidth(28),
+                            backgroundImage: avatarImage,
+                            backgroundColor: const Color(0xffE5E7EB),
                           ),
-                          SizedBox(height: getHeight(2)),
-                          Text(
-                            s.description ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: getWidth(13),
-                              color: subtitleColor,
+                          SizedBox(width: getWidth(12)),
+                          SizedBox(
+                            width: getWidth(200),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  s.title ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: getWidth(16),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(height: getHeight(2)),
+                                Text(
+                                  s.description ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: getWidth(13),
+                                    color: subtitleColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                Text(
-                  "\$${price?.toStringAsFixed(0) ?? '0'}",
-                  style: TextStyle(
-                    fontSize: getWidth(16),
-                    fontWeight: FontWeight.w600,
-                    color: priceColor,
+                      Text(
+                        "\$${price?.toStringAsFixed(0) ?? '0'}",
+                        style: TextStyle(
+                          fontSize: getWidth(16),
+                          fontWeight: FontWeight.w600,
+                          color: priceColor,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             );
           },
         ),

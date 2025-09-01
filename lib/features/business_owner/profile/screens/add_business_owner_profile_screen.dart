@@ -120,7 +120,7 @@ class _AddBusinessOwnerProfileScreenState
                                           ?.image !=
                                       null
                                 ? NetworkImage(
-                                    "${controller1.profileDetails.value.data?.image}?v=${DateTime.now().millisecondsSinceEpoch}",
+                                    "${controller1.profileDetails.value.data?.image}",
                                   )
                                 : const AssetImage(ImagePath.profileImage)
                                       as ImageProvider,
@@ -225,69 +225,71 @@ class _AddBusinessOwnerProfileScreenState
             const SizedBox(height: 12),
 
             // Times (explicit labels, no seconds)
-            Row(
-              children: [
-                Expanded(
-                  child: _timeTile(
-                    label: 'Opens at',
-                    value: controller1.startTime.value.isEmpty
-                        ? (controller1.profileDetails.value.data?.startTime ??
-                              '09:00 AM')
-                        : controller1.startTime.value,
-                    onTap: () async {
-                      final t = await showTimePicker(
-                        context: context,
-                        initialTime: _parseOrNow(
-                          controller1.startTime.value.isEmpty
-                              ? (controller1
-                                        .profileDetails
-                                        .value
-                                        .data
-                                        ?.startTime ??
-                                    '09:00 AM')
-                              : controller1.startTime.value,
-                        ),
-                      );
-                      if (t != null) {
-                        controller1.startTime.value = t.format(
-                          context,
-                        ); // <-- no seconds
-                      }
-                    },
+            Obx(() {
+              return Row(
+                children: [
+                  Expanded(
+                    child: _timeTile(
+                      label: 'Opens at',
+                      value: controller1.startTime.value.isEmpty
+                          ? (controller1.profileDetails.value.data?.startTime ??
+                                '09:00 AM')
+                          : controller1.startTime.value,
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: _parseOrNow(
+                            controller1.startTime.value.isEmpty
+                                ? (controller1
+                                          .profileDetails
+                                          .value
+                                          .data
+                                          ?.startTime ??
+                                      '09:00 AM')
+                                : controller1.startTime.value,
+                          ),
+                        );
+                        if (t != null) {
+                          controller1.startTime.value = t.format(
+                            context,
+                          ); // <-- no seconds
+                        }
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _timeTile(
-                    label: 'Closes at',
-                    value: controller1.endTime.value.isEmpty
-                        ? (controller1.profileDetails.value.data?.endTime ??
-                              '08:00 PM')
-                        : controller1.endTime.value,
-                    onTap: () async {
-                      final t = await showTimePicker(
-                        context: context,
-                        initialTime: _parseOrNow(
-                          controller1.endTime.value.isEmpty
-                              ? (controller1
-                                        .profileDetails
-                                        .value
-                                        .data
-                                        ?.endTime ??
-                                    '08:00 PM')
-                              : controller1.endTime.value,
-                        ),
-                      );
-                      if (t != null) {
-                        controller1.endTime.value = t.format(
-                          context,
-                        ); // <-- no seconds
-                      }
-                    },
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _timeTile(
+                      label: 'Closes at',
+                      value: controller1.endTime.value.isEmpty
+                          ? (controller1.profileDetails.value.data?.endTime ??
+                                '08:00 PM')
+                          : controller1.endTime.value,
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: _parseOrNow(
+                            controller1.endTime.value.isEmpty
+                                ? (controller1
+                                          .profileDetails
+                                          .value
+                                          .data
+                                          ?.endTime ??
+                                      '08:00 PM')
+                                : controller1.endTime.value,
+                          ),
+                        );
+                        if (t != null) {
+                          controller1.endTime.value = t.format(
+                            context,
+                          ); // <-- no seconds
+                        }
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            }),
 
             SizedBox(height: getHeight(16)),
 

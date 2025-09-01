@@ -3,6 +3,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
 import 'package:fidden/features/user/shops/controller/all_shops_controller.dart';
+import 'package:fidden/features/user/shops/widgets/fav_button.dart';
+import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
+import 'package:fidden/features/user/wishlist/data/wishlist_models.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
@@ -22,6 +25,13 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
   Timer? _debounce;
 
   @override
+  void initState() {
+    super.initState();
+    // kick off first load
+    controller.fetchAllShops();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _debounce?.cancel();
@@ -37,6 +47,9 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final wishlistController =
+        Get.find<WishlistController>(); // 🚀 Get the controller
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
@@ -56,7 +69,7 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
       ),
       body: Column(
         children: [
-          // 🔎 Search bar
+          // Search bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -196,31 +209,27 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
                               Positioned(
                                 top: 12,
                                 right: 12,
-                                child: Material(
-                                  color: Colors.white.withOpacity(0.9),
-                                  shape: const CircleBorder(),
-                                  child: InkWell(
-                                    customBorder: const CircleBorder(),
+                                child: Obx(() {
+                                  final isFavorite = wishlistController
+                                      .isShopFavorite(shop.id!);
+                                  return FavButton(
+                                    isActive: isFavorite,
                                     onTap: () {
-                                      // TODO: toggle favorite API → update shop.isFavorite then refresh UI
-                                      // setState or trigger controller update if you store favorites in state
+                                      final favoriteShop = FavoriteShop(
+                                        id: shop.id,
+                                        name: shop.name,
+                                        address: shop.address,
+                                        shopImg: shop.shop_img,
+                                      );
+                                      wishlistController
+                                          .toggleShopFavoriteByShopId(shop.id!);
                                     },
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: Icon(
-                                        fav
-                                            ? Icons.favorite
-                                            : Icons.favorite_border,
-                                        color: fav ? Colors.red : Colors.black,
-                                        size: 22,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                  );
+                                }),
                               ),
                             ],
                           ),
-                          // 📄 Info
+                          // Info
                           Padding(
                             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
                             child: Column(

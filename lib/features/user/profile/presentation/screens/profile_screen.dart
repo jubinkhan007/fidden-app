@@ -51,7 +51,7 @@ class ProfileScreen extends StatelessWidget {
                           controller.profileDetails.value.data?.image != null
                           ? NetworkImage(
                               // Append a unique timestamp to force a reload
-                              "${controller.profileDetails.value.data?.image}?v=${DateTime.now().millisecondsSinceEpoch}",
+                              "${controller.profileDetails.value.data?.image}",
                             )
                           : const AssetImage(ImagePath.profileImage)
                                 as ImageProvider,
@@ -89,6 +89,14 @@ class ProfileScreen extends StatelessWidget {
                     firstImageString: IconPath.notificationIcon,
                     onTap: () {
                       Get.toNamed(AppRoute.notificationScreen);
+                    },
+                  ),
+                  SizedBox(height: getHeight(16)),
+                  CustomProfileButton(
+                    title: 'Wishlist',
+                    firstImageString: 'assets/icons/wishlist.png',
+                    onTap: () {
+                      Get.toNamed(AppRoute.wishListScreen);
                     },
                   ),
                   SizedBox(height: getHeight(16)),

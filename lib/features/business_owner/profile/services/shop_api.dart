@@ -1,6 +1,7 @@
 // lib/core/services/shop_api.dart
 import 'dart:convert';
 import 'dart:developer';
+import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
@@ -42,9 +43,7 @@ class ShopApi {
       location = '$lat,$lon';
     }
 
-    final url = Uri.parse(
-      'https://fidden-service-provider.onrender.com/api/shop/',
-    );
+    final url = Uri.parse(AppUrls.getMBusinessProfile);
 
     final req = http.MultipartRequest('POST', url);
     req.headers['Authorization'] = 'Bearer $token';
@@ -110,7 +109,7 @@ class ShopApi {
     }
 
     final url = Uri.parse(
-      'https://fidden-service-provider.onrender.com/api/shop/$id/', // note trailing slash
+      AppUrls.editBusinessProfile(id), // note trailing slash
     );
 
     final req = http.MultipartRequest('PUT', url);

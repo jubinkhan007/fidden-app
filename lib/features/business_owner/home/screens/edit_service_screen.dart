@@ -121,14 +121,14 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                           : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
-                    _buildLabel("Discount Price"),
+                    _buildLabel("Discounted Price"),
                     _buildTextField(
                       controller.discountPriceTEController,
                       hint: "0",
                       isPhone: true,
-                      validator: (val) => val == null || val.isEmpty
-                          ? 'Price is required'
-                          : null,
+                      // validator: (val) => val == null || val.isEmpty
+                      //     ? 'Price is required'
+                      //     : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Service Duration (minutes)"),

@@ -1,26 +1,16 @@
-// lib/main.dart
 import 'dart:math' as math;
-import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
+import 'package:fidden/features/user/home/controller/home_controller.dart';
+import 'package:fidden/features/user/home/data/category_model.dart';
+import 'package:fidden/features/user/home/data/promotion_offers_model.dart';
+import 'package:fidden/features/user/home/data/trending_service_model.dart';
+import 'package:fidden/features/user/home/presentation/screen/widgets/sticky_map_button.dart';
+import 'package:fidden/features/user/map/map_screen.dart';
+import 'package:fidden/features/user/shops/data/all_shops_model.dart';
 import 'package:fidden/features/user/shops/presentation/screens/all_shops_screen.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/all_services_screen.dart';
 import 'package:flutter/material.dart';
-
-class SalonApp extends StatelessWidget {
-  const SalonApp({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Salon UI',
-      theme: ThemeData(
-        useMaterial3: false,
-        scaffoldBackgroundColor: const Color(0xFFF7F7F9),
-        fontFamily: 'SF Pro',
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
+import 'package:get/get.dart';
+import 'shop_details_screen.dart';
 
 /// Quick responsive helpers
 class R {
@@ -33,7 +23,6 @@ class R {
   factory R.of(BuildContext c) {
     final size = MediaQuery.of(c).size;
     final baseW = 375.0, baseH = 812.0;
-    // scale based on the limiting dimension for better pixel-consistency
     final s = math.min(size.width / baseW, size.height / baseH);
     return R._(c, size, size.width, size.height, s.clamp(0.75, 1.35));
   }
@@ -50,20 +39,187 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = R.of(context);
+    Get.put(HomeController());
+    final c = Get.find<HomeController>();
+
     return Scaffold(
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _Header(r: r)),
-            //SliverToBoxAdapter(child: _SearchBar(r: r)),
-            SliverToBoxAdapter(child: _PromoCarousel(r: r)),
-            SliverToBoxAdapter(child: _Categories(r: r)),
-            SliverToBoxAdapter(child: _TrendingServices(r: r)),
-            SliverToBoxAdapter(child: _RecentBooking(r: r)),
-            SliverToBoxAdapter(child: _PopularShops(r: r)),
-            SliverToBoxAdapter(child: SizedBox(height: r.h(90))),
+      body: Obx(() {
+        // your existing content (skeleton vs actual)
+        final Widget content = c.isLoading.value
+            ? _HomeSkeleton(r: r)
+            : SafeArea(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(child: _Header(r: r)),
+                    SliverToBoxAdapter(child: _PromoCarousel(r: r)),
+                    SliverToBoxAdapter(child: _Categories(r: r)),
+                    SliverToBoxAdapter(child: _TrendingServices(r: r)),
+                    SliverToBoxAdapter(child: _PopularShops(r: r)),
+                    // keeps last items from hiding behind the button
+                    SliverToBoxAdapter(child: SizedBox(height: r.h(90))),
+                  ],
+                ),
+              );
+
+        return Stack(
+          children: [
+            content,
+            // 👇 sticky floating button overlay
+            StickyShowMapButton(
+              r: r,
+              onTap: () {
+                // TODO: route to the map screen for shops
+                Get.to(() => const MapScreen());
+              },
+            ),
           ],
-        ),
+        );
+      }),
+    );
+  }
+}
+
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton({required this.r});
+  final R r;
+
+  Widget _bar({double h = 16, double w = double.infinity}) => Container(
+    height: h,
+    width: w,
+    decoration: BoxDecoration(
+      color: const Color(0xFFF0F2F6),
+      borderRadius: BorderRadius.circular(8),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding: EdgeInsets.symmetric(horizontal: r.w(20), vertical: r.h(16)),
+        children: [
+          // header card
+          Container(
+            height: r.h(120),
+            decoration: BoxDecoration(
+              color: const Color(0xFFECEEF3),
+              borderRadius: r.r(24),
+            ),
+          ),
+          SizedBox(height: r.h(16)),
+
+          // promo
+          Container(
+            height: r.h(160),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F2F6),
+              borderRadius: r.r(24),
+            ),
+          ),
+          SizedBox(height: r.h(20)),
+
+          // categories strip
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: List.generate(
+              3,
+              (_) => Padding(
+                padding: EdgeInsets.only(right: r.w(12)),
+                child: Container(
+                  width: r.w(72),
+                  height: r.w(72),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F2F6),
+                    borderRadius: r.r(22),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: r.h(24)),
+
+          // “Trending Services” title bar
+          _bar(h: 22, w: r.w(180)),
+          SizedBox(height: r.h(12)),
+
+          // trending cards (2 placeholders)
+          SizedBox(
+            height: r.h(220),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 2,
+              separatorBuilder: (_, __) => SizedBox(width: r.w(14)),
+              itemBuilder: (_, __) => Container(
+                width: r.w(300),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: r.r(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      height: r.h(140),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F2F6),
+                        borderRadius: BorderRadius.only(
+                          topLeft: r.r(16).topLeft,
+                          topRight: r.r(16).topRight,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(r.w(14)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _bar(h: 18, w: r.w(180)),
+                          SizedBox(height: r.h(8)),
+                          _bar(h: 14, w: r.w(120)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: r.h(24)),
+
+          // “Popular Shops” title bar
+          _bar(h: 22, w: r.w(180)),
+          SizedBox(height: r.h(12)),
+
+          // popular shops avatars
+          Row(
+            children: List.generate(
+              3,
+              (_) => Padding(
+                padding: EdgeInsets.only(right: r.w(22)),
+                child: Column(
+                  children: [
+                    Container(
+                      width: r.w(64),
+                      height: r.w(64),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF0F2F6),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    SizedBox(height: r.h(8)),
+                    _bar(h: 12, w: r.w(70)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -99,7 +255,7 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hi, Aaron Ramsdale',
+                      'Hi, Welcome',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -133,8 +289,8 @@ class _Header extends StatelessWidget {
                   Container(
                     width: r.w(48),
                     height: r.w(48),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4D1020),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4D1020),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -169,7 +325,6 @@ class _Header extends StatelessWidget {
             ],
           ),
           SizedBox(height: r.h(12)),
-
           Container(
             height: r.h(52),
             decoration: BoxDecoration(
@@ -199,7 +354,6 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-
           SizedBox(height: r.h(6)),
         ],
       ),
@@ -207,146 +361,208 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _PromoCarousel extends StatefulWidget {
+class _PromoCarousel extends GetView<HomeController> {
   const _PromoCarousel({required this.r});
   final R r;
-  @override
-  State<_PromoCarousel> createState() => _PromoCarouselState();
-}
 
-class _PromoCarouselState extends State<_PromoCarousel> {
-  int idx = 0;
-  final controller = PageController(viewportFraction: 1.0);
   @override
   Widget build(BuildContext context) {
-    final r = widget.r;
+    final pageController = PageController();
+    final idx = 0.obs;
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: r.w(20), vertical: r.h(12)),
-      child: Column(
-        children: [
-          //SizedBox(width: r.w(160)),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: SizedBox(
-              // width: r.w(700),
+      child: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (controller.promotions.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          children: [
+            SizedBox(
               height: r.h(160),
               child: PageView.builder(
-                controller: controller,
-                onPageChanged: (i) => setState(() => idx = i),
-                itemCount: 3,
-                itemBuilder: (_, i) => Container(
-                  margin: EdgeInsets.only(bottom: r.h(10)),
-                  decoration: BoxDecoration(
-                    borderRadius: r.r(24),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF421220), Color(0xFF0D0B13)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  padding: EdgeInsets.all(r.w(20)),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min, // 👈 important
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Today's\nSpecial Offer",
-                              style: TextStyle(
-                                color: Colors.white,
-                                height: 1.05,
-                                fontWeight: FontWeight.w700,
-                                fontSize: r.sp(22),
-                              ),
-                            ),
-                            SizedBox(height: r.h(4)), // reduce spacing
-                            Flexible(
-                              // 👈 prevents overflow
-                              child: Text(
-                                'Get a discount for every service order!\nOnly valid for today',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: r.sp(13),
-                                  height: 1.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(width: r.w(8)),
-                      Text(
-                        '30%',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: r.sp(44),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                controller: pageController,
+                onPageChanged: (i) => idx.value = i,
+                itemCount: controller.promotions.length,
+                itemBuilder: (_, i) {
+                  final promo = controller.promotions[i];
+                  return _PromoCard(r: r, promo: promo);
+                },
               ),
             ),
-          ),
-          SizedBox(height: r.h(0)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(3, (i) {
-              final active = i == idx;
-              return Container(
-                width: active ? r.w(18) : r.w(6),
-                height: r.w(6),
-                margin: EdgeInsets.symmetric(horizontal: r.w(4)),
-                decoration: BoxDecoration(
-                  color: active ? Colors.white : Colors.white38,
-                  borderRadius: r.r(12),
+            SizedBox(height: r.h(10)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(controller.promotions.length, (i) {
+                return Obx(() {
+                  final active = i == idx.value;
+                  return Container(
+                    width: active ? r.w(18) : r.w(6),
+                    height: r.w(6),
+                    margin: EdgeInsets.symmetric(horizontal: r.w(4)),
+                    decoration: BoxDecoration(
+                      color: active ? Colors.black87 : Colors.black26,
+                      borderRadius: r.r(12),
+                    ),
+                  );
+                });
+              }),
+            ),
+            SizedBox(height: r.h(14)),
+          ],
+        );
+      }),
+    );
+  }
+}
+
+class _PromoCard extends StatelessWidget {
+  const _PromoCard({required this.r, required this.promo});
+  final R r;
+  final PromotionModel promo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: r.w(4)),
+      decoration: BoxDecoration(
+        borderRadius: r.r(24),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF421220), Color(0xFF0D0B13)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: EdgeInsets.all(r.w(20)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  promo.title ?? "Special Offer",
+                  style: TextStyle(
+                    color: Colors.white,
+                    height: 1.05,
+                    fontWeight: FontWeight.w700,
+                    fontSize: r.sp(22),
+                  ),
                 ),
-              );
-            }),
+                SizedBox(height: r.h(4)),
+                Flexible(
+                  child: Text(
+                    promo.subtitle ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: r.sp(13),
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          SizedBox(height: r.h(14)),
+          SizedBox(width: r.w(8)),
+          Text(
+            '${promo.amount?.split('.').first}%',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: r.sp(44),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _Categories extends StatelessWidget {
+class _Categories extends GetView<HomeController> {
   const _Categories({required this.r});
   final R r;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: r.w(20)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: const [
-          _Cat(icon: Icons.cut, label: 'Haircare', tint: Color(0xFFEEF3FF)),
-          _Cat(
-            icon: Icons.auto_awesome,
-            label: 'Skincare',
-            tint: Color(0xFFFFEEF4),
-          ),
-          _Cat(
-            icon: Icons.back_hand,
-            label: 'Nailcare',
-            tint: Color(0xFFF2EFFF),
-          ),
-          _Cat(
-            icon: Icons.grid_view_rounded,
-            label: 'More',
-            tint: Color(0xFFEFF6FF),
-          ),
-        ],
-      ),
+      child: Obx(() {
+        // Skeleton while loading
+        if (controller.isLoading.value && controller.categories.isEmpty) {
+          return _catsSkeleton(r);
+        }
+
+        final cats = controller.categories;
+        if (cats.isEmpty) return const SizedBox.shrink();
+
+        // Use Wrap so chips pack tightly
+        return Wrap(
+          spacing: r.w(12),
+          runSpacing: r.h(12),
+          children: cats.map((cat) {
+            // --- 🚀 CHANGE IS HERE ---
+            return GestureDetector(
+              onTap: () {
+                // Navigate to the AllServicesScreen with category info
+                Get.to(
+                  () => AllServicesScreen(
+                    categoryId: cat.id,
+                    categoryName: cat.name,
+                  ),
+                  transition: Transition.cupertino,
+                );
+              },
+              // Make sure your _Cat widget doesn't handle gestures itself
+              // to avoid conflicts.
+              child: _Cat(
+                label: cat.name ?? '',
+                icon: Icons.cut,
+                tint: const Color(0xFFEEF3FF),
+              ),
+            );
+            // --- END CHANGE ---
+          }).toList(),
+        );
+      }),
     );
   }
+}
+
+Widget _catsSkeleton(R r) {
+  Widget tile() => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: r.w(72),
+        height: r.w(72),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F2F6),
+          borderRadius: r.r(22),
+        ),
+      ),
+      SizedBox(height: r.h(10)),
+      Container(
+        width: r.w(60),
+        height: r.h(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F2F6),
+          borderRadius: r.r(6),
+        ),
+      ),
+    ],
+  );
+
+  return Wrap(
+    spacing: r.w(12),
+    runSpacing: r.h(12),
+    children: List.generate(4, (_) => tile()),
+  );
 }
 
 class _Cat extends StatelessWidget {
@@ -419,195 +635,177 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _TrendingServices extends StatelessWidget {
+class _TrendingServices extends GetView<HomeController> {
   const _TrendingServices({required this.r});
   final R r;
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(
-          'Trending Services',
-          r: r,
-          actionLabel: 'See All',
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AllServicesScreen()),
-            );
-          },
-        ),
-        SizedBox(
-          height: r.h(280),
-          child: ListView.separated(
-            padding: EdgeInsets.symmetric(horizontal: r.w(20)),
-            scrollDirection: Axis.horizontal,
-            itemBuilder: (_, i) => _TrendingCard(r: r, index: i),
-            separatorBuilder: (_, __) => SizedBox(width: r.w(14)),
-            itemCount: 2,
+    return Obx(() {
+      final services = controller.trendingServices.value.results;
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (services == null || services.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle(
+            'Trending Services',
+            r: r,
+            actionLabel: 'See All',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AllServicesScreen()),
+              );
+            },
           ),
-        ),
-      ],
-    );
+          SizedBox(
+            height: r.h(280),
+            child: ListView.separated(
+              padding: EdgeInsets.symmetric(horizontal: r.w(20)),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, i) => _TrendingCard(r: r, service: services[i]),
+              separatorBuilder: (_, __) => SizedBox(width: r.w(14)),
+              itemCount: services.length,
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
 
 class _TrendingCard extends StatelessWidget {
-  const _TrendingCard({required this.r, required this.index});
+  const _TrendingCard({required this.r, required this.service});
   final R r;
-  final int index;
+  final TrendingService service;
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: r.w(300),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: r.r(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: r.r(16).topLeft,
-                  topRight: r.r(16).topRight,
-                ),
-                child: Image.network(
-                  index == 0
-                      ? 'https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?q=80&w=1200&auto=format&fit=crop'
-                      : 'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-                  height: r.h(160),
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: r.h(10),
-                left: r.w(10),
-                child: _Chip(
-                  label: index == 0 ? 'Top Pro' : 'Popular',
-                  icon: index == 0
-                      ? Icons.emoji_events
-                      : Icons.local_fire_department,
-                ),
-              ),
-              Positioned(
-                top: r.h(10),
-                right: r.w(10),
-                child: _Fav(r: r),
-              ),
-            ],
-          ),
-          Padding(
-            padding: EdgeInsets.all(r.w(14)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () =>
+          Get.to(() => ShopDetailsScreen(id: service.shopId.toString())),
+      child: Container(
+        width: r.w(300),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: r.r(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
-                Text(
-                  index == 0 ? 'Blowout & Styling' : "Men's Fade Haircut",
-                  style: TextStyle(
-                    fontSize: r.sp(16),
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF22242A),
+                ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: r.r(16).topLeft,
+                    topRight: r.r(16).topRight,
+                  ),
+                  child: Image.network(
+                    service.serviceImg ??
+                        'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0',
+                    height: r.h(160),
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, o, s) => Container(
+                      height: r.h(160),
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
                   ),
                 ),
-                SizedBox(height: r.h(8)),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      size: r.w(16),
-                      color: const Color(0xFF6B6F7C),
+                Positioned(
+                  top: r.h(10),
+                  right: r.w(10),
+                  child: _Fav(r: r),
+                ),
+              ],
+            ),
+            Padding(
+              padding: EdgeInsets.all(r.w(14)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    service.title ?? '',
+                    style: TextStyle(
+                      fontSize: r.sp(16),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF22242A),
                     ),
-                    SizedBox(width: r.w(6)),
-                    Expanded(
-                      child: Text(
-                        index == 0 ? 'Oak Street, CA' : 'Oak Street, CA',
+                  ),
+                  SizedBox(height: r.h(8)),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: r.w(16),
+                        color: const Color(0xFF6B6F7C),
+                      ),
+                      SizedBox(width: r.w(6)),
+                      Expanded(
+                        child: Text(
+                          service.shopAddress ?? '',
+                          style: TextStyle(
+                            fontSize: r.sp(13),
+                            color: const Color(0xFF6B6F7C),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: r.h(12)),
+                  Row(
+                    children: [
+                      Text(
+                        '\$${service.discountPrice ?? service.price ?? '0'}',
+                        style: TextStyle(
+                          fontSize: r.sp(18),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        Icons.star,
+                        size: r.w(16),
+                        color: const Color(0xFFF7B500),
+                      ),
+                      SizedBox(width: r.w(4)),
+                      Text(
+                        service.avgRating?.toStringAsFixed(1) ?? '0.0',
+                        style: TextStyle(
+                          fontSize: r.sp(14),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: r.w(8)),
+                      Text(
+                        '(${service.reviewCount} Reviews)',
                         style: TextStyle(
                           fontSize: r.sp(13),
                           color: const Color(0xFF6B6F7C),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: r.h(12)),
-                Row(
-                  children: [
-                    Text(
-                      index == 0 ? '\$89' : '\$20',
-                      style: TextStyle(
-                        fontSize: r.sp(18),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.star,
-                      size: r.w(16),
-                      color: const Color(0xFFF7B500),
-                    ),
-                    SizedBox(width: r.w(4)),
-                    Text(
-                      '5.0',
-                      style: TextStyle(
-                        fontSize: r.sp(14),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(width: r.w(8)),
-                    Text(
-                      '(58 Reviews)',
-                      style: TextStyle(
-                        fontSize: r.sp(13),
-                        color: const Color(0xFF6B6F7C),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.icon});
-  final String label;
-  final IconData icon;
-  @override
-  Widget build(BuildContext context) {
-    final r = R.of(context);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: r.w(10), vertical: r.h(6)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: r.r(100),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: r.w(14), color: const Color(0xFF6B2A3B)),
-          SizedBox(width: r.w(6)),
-          Text(
-            label,
-            style: TextStyle(fontSize: r.sp(12), fontWeight: FontWeight.w700),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -646,196 +844,55 @@ class _FavState extends State<_Fav> {
   }
 }
 
-class _RecentBooking extends StatelessWidget {
-  const _RecentBooking({required this.r});
-  final R r;
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(
-          'Recently Booking',
-          r: r,
-          actionLabel: 'See All',
-          onTap: () {},
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: r.w(20)),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: r.r(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            padding: EdgeInsets.all(r.w(16)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Dec 22, 2024',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: r.sp(14),
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      'Remind me',
-                      style: TextStyle(
-                        color: const Color(0xFF858896),
-                        fontSize: r.sp(13),
-                      ),
-                    ),
-                    SizedBox(width: r.w(8)),
-                    Switch(
-                      value: true,
-                      onChanged: (_) {},
-                      activeColor: const Color(0xFF6B2A3B),
-                    ),
-                  ],
-                ),
-                SizedBox(height: r.h(8)),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: r.r(12),
-                      child: Image.network(
-                        'https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?q=80&w=600&auto=format&fit=crop',
-                        width: r.w(88),
-                        height: r.w(88),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    SizedBox(width: r.w(12)),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Blowout & Styling',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: r.sp(16),
-                            ),
-                          ),
-                          SizedBox(height: r.h(6)),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                size: r.w(16),
-                                color: const Color(0xFF6B6F7C),
-                              ),
-                              SizedBox(width: r.w(6)),
-                              Text(
-                                '123 Oak Street, CA 98765',
-                                style: TextStyle(
-                                  color: const Color(0xFF6B6F7C),
-                                  fontSize: r.sp(13),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: r.h(10)),
-                          Text(
-                            'Services:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: r.sp(13),
-                            ),
-                          ),
-                          SizedBox(height: r.h(4)),
-                          Text(
-                            'Undercut Haircut, Regular Shaving,\nNatural Hair Wash',
-                            style: TextStyle(
-                              color: const Color(0xFF6B6F7C),
-                              fontSize: r.sp(13),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PopularShops extends StatelessWidget {
+class _PopularShops extends GetView<HomeController> {
   const _PopularShops({required this.r});
   final R r;
 
   @override
   Widget build(BuildContext context) {
-    // mock ids to demonstrate navigation; replace with real ids from your data source
-    final shopIds = ['1', '2', '3', '4', '5'];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(
-          'Popular Shops',
-          r: r,
-          actionLabel: 'See All',
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const AllShopsScreen()));
-          },
-        ),
-        SizedBox(
-          height: r.h(130),
-          child: ListView.separated(
-            shrinkWrap: true,
-            padding: EdgeInsets.symmetric(horizontal: r.w(20)),
-            scrollDirection: Axis.horizontal,
-            itemBuilder: (_, i) => _ShopItem(
-              index: i,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ShopDetailsScreen(id: shopIds[i % shopIds.length]),
-                  ),
-                );
-              },
-            ),
-            separatorBuilder: (_, __) => SizedBox(width: r.w(22)),
-            itemCount: 5,
+    return Obx(() {
+      final shops = controller.popularShops.value.shops;
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (shops == null || shops.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle(
+            'Popular Shops',
+            r: r,
+            actionLabel: 'See All',
+            onTap: () => Get.to(() => const AllShopsScreen()),
           ),
-        ),
-      ],
-    );
+          SizedBox(
+            height: r.h(130),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.fromLTRB(r.w(20), 0, 0, 0),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, i) => _ShopItem(shop: shops[i]),
+              separatorBuilder: (_, __) => SizedBox(width: r.w(0)),
+              itemCount: shops.length,
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
 
 class _ShopItem extends StatelessWidget {
-  const _ShopItem({required this.index, required this.onTap});
-  final int index;
-  final VoidCallback onTap;
+  const _ShopItem({required this.shop});
+  final Shop shop;
 
   @override
   Widget build(BuildContext context) {
     final r = R.of(context);
-    final names = ['Glow & Go', 'FreshCuts', 'NailFix', 'Beauty', 'Deem port'];
-
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => Get.to(() => ShopDetailsScreen(id: shop.id.toString())),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -853,7 +910,7 @@ class _ShopItem extends StatelessWidget {
               ],
               image: const DecorationImage(
                 image: NetworkImage(
-                  'https://avatars.githubusercontent.com/u/9919?s=200&v=4',
+                  'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0',
                 ),
                 fit: BoxFit.cover,
               ),
@@ -863,7 +920,7 @@ class _ShopItem extends StatelessWidget {
           SizedBox(
             width: r.w(86),
             child: Text(
-              names[index % names.length],
+              shop.name ?? '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: r.sp(14), fontWeight: FontWeight.w700),
@@ -875,7 +932,7 @@ class _ShopItem extends StatelessWidget {
               Icon(Icons.star, size: r.w(14), color: const Color(0xFFF7B500)),
               SizedBox(width: r.w(4)),
               Text(
-                '5.0',
+                shop.avgRating?.toStringAsFixed(1) ?? '0.0',
                 style: TextStyle(
                   fontSize: r.sp(12),
                   fontWeight: FontWeight.w700,
@@ -883,7 +940,7 @@ class _ShopItem extends StatelessWidget {
               ),
               SizedBox(width: r.w(4)),
               Text(
-                '(58)',
+                '(${shop.reviewCount})',
                 style: TextStyle(
                   fontSize: r.sp(12),
                   color: const Color(0xFF6B6F7C),

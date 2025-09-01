@@ -75,7 +75,7 @@ class AddServiceScreen extends StatelessWidget {
                 ),
                 VerticalSpace(height: getHeight(20)),
                 CustomText(
-                  text: "Discount Price",
+                  text: "Discounted Price",
                   color: Color(0xff141414),
                   fontSize: getWidth(15),
                   fontWeight: FontWeight.w600,
@@ -85,9 +85,9 @@ class AddServiceScreen extends StatelessWidget {
                   controller: controller.discountPriceTEController,
                   hintText: "0",
                   isPhoneField: true,
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Price is required'
-                      : null,
+                  // validator: (value) => value == null || value.isEmpty
+                  //     ? 'Price is required'
+                  //     : null,
                 ),
                 VerticalSpace(height: getHeight(20)),
                 CustomText(
@@ -179,28 +179,30 @@ class AddServiceScreen extends StatelessWidget {
                 SizedBox(height: getHeight(10)),
                 Obx(() {
                   return controller.selectedImagePath.value.isEmpty
-                      ? SizedBox(
-                          height: getHeight(180),
-                          child: Card(
-                            child: GestureDetector(
-                              onTap: () {
-                                controller.pickImage();
-                              },
+                      // If no image is selected, show the upload box
+                      ? GestureDetector(
+                          onTap: () {
+                            controller.pickImage();
+                          },
+                          child: SizedBox(
+                            height: getHeight(180),
+                            child: Card(
+                              // The GestureDetector now wraps the Card
                               child: Center(
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    CustomText(
+                                    const CustomText(
                                       text: "Upload",
                                       color: Color(0xff767676),
-                                      fontSize: getWidth(18),
+                                      fontSize: 18,
                                     ),
-                                    SizedBox(width: getWidth(10)),
+                                    const SizedBox(width: 10),
                                     Image.asset(
                                       IconPath.uploadImageIcon,
-                                      height: getHeight(19),
-                                      width: getWidth(19),
-                                      color: Color(0xff767676),
+                                      height: 19,
+                                      width: 19,
+                                      color: const Color(0xff767676),
                                     ),
                                   ],
                                 ),
@@ -208,6 +210,7 @@ class AddServiceScreen extends StatelessWidget {
                             ),
                           ),
                         )
+                      // If an image IS selected, show the image
                       : GestureDetector(
                           onTap: () {
                             controller.pickImage();

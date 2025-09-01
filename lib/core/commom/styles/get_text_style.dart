@@ -12,7 +12,7 @@ TextStyle getTextStyleMsrt({
   Color? decorationColor,
   double? decorationThickness,
 }) {
-  return GoogleFonts.raleway(
+  return GoogleFonts.inter(
     fontSize: getWidth(fontSize),
     fontWeight: fontWeight,
     //color: color,

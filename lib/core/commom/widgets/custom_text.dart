@@ -31,7 +31,7 @@ class CustomText extends StatelessWidget {
     return Text(
       text,
       textAlign: textAlign,
-      style: GoogleFonts.raleway(
+      style: GoogleFonts.inter(
         decorationColor: decorationColor ?? AppColors.textPrimary,
         fontSize: fontSize ?? getWidth(16),
         //color: color ?? AppColors.textPrimary,

@@ -1,6 +1,8 @@
 //lib/core/bindings/controller_binder.dart
 
 import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
+import 'package:fidden/features/user/shops/controller/all_shops_controller.dart';
+import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:get/get.dart';
 
 import '../../features/auth/controller/login_controller.dart';
@@ -50,5 +52,8 @@ class ControllerBinder extends Bindings {
       () => BusinessOwnerController(),
       fenix: true,
     );
+
+    Get.lazyPut(() => AllShopsController(), fenix: true);
+    Get.lazyPut(() => WishlistController(), fenix: true);
   }
 }
