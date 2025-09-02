@@ -6,6 +6,10 @@ import 'package:fidden/features/user/shops/services/controller/service_details_c
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+// 👇 NEW
+import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
+import 'package:share_plus/share_plus.dart';
+
 class ServiceDetailsScreen extends StatelessWidget {
   const ServiceDetailsScreen({super.key, required this.serviceId});
   final int serviceId;
@@ -16,6 +20,11 @@ class ServiceDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.put(ServiceDetailsController(serviceId));
+
+    // 👇 Ensure we have a WishlistController to manage the heart state
+    final wishlist = Get.isRegistered<WishlistController>()
+        ? Get.find<WishlistController>()
+        : Get.put(WishlistController());
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -65,14 +74,26 @@ class ServiceDetailsScreen extends StatelessWidget {
                                 ),
                                 Row(
                                   children: [
-                                    _roundIcon(
-                                      icon: Icons.favorite_border_rounded,
-                                      onTap: () {},
-                                    ),
+                                    // 👇 FAVORITE (reactive)
+                                    Obx(() {
+                                      final isFav = wishlist.isServiceFavorite(
+                                        serviceId,
+                                      );
+                                      return _roundIcon(
+                                        icon: isFav
+                                            ? Icons.favorite_rounded
+                                            : Icons.favorite_border_rounded,
+                                        onTap: () => wishlist
+                                            .toggleServiceFavoriteByServiceId(
+                                              serviceId,
+                                            ),
+                                      );
+                                    }),
                                     const SizedBox(width: 8),
+                                    // 👇 SHARE
                                     _roundIcon(
                                       icon: Icons.ios_share_rounded,
-                                      onTap: () {},
+                                      onTap: () => _shareService(d),
                                     ),
                                   ],
                                 ),
@@ -103,8 +124,6 @@ class ServiceDetailsScreen extends StatelessWidget {
                           // Price
                           Row(
                             children: [
-                              // helper to parse "12.00", "$12", "12" safely
-                              // (you can lift this out of build if you prefer)
                               ...() {
                                 double? _toDouble(String? s) {
                                   if (s == null) return null;
@@ -183,7 +202,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                           const SizedBox(height: 10),
                           _ExpandableText(
                             text: d?.description ?? '—',
-                            maxLines: 5, // tweak as you like
+                            maxLines: 5,
                             style: TextStyle(
                               color: Colors.grey.shade800,
                               fontSize: 15,
@@ -230,7 +249,6 @@ class ServiceDetailsScreen extends StatelessWidget {
                           SizedBox(
                             height: 60,
                             child: Obx(() {
-                              // Force dependency here so Obx rebuilds on date change
                               final selected = c.selectedDate.value;
                               final days = c.next7Days;
 
@@ -286,7 +304,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                                 final isSel = c.selectedSlotId.value == s.id;
                                 final label = c.fmtTimeLocal(
                                   s.startTimeUtc,
-                                ); // local time
+                                ); // local
                                 return _TimeChip(
                                   text: label,
                                   selected: isSel,
@@ -298,9 +316,6 @@ class ServiceDetailsScreen extends StatelessWidget {
                           }),
 
                           const SizedBox(height: 26),
-
-                          // You might also like (optional placeholder)
-                          // ... add related services carousel if needed
                         ],
                       ),
                     ),
@@ -347,7 +362,6 @@ class ServiceDetailsScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-
                         const SizedBox(width: 0),
                         Expanded(
                           flex: 2,
@@ -371,7 +385,6 @@ class ServiceDetailsScreen extends StatelessWidget {
                                 );
                                 return;
                               }
-                              // TODO: Navigate to booking / confirm screen
                               Get.snackbar(
                                 'Proceed to book',
                                 'Slot #$slotId on ${c.selectedDate.value.toString().substring(0, 10)}',
@@ -399,6 +412,7 @@ class ServiceDetailsScreen extends StatelessWidget {
     );
   }
 
+  // --- helpers (unchanged) ---
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -415,6 +429,27 @@ class ServiceDetailsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // 👇 NEW: Share helper
+  void _shareService(dynamic d) {
+    final title = (d?.title ?? 'this service').toString();
+    final shop = (d?.shopName ?? '').toString();
+    final price = (d?.discountPrice?.toString()?.isNotEmpty == true)
+        ? d?.discountPrice
+        : d?.price;
+    // (Optional) deep link/URL if you have one
+    // final url = 'https://fidden.app/service/$serviceId';
+
+    final msg = StringBuffer()
+      ..writeln(
+        'Check out "$title"${shop.isNotEmpty ? ' at $shop' : ''} on Fidden.',
+      )
+      ..write(price != null ? 'Price: \$$price' : '');
+    // ..writeln()
+    // ..write(url);
+
+    Share.share(msg.toString());
   }
 }
 

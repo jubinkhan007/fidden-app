@@ -1,13 +1,17 @@
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/features/user/home/controller/home_controller.dart';
 import 'package:fidden/features/user/home/data/category_model.dart';
 import 'package:fidden/features/user/home/data/promotion_offers_model.dart';
 import 'package:fidden/features/user/home/data/trending_service_model.dart';
 import 'package:fidden/features/user/home/presentation/screen/widgets/sticky_map_button.dart';
 import 'package:fidden/features/user/map/map_screen.dart';
+import 'package:fidden/features/user/search/presentation/screens/search_result_screen.dart';
 import 'package:fidden/features/user/shops/data/all_shops_model.dart';
 import 'package:fidden/features/user/shops/presentation/screens/all_shops_screen.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/all_services_screen.dart';
+import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
+import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'shop_details_screen.dart';
@@ -325,33 +329,46 @@ class _Header extends StatelessWidget {
             ],
           ),
           SizedBox(height: r.h(12)),
-          Container(
-            height: r.h(52),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3F1220),
-              borderRadius: r.r(18),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: r.w(16)),
-            child: Row(
-              children: [
-                Icon(Icons.search, color: Colors.white70, size: r.w(22)),
-                SizedBox(width: r.w(10)),
-                Expanded(
-                  child: Text(
-                    'Search here...',
-                    style: TextStyle(color: Colors.white70, fontSize: r.sp(15)),
-                  ),
+          InkWell(
+            onTap: () {
+              Get.to(
+                () => const SearchResultScreen(
+                  // you can pass an initialQuery if you want
+                  // initialLocation: '<lat,long>'  // optional; controller will fetch if omitted
                 ),
-                Container(
-                  width: r.w(36),
-                  height: r.w(36),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF5A1B2D),
-                    borderRadius: r.r(12),
+              );
+            },
+            child: Container(
+              height: r.h(52),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3F1220),
+                borderRadius: r.r(18),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: r.w(16)),
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: Colors.white70, size: r.w(22)),
+                  SizedBox(width: r.w(10)),
+                  Expanded(
+                    child: Text(
+                      'Search here...',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: r.sp(15),
+                      ),
+                    ),
                   ),
-                  child: Icon(Icons.tune, color: Colors.white, size: r.w(18)),
-                ),
-              ],
+                  Container(
+                    width: r.w(36),
+                    height: r.w(36),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF5A1B2D),
+                      borderRadius: r.r(12),
+                    ),
+                    child: Icon(Icons.tune, color: Colors.white, size: r.w(18)),
+                  ),
+                ],
+              ),
             ),
           ),
           SizedBox(height: r.h(6)),
@@ -491,45 +508,28 @@ class _Categories extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: r.w(20)),
-      child: Obx(() {
-        // Skeleton while loading
-        if (controller.isLoading.value && controller.categories.isEmpty) {
-          return _catsSkeleton(r);
-        }
-
-        final cats = controller.categories;
-        if (cats.isEmpty) return const SizedBox.shrink();
-
-        // Use Wrap so chips pack tightly
-        return Wrap(
-          spacing: r.w(12),
-          runSpacing: r.h(12),
-          children: cats.map((cat) {
-            // --- 🚀 CHANGE IS HERE ---
-            return GestureDetector(
-              onTap: () {
-                // Navigate to the AllServicesScreen with category info
-                Get.to(
-                  () => AllServicesScreen(
-                    categoryId: cat.id,
-                    categoryName: cat.name,
-                  ),
-                  transition: Transition.cupertino,
-                );
-              },
-              // Make sure your _Cat widget doesn't handle gestures itself
-              // to avoid conflicts.
-              child: _Cat(
-                label: cat.name ?? '',
-                icon: Icons.cut,
-                tint: const Color(0xFFEEF3FF),
-              ),
-            );
-            // --- END CHANGE ---
-          }).toList(),
-        );
-      }),
+      padding: EdgeInsets.symmetric(horizontal: r.w(12)),
+      child: Wrap(
+        spacing: r.w(0),
+        runSpacing: r.h(0),
+        children: controller.categories.map((cat) {
+          return GestureDetector(
+            onTap: () {
+              Get.to(
+                () => AllServicesScreen(
+                  categoryId: cat.id,
+                  categoryName: cat.name,
+                ),
+                transition: Transition.cupertino,
+              );
+            },
+            child: _Cat(
+              label: cat.name ?? '',
+              imageUrl: cat.scImg, // <-- pass sc_img here
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
@@ -566,25 +566,78 @@ Widget _catsSkeleton(R r) {
 }
 
 class _Cat extends StatelessWidget {
-  const _Cat({required this.icon, required this.label, required this.tint});
-  final IconData icon;
+  const _Cat({required this.label, this.imageUrl});
+
   final String label;
-  final Color tint;
+  final String? imageUrl;
+
   @override
   Widget build(BuildContext context) {
     final r = R.of(context);
+    final hasUrl = imageUrl != null && imageUrl!.trim().isNotEmpty;
+
+    Widget _imgBox(Widget child) => Container(
+      width: r.w(72),
+      height: r.w(72),
+      decoration: BoxDecoration(
+        color: const Color(0xFFB0B7C1).withOpacity(0.3),
+        borderRadius: r.r(22),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: r.w(72),
-          height: r.w(72),
-          decoration: BoxDecoration(color: tint, borderRadius: r.r(22)),
-          child: Icon(icon, size: r.w(28), color: const Color(0xFF6B2A3B)),
+        // Image with asset fallback
+        _imgBox(
+          hasUrl
+              ? CachedNetworkImage(
+                  imageUrl: imageUrl!,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Center(
+                    child: Image.asset(
+                      color: const Color(0xFFB0B7C1),
+                      colorBlendMode: BlendMode.overlay,
+                      'assets/icons/scissors.png',
+                      fit: BoxFit.contain,
+                      width: r.w(28),
+                      height: r.w(28),
+                    ),
+                  ),
+                  errorWidget: (_, __, ___) => Center(
+                    child: Image.asset(
+                      'assets/icons/scissors.png',
+                      fit: BoxFit.contain,
+                      width: r.w(28),
+                      height: r.w(28),
+                    ),
+                  ),
+                )
+              : Center(
+                  child: Image.asset(
+                    'assets/icons/scissors.png',
+                    fit: BoxFit.contain,
+                    width: r.w(28),
+                    height: r.w(28),
+                  ),
+                ),
         ),
         SizedBox(height: r.h(10)),
-        Text(
-          label,
-          style: TextStyle(fontSize: r.sp(14), color: const Color(0xFF383A42)),
+        SizedBox(
+          width: r.w(90),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: r.sp(14),
+              color: const Color(0xFF383A42),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ],
     );
@@ -685,8 +738,7 @@ class _TrendingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () =>
-          Get.to(() => ShopDetailsScreen(id: service.shopId.toString())),
+      onTap: () => Get.to(() => ServiceDetailsScreen(serviceId: service.id!)),
       child: Container(
         width: r.w(300),
         decoration: BoxDecoration(
@@ -730,7 +782,7 @@ class _TrendingCard extends StatelessWidget {
                 Positioned(
                   top: r.h(10),
                   right: r.w(10),
-                  child: _Fav(r: r),
+                  child: _Fav(r: r, serviceId: service.id!),
                 ),
               ],
             ),
@@ -811,38 +863,66 @@ class _TrendingCard extends StatelessWidget {
   }
 }
 
-class _Fav extends StatefulWidget {
-  const _Fav({required this.r});
+class _Fav extends StatelessWidget {
+  const _Fav({required this.r, required this.serviceId});
   final R r;
-  @override
-  State<_Fav> createState() => _FavState();
-}
+  final int serviceId;
 
-class _FavState extends State<_Fav> {
-  bool liked = false;
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => setState(() => liked = !liked),
-      child: Container(
-        width: widget.r.w(36),
-        height: widget.r.w(36),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10),
-          ],
+    // Ensure the controller exists (creates if not registered yet)
+    final wishlist = Get.put(WishlistController(), permanent: true);
+
+    return Obx(() {
+      final isLiked = wishlist.isServiceFavorite(serviceId);
+      return GestureDetector(
+        onTap: () => wishlist.toggleServiceFavoriteByServiceId(serviceId),
+        child: Container(
+          width: r.w(36),
+          height: r.w(36),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10),
+            ],
+          ),
+          child: Icon(
+            isLiked ? Icons.favorite : Icons.favorite_border,
+            color: const Color(0xFF6B2A3B),
+            size: r.w(20),
+          ),
         ),
-        child: Icon(
-          liked ? Icons.favorite : Icons.favorite_border,
-          color: const Color(0xFF6B2A3B),
-          size: widget.r.w(20),
-        ),
-      ),
-    );
+      );
+    });
   }
 }
+
+// class _FavState extends State<_Fav> {
+//   bool liked = false;
+//   @override
+//   Widget build(BuildContext context) {
+//     return GestureDetector(
+//       onTap: () => setState(() => liked = !liked),
+//       child: Container(
+//         width: widget.r.w(36),
+//         height: widget.r.w(36),
+//         decoration: BoxDecoration(
+//           color: Colors.white,
+//           shape: BoxShape.circle,
+//           boxShadow: [
+//             BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10),
+//           ],
+//         ),
+//         child: Icon(
+//           liked ? Icons.favorite : Icons.favorite_border,
+//           color: const Color(0xFF6B2A3B),
+//           size: widget.r.w(20),
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 class _PopularShops extends GetView<HomeController> {
   const _PopularShops({required this.r});

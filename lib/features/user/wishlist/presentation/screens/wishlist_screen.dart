@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/features/business_owner/home/screens/all_service_screen.dart';
+import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
 import 'package:fidden/features/user/shops/presentation/screens/all_shops_screen.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/all_services_screen.dart';
+import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -141,6 +143,8 @@ class _ShopsTab extends StatelessWidget {
                 onTap: () =>
                     controller.removeShopFromWishlistByWishlistId(s.id!),
               ),
+              onTap: () =>
+                  Get.to(() => ShopDetailsScreen(id: s.id!.toString())),
             ),
           );
         },
@@ -189,6 +193,18 @@ class _ServicesTab extends StatelessWidget {
                 onTap: () =>
                     controller.removeServiceFromWishlistByWishlistId(s.id!),
               ),
+              onTap: () {
+                // If your model uses a different field name, change s.serviceId accordingly.
+                final sid = s.id; // mapped from JSON key "service_id"
+                if (sid != null) {
+                  Get.to(() => ServiceDetailsScreen(serviceId: sid));
+                } else {
+                  Get.snackbar(
+                    'Unavailable',
+                    'Service id missing for this item.',
+                  );
+                }
+              },
             ),
           );
         },
@@ -204,6 +220,7 @@ class _WishlistCard extends StatelessWidget {
     required this.subtitle,
     this.price,
     required this.trailing,
+    this.onTap,
   });
 
   final String? imageUrl;
@@ -211,125 +228,131 @@ class _WishlistCard extends StatelessWidget {
   final String subtitle;
   final String? price;
   final Widget trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final placeholder =
         'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Image with subtle gradient and optional price pill
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl ?? placeholder,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) =>
-                        Container(color: const Color(0xFFEFF1F5)),
-                    errorWidget: (_, __, ___) =>
-                        Container(color: const Color(0xFFEFF1F5)),
-                  ),
-                ),
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+            ],
+          ),
+          child: Column(
+            children: [
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl ?? placeholder,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) =>
+                            Container(color: const Color(0xFFEFF1F5)),
+                        errorWidget: (_, __, ___) =>
+                            Container(color: const Color(0xFFEFF1F5)),
                       ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.55),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.55),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (price != null && price!.trim().isNotEmpty)
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '\$${price!}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CustomText(
+                            text: title,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            maxLines: 1,
+                            textOverflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    trailing,
+                  ],
                 ),
               ),
-              if (price != null && price!.trim().isNotEmpty)
-                Positioned(
-                  right: 12,
-                  bottom: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '\$${price!}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14.5,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
-          // Text row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Row(
-              children: [
-                // title + subtitle
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CustomText(
-                        text: title,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        maxLines: 1,
-                        textOverflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                trailing,
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

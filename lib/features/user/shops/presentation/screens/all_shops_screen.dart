@@ -48,7 +48,7 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
   @override
   Widget build(BuildContext context) {
     final wishlistController =
-        Get.find<WishlistController>(); // 🚀 Get the controller
+        Get.find<WishlistController>(); //  Get the controller
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -282,7 +282,7 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
                                           ),
                                         ),
                                         child: Text(
-                                          "${((shop.distance ?? 0) / 1000).toStringAsFixed(2)} km",
+                                          "${((shop.distance ?? 0)).toStringAsFixed(2)} km",
                                           style: TextStyle(
                                             color: Colors.blue.shade700,
                                             fontWeight: FontWeight.w600,

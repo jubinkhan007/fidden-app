@@ -57,7 +57,7 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
           zoom: 14.0,
         ),
         onTap: _onTap,
-        // --- 🚀 MODIFIED MARKERS LOGIC ---
+        // ---  MODIFIED MARKERS LOGIC ---
         markers: {
           if (_selectedLocation != null)
             Marker(
@@ -68,7 +68,7 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
         },
         // --- END MODIFICATION ---
       ),
-      // --- 🚀 ADD FLOATING ACTION BUTTON ---
+      // ---  ADD FLOATING ACTION BUTTON ---
       floatingActionButton: FloatingActionButton(
         onPressed: _goToCurrentUserLocation,
         child: const Icon(Icons.my_location),
@@ -77,7 +77,7 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
     );
   }
 
-  // --- 🚀 ADD NEW METHOD TO GO TO CURRENT LOCATION ---
+  // ---  ADD NEW METHOD TO GO TO CURRENT LOCATION ---
   Future<void> _goToCurrentUserLocation() async {
     try {
       final position = await LocationService().getCurrentPosition();

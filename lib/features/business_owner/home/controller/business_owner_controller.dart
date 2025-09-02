@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:fidden/features/business_owner/home/model/business_owner_booking_model.dart';
 import 'package:fidden/features/business_owner/home/model/get_my_service_model.dart';
 import 'package:flutter/foundation.dart';
@@ -9,6 +8,7 @@ import 'package:get/get.dart';
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
+import '../../profile/controller/busines_owner_profile_controller.dart';
 
 class BusinessOwnerController extends GetxController {
   final pageController = PageController();
@@ -17,12 +17,66 @@ class BusinessOwnerController extends GetxController {
   final RxList<GetMyServiceModel> discountedServices =
       <GetMyServiceModel>[].obs;
   var allBusinessOwnerBookingOne = BusinessOwnerBookingModel().obs;
+  final shopMissing = false.obs;
+  final shopMissingMessage = ''.obs;
+
+  final isShopVerified = false.obs;
+  final verificationMessage = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
-    fetchAllMyService();
-    fetchBusinessOwnerBooking();
+    // Chain the calls to ensure correct order
+    _initProfileAndGuards().then((_) {
+      fetchAllMyService();
+      fetchBusinessOwnerBooking();
+    });
+  }
+
+  Future<void> refreshGuardsAndServices() async {
+    await _initProfileAndGuards();
+    await fetchAllMyService();
+  }
+
+  Future<void> _initProfileAndGuards() async {
+    try {
+      final profileController = Get.find<BusinessOwnerProfileController>();
+      await profileController.fetchProfileDetails();
+
+      final data = profileController.profileDetails.value.data;
+
+      if (data == null) {
+        // no shop
+        shopMissing.value = true;
+        shopMissingMessage.value =
+            'You must create a shop before adding services.';
+        isShopVerified.value = false;
+        verificationMessage.value = '';
+        return;
+      }
+
+      // ✅ Profile exists → clear the “missing” flag
+      shopMissing.value = false;
+      shopMissingMessage.value = '';
+
+      // If backend hasn’t set the flag yet, you can decide how strict to be:
+      // strict:
+      // final verified = (data.isVarified == true);
+      // permissive (treat null as verified so owners can add services):
+      final verified = (data.isVarified != false);
+
+      isShopVerified.value = verified;
+      verificationMessage.value = verified
+          ? ''
+          : 'Your shop is pending verification. Please complete verification to add services.';
+    } catch (e) {
+      debugPrint("Error initializing guards: $e");
+      // Be conservative, but don’t hard-lock the user forever
+      shopMissing.value = false; // don’t claim “no profile” on transient error
+      shopMissingMessage.value = '';
+      isShopVerified.value = true; // or false, depending on your policy
+      verificationMessage.value = '';
+    }
   }
 
   @override
@@ -30,38 +84,6 @@ class BusinessOwnerController extends GetxController {
     pageController.dispose();
     super.onClose();
   }
-
-  // Future<void> fetchAllMyService() async {
-  //   isLoading.value = true;
-  //   try {
-  //     final response = await NetworkCaller().getRequest(
-  //       AppUrls.getMyService,
-  //       token: AuthService.accessToken,
-  //     );
-
-  //     if (response.isSuccess) {
-  //       if (response.responseData is List) {
-  //         final serviceData = List<GetMyServiceModel>.from(
-  //           response.responseData.map((x) => GetMyServiceModel.fromJson(x)),
-  //         );
-  //         allServiceList.value = serviceData;
-  //         discountedServices.value = serviceData
-  //             .where(
-  //               (item) =>
-  //                   item.discountPrice != null &&
-  //                   double.tryParse(item.discountPrice!)! > 0,
-  //             )
-  //             .toList();
-  //       } else {
-  //         throw Exception('Unexpected response data format');
-  //       }
-  //     }
-  //   } catch (e) {
-  //     Get.snackbar('Error', 'An error occurred: $e');
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
 
   Future<void> fetchBusinessOwnerBooking() async {
     isLoading.value = true;
@@ -82,10 +104,6 @@ class BusinessOwnerController extends GetxController {
     }
   }
 
-  /// NEW: flag + message when API says “You must create a shop…”
-  final shopMissing = false.obs;
-  final shopMissingMessage = ''.obs;
-
   Future<void> fetchAllMyService() async {
     isLoading.value = true;
     shopMissing.value = false;
@@ -97,7 +115,6 @@ class BusinessOwnerController extends GetxController {
         token: AuthService.accessToken,
       );
 
-      // ---- debug: see exactly what came back
       if (kDebugMode) {
         debugPrint('[services] isSuccess=${res.isSuccess}');
         debugPrint('[services] status=${res.statusCode}');
@@ -107,7 +124,6 @@ class BusinessOwnerController extends GetxController {
 
       dynamic data = res.responseData;
 
-      // If body came as String, try parse JSON
       if (data is String) {
         try {
           data = json.decode(data);
@@ -116,23 +132,19 @@ class BusinessOwnerController extends GetxController {
         }
       }
 
-      // Success case: list => shop exists
       if (res.isSuccess && data is List) {
         final list = data.map((e) => GetMyServiceModel.fromJson(e)).toList();
         allServiceList.assignAll(list);
         return;
       }
 
-      // If backend sent {detail: "..."} with 200 or non-200
       String? detail;
       if (data is Map && data['detail'] != null) {
         detail = data['detail'].toString();
       } else if (data is String) {
-        // sometimes it's plain string
         detail = data;
       }
 
-      // If it's the “create shop” message or a 401/403-ish gate, flip the flag
       final lowerDetail = detail?.toLowerCase() ?? '';
       final isForbidden = (res.statusCode == 401 || res.statusCode == 403);
       if (lowerDetail.contains('create a shop') || isForbidden) {
@@ -144,17 +156,14 @@ class BusinessOwnerController extends GetxController {
         return;
       }
 
-      // Any other non-list or error => treat as empty (optional: toast)
       allServiceList.clear();
     } catch (e) {
       allServiceList.clear();
       if (kDebugMode) debugPrint('[services] error: $e');
-      // optional: Get.snackbar('Error', 'Failed to load services');
     } finally {
       isLoading.value = false;
     }
   }
 
-  /// Guard to prevent adding services if shop missing
-  bool get canAddService => !shopMissing.value;
+  bool get canAddService => !shopMissing.value && isShopVerified.value;
 }

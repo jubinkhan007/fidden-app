@@ -44,7 +44,7 @@ class AllServicesScreen extends StatelessWidget {
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        // --- 🚀 DYNAMICALLY SET TITLE ---
+        // ---  DYNAMICALLY SET TITLE ---
         title: CustomText(
           text: categoryName ?? "All Services", // Use category name if provided
           fontSize: getWidth(20),
@@ -268,7 +268,7 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wishlistController =
-        Get.find<WishlistController>(); // 🚀 Get the controller
+        Get.find<WishlistController>(); //  Get the controller
 
     return Material(
       color: Colors.transparent,
@@ -445,7 +445,7 @@ class _ServiceCard extends StatelessWidget {
                         Row(
                           children: [
                             Text(
-                              // --- 🚀 CHANGE IS HERE ---
+                              // ---  CHANGE IS HERE ---
                               'View Service', // Changed from 'View Shop'
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,

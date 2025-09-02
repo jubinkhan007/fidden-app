@@ -82,6 +82,9 @@ class Data {
   DateTime? createdAt;
   DateTime? updatedAt;
 
+  bool? isVarified;
+  String? status;
+
   Data({
     this.id,
     this.userId,
@@ -102,6 +105,8 @@ class Data {
     this.longitude,
     this.createdAt,
     this.updatedAt,
+    this.isVarified,
+    this.status,
   });
 
   /// All 7 days for computing openDays
@@ -247,6 +252,8 @@ class Data {
       longitude: lon,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      isVarified: json['is_varified'] as bool?,
+      status: json['status'] as String?,
     );
   }
 
@@ -280,6 +287,8 @@ class Data {
       // NOTE: API doesn’t accept open_days; it infers from close_days.
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'is_varified': false,
+      'status': status,
     };
   }
 }

@@ -170,20 +170,33 @@ class _AddBusinessOwnerProfileScreenState
                     readOnly: true,
                     suffixIcon: GestureDetector(
                       onTap: () async {
-                        LatLng? selectedLocation = await Get.to(
-                          () => MapScreenProfile(),
+                        final LatLng? selected = await Get.to(
+                          () => const MapScreenProfile(),
                         );
-                        if (selectedLocation != null) {
-                          String address = await _getAddressFromLatLng(
-                            selectedLocation,
+                        if (selected == null) {
+                          Get.snackbar(
+                            'No location selected',
+                            'Tap on the map and press Done.',
                           );
-                          locationTEController.text = address;
-                          controller1.lat.value = selectedLocation.latitude
-                              .toString();
-                          controller1.long.value = selectedLocation.longitude
-                              .toString();
+                          return;
                         }
+
+                        // save raw coords first
+                        controller1.lat.value = selected.latitude
+                            .toStringAsFixed(6);
+                        controller1.long.value = selected.longitude
+                            .toStringAsFixed(6);
+
+                        var address = await _getAddressFromLatLng(selected);
+                        if (address.trim().isEmpty) {
+                          address =
+                              "${controller1.lat.value}, ${controller1.long.value}";
+                        }
+
+                        locationTEController.text = address;
+                        if (mounted) setState(() {});
                       },
+
                       child: const Icon(
                         Icons.location_on_outlined,
                         color: AppColors.primaryColor,
@@ -356,7 +369,7 @@ class _AddBusinessOwnerProfileScreenState
                         );
                       },
                       child: Text(
-                        "Save & Continue",
+                        "Save",
                         style: TextStyle(
                           fontSize: getWidth(18),
                           fontWeight: FontWeight.w700,
@@ -374,17 +387,33 @@ class _AddBusinessOwnerProfileScreenState
 
   Future<String> _getAddressFromLatLng(LatLng position) async {
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(
+      final placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks.first;
-        return "${place.street}, ${place.locality}, ${place.country}";
-      }
-      return "Unknown location";
-    } catch (e) {
-      return "Failed to get address";
+      if (placemarks.isEmpty) return "Unknown location";
+
+      final p = placemarks.first;
+
+      // Filter out auto-generated Plus Codes from the address
+      bool looksLikePlusCode(String? s) =>
+          s != null && s.contains('+') && RegExp(r'^[A-Z0-9+\s]+$').hasMatch(s);
+
+      // Build a more complete address from multiple fields
+      final parts = <String>[
+        if (!looksLikePlusCode(p.street) && (p.street ?? '').isNotEmpty)
+          p.street!,
+        if ((p.subLocality ?? '').isNotEmpty) p.subLocality!,
+        if ((p.locality ?? '').isNotEmpty) p.locality!,
+        if ((p.administrativeArea ?? '').isNotEmpty) p.administrativeArea!,
+        if ((p.postalCode ?? '').isNotEmpty) p.postalCode!,
+        if ((p.country ?? '').isNotEmpty) p.country!,
+      ];
+
+      return parts.join(', ');
+    } catch (_) {
+      // Fallback if geocoding fails
+      return "${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}";
     }
   }
 }

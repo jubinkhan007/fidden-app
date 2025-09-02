@@ -69,16 +69,17 @@ class NetworkCaller {
     try {
       final http.Response response = await http
           .post(
-            // Use the 'http' alias
             Uri.parse(endpoint),
             headers: {
               if (token != null && token.isNotEmpty)
                 'Authorization': 'Bearer $token',
-              'Content-type': 'application/json',
+              'Content-Type': 'application/json', // <- use this canonical key
             },
             body: jsonEncode(body),
           )
           .timeout(Duration(seconds: timeoutDuration));
+
+      // ✅ One path: centralize in _handleResponse
       return _handleResponse(response);
     } catch (e) {
       return _handleError(e);
@@ -204,16 +205,19 @@ class NetworkCaller {
         return ResponseData(
           isSuccess: false,
           statusCode: code,
-          errorMessage: 'User already exists.',
-          responseData: null,
+          errorMessage: extractErrorMessage(raw), // instead of hard-coded text
+          responseData: decoded,
         );
       case 400:
-        return ResponseData(
-          isSuccess: false,
-          statusCode: code,
-          errorMessage: 'Bad request.',
-          responseData: null,
-        );
+        {
+          final friendly = extractErrorMessage(raw);
+          return ResponseData(
+            isSuccess: false,
+            statusCode: code,
+            errorMessage: friendly.isNotEmpty ? friendly : 'Bad request.',
+            responseData: decoded,
+          );
+        }
       case 500:
         return ResponseData(
           isSuccess: false,
@@ -222,17 +226,23 @@ class NetworkCaller {
           responseData: null,
         );
       default:
-        final msg = (decoded is Map && decoded['detail'] != null)
-            ? decoded['detail'].toString()
-            : (decoded is Map && decoded['error'] != null)
-            ? decoded['error'].toString()
-            : 'Something went wrong. Please try again.';
-        return ResponseData(
-          isSuccess: false,
-          statusCode: code,
-          errorMessage: msg,
-          responseData: null,
-        );
+        {
+          // Try to extract a helpful message from the body first
+          final friendly = extractErrorMessage(raw);
+          final msg = (friendly.isNotEmpty)
+              ? friendly
+              : (decoded is Map && decoded['detail'] != null)
+              ? decoded['detail'].toString()
+              : (decoded is Map && decoded['error'] != null)
+              ? decoded['error'].toString()
+              : 'Something went wrong. Please try again.';
+          return ResponseData(
+            isSuccess: false,
+            statusCode: code,
+            errorMessage: msg,
+            responseData: decoded,
+          );
+        }
     }
   }
 
@@ -264,5 +274,49 @@ class NetworkCaller {
         responseData: null,
       );
     }
+  }
+
+  String extractErrorMessage(String body) {
+    try {
+      final decoded = json.decode(body);
+
+      // Django REST Framework common shapes:
+
+      // 1) {"detail": "Something"}  OR {"non_field_errors": ["..."]}
+      if (decoded is Map<String, dynamic>) {
+        if (decoded['detail'] is String) return decoded['detail'];
+
+        // 2) Field errors: {"email": ["user with this email already exists."]}
+        if (decoded.values.any((v) => v is List)) {
+          final buf = StringBuffer();
+          decoded.forEach((key, value) {
+            if (value is List && value.isNotEmpty) {
+              final msg = value.first.toString();
+              // prettify key
+              final prettyKey = key == 'non_field_errors'
+                  ? ''
+                  : '${key[0].toUpperCase()}${key.substring(1)}: ';
+              buf.writeln('$prettyKey$msg');
+            }
+          });
+          final text = buf.toString().trim();
+          if (text.isNotEmpty) return text;
+        }
+
+        // 3) Flat strings map: {"error": "message"}
+        final firstString = decoded.values.firstWhere(
+          (v) => v is String,
+          orElse: () => null,
+        );
+        if (firstString is String && firstString.isNotEmpty) return firstString;
+      }
+
+      // If it's just a string JSON, return it
+      if (decoded is String && decoded.isNotEmpty) return decoded;
+    } catch (_) {
+      // body wasn't JSON; fall through
+    }
+    // ultimate fallback
+    return 'Something went wrong. Please try again.';
   }
 }

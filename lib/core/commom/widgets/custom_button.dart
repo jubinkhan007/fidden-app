@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../../utils/constants/app_colors.dart';
@@ -18,7 +17,7 @@ class CustomButton extends StatelessWidget {
     this.borderColor,
   });
   final bool isPrimary;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final double? height;
   final double? width;
   final Widget child;
@@ -35,7 +34,8 @@ class CustomButton extends StatelessWidget {
         width: width,
         padding: padding ?? EdgeInsets.all(getWidth(13)),
         decoration: BoxDecoration(
-          color: color ??
+          color:
+              color ??
               (isPrimary ? Theme.of(context).primaryColor : AppColors.white),
           borderRadius: BorderRadius.circular(radious ?? 8),
           border: Border.all(
@@ -45,9 +45,7 @@ class CustomButton extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Center(
-          child: child,
-        ),
+        child: Center(child: child),
       ),
     );
   }

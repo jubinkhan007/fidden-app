@@ -1,3 +1,4 @@
+// lib/features/user/home/data/category_model.dart
 import 'dart:convert';
 
 List<CategoryModel> categoryModelFromJson(String str) =>
@@ -11,11 +12,19 @@ String categoryModelToJson(List<CategoryModel> data) =>
 class CategoryModel {
   int? id;
   String? name;
+  String? scImg; // <-- NEW
 
-  CategoryModel({this.id, this.name});
+  CategoryModel({this.id, this.name, this.scImg});
 
-  factory CategoryModel.fromJson(Map<String, dynamic> json) =>
-      CategoryModel(id: json["id"], name: json["name"]);
+  factory CategoryModel.fromJson(Map<String, dynamic> json) => CategoryModel(
+    id: json["id"],
+    name: json["name"],
+    scImg: json["sc_img"], // <-- NEW
+  );
 
-  Map<String, dynamic> toJson() => {"id": id, "name": name};
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "name": name,
+    "sc_img": scImg, // <-- NEW
+  };
 }

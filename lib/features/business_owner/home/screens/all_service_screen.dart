@@ -30,19 +30,28 @@ class AllServiceScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back_ios_new_outlined),
         ),
         actions: [
-          GestureDetector(
-            onTap: () {
-              Get.to(() => AddServiceScreen());
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Image.asset(
-                IconPath.plusIcon,
-                height: getHeight(26),
-                width: getWidth(26),
+          Obx(() {
+            // Disable the button if the user can't add a service
+            final canAdd = controller.canAddService;
+            return GestureDetector(
+              onTap: canAdd
+                  ? () => Get.to(() => AddServiceScreen())
+                  : () => Get.snackbar(
+                      "No Business Profile",
+                      "Please create a business profile before adding services.",
+                      snackPosition: SnackPosition.BOTTOM,
+                    ),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Image.asset(
+                  IconPath.plusIcon,
+                  height: getHeight(26),
+                  width: getWidth(26),
+                  color: canAdd ? null : Colors.grey, // Visual feedback
+                ),
               ),
-            ),
-          ),
+            );
+          }),
         ],
       ),
       body: RefreshIndicator(

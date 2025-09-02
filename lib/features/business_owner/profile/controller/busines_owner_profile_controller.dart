@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
+import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
 import 'package:fidden/features/business_owner/profile/services/shop_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:fidden/core/services/Auth_service.dart';
@@ -13,8 +14,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../data/business_profile_model.dart';
-
-final RxSet<String> openDays = <String>{}.obs;
 
 class BusinessOwnerProfileController extends GetxController {
   final RxSet<String> openDays = <String>{}.obs;
@@ -141,6 +140,8 @@ class BusinessOwnerProfileController extends GetxController {
 
   var profileDetails = GetBusinesModel().obs;
 
+  // lib/features/business_owner/profile/controller/busines_owner_profile_controller.dart
+
   Future<void> fetchProfileDetails() async {
     isLoading.value = true;
     try {
@@ -151,22 +152,34 @@ class BusinessOwnerProfileController extends GetxController {
 
       if (response.isSuccess) {
         if (response.responseData is Map<String, dynamic>) {
-          // 1. Directly parse the response into the Data object.
-          final data = Data.fromJson(response.responseData);
-
-          // 2. Manually construct the parent GetBusinesModel.
-          profileDetails.value = GetBusinesModel(
-            success: true,
-            statusCode: response.statusCode,
-            message: "Profile loaded successfully",
-            data: data,
+          // ---  CORRECTED LOGIC ---
+          // Use the model's built-in factory method. It correctly handles
+          // both wrapped (e.g., { "data": {...} }) and unwrapped API responses.
+          profileDetails.value = GetBusinesModel.fromJson(
+            response.responseData,
           );
+          // --- END CORRECTION ---
         } else {
-          throw Exception('Unexpected response data format');
+          // This handles cases where the response is not a valid map.
+          profileDetails.value = GetBusinesModel(data: null);
+          AppSnackBar.showError('Received invalid profile data format.');
         }
+      } else {
+        // This handles API call failures (e.g. 404, 500)
+        profileDetails.value = GetBusinesModel(data: null);
+        AppSnackBar.showError(
+          response.errorMessage ?? 'Failed to fetch profile.',
+        );
       }
     } catch (e) {
-      Get.snackbar('Error', 'An error occurred: $e');
+      profileDetails.value = GetBusinesModel(
+        data: null,
+      ); // Ensure data is null on error
+      Get.snackbar(
+        'Error',
+        'An error occurred while fetching profile details: $e',
+      );
+      log('Fetch profile details error: $e');
     } finally {
       isLoading.value = false;
     }
@@ -214,8 +227,27 @@ class BusinessOwnerProfileController extends GetxController {
       );
 
       if (resp.statusCode == 200 || resp.statusCode == 201) {
+        // Read and decode response body
+        final bodyStr = await resp.stream.bytesToString();
+        Map<String, dynamic> bodyJson;
+        try {
+          bodyJson = json.decode(bodyStr) as Map<String, dynamic>;
+        } catch (_) {
+          bodyJson = <String, dynamic>{};
+        }
+
+        // Update local model from server response (if it’s the object or wrapped)
+        profileDetails.value = GetBusinesModel.fromJson(bodyJson);
+
         AppSnackBar.showSuccess("Business Profile created successfully!");
-        await fetchProfileDetails();
+
+        // Refresh guards in the service controller so the banner disappears
+        final svc = Get.isRegistered<BusinessOwnerController>()
+            ? Get.find<BusinessOwnerController>()
+            : null;
+        await svc?.refreshGuardsAndServices();
+
+        // Navigate
         Get.offNamed('/all-services');
       } else {
         final body = await resp.stream.bytesToString();
@@ -422,6 +454,33 @@ class BusinessOwnerProfileController extends GetxController {
       AppSnackBar.showError(
         "Failed to update business profile. Please try again.",
       );
+    }
+  }
+
+  Future<void> deleteBusinessProfile(String shopId) async {
+    isLoading.value = true;
+    try {
+      final response = await NetworkCaller().deleteRequest(
+        AppUrls.deleteShop(shopId),
+        token: AuthService.accessToken,
+      );
+
+      if (response.isSuccess) {
+        AppSnackBar.showSuccess("Business Profile deleted successfully!");
+        // Pop twice to close the dialog and the edit screen
+        Get.back();
+        Get.back();
+        // Optionally refresh the previous screen's data if needed
+      } else {
+        AppSnackBar.showError(
+          response.errorMessage ?? 'Failed to delete profile.',
+        );
+      }
+    } catch (e) {
+      log('Delete profile error: $e');
+      AppSnackBar.showError('An error occurred while deleting the profile.');
+    } finally {
+      isLoading.value = false;
     }
   }
 }

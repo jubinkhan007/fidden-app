@@ -32,6 +32,9 @@ class AppUrls {
   static getNearByService({required String lat, required String lon}) =>
       '$_baseUrl/find-near-by?myLat=$lat&myLon=$lon';
 
+  //Globla Search
+  static String globalSearch(String q) => '${_baseUrl}/api/global-search/?q=$q';
+
   // Seller
   static const String getMyService = '$_baseUrl/api/services/';
   static const String getMBusinessProfile = '$_baseUrl/api/shop/';
@@ -39,6 +42,7 @@ class AppUrls {
       '$_baseUrl/business-profile?rate=4';
   static const String businessProfile = '$_baseUrl/api/shop/';
   static editBusinessProfile(String id) => '$_baseUrl/api/shop/$id/';
+  static deleteShop(String id) => '$_baseUrl/api/shop/$id/';
   static getSingleService(String id) => '$_baseUrl/api/services/$id/';
   static updateService(String id) => '$_baseUrl/api/services/$id/';
 

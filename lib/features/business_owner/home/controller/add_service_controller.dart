@@ -93,7 +93,7 @@ class AddServiceController extends GetxController {
   Future<void> createService() async {
     inProgress.value = true;
 
-    // --- 🚀 CHANGE IS HERE ---
+    // ---  CHANGE IS HERE ---
     final price = priceTEController.text;
     final discountPriceText = discountPriceTEController.text;
     final currentStatus = singleServiceDetails.value.isActive ?? true;
@@ -181,7 +181,7 @@ class AddServiceController extends GetxController {
   Future<void> updateService({required String id}) async {
     inProgress.value = true;
 
-    // --- 🚀 CHANGE IS HERE ---
+    // ---  CHANGE IS HERE ---
     final price = priceTEController.text;
     final discountPriceText = discountPriceTEController.text;
     final currentStatus = singleServiceDetails.value.isActive ?? true;
