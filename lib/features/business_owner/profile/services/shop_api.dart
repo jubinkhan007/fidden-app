@@ -1,6 +1,7 @@
 // lib/core/services/shop_api.dart
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -31,6 +32,7 @@ class ShopApi {
     String? latitude,
     String? longitude,
     String? imagePath,
+    required List<File> documents,
     required String token,
   }) async {
     final startAt = toApiTime(startAtUi);
@@ -69,6 +71,16 @@ class ShopApi {
       );
     }
 
+    for (var file in documents) {
+      req.files.add(
+        await http.MultipartFile.fromPath(
+          'verification_files',
+          file.path,
+          contentType: MediaType('application', 'octet-stream'),
+        ),
+      );
+    }
+
     log('Uploading multipart to $url');
     log('Fields: ${req.fields}');
     final streamed = await req.send();
@@ -84,23 +96,23 @@ class ShopApi {
   }
 
   static Future<http.StreamedResponse> updateShopWithImage({
-    required String id, // "1"
+    required String id,
     required String name,
     required String address,
     required String aboutUs,
     required int capacity,
-    required String startAtUi, // "09:00 AM"
-    required String closeAtUi, // "06:00 PM"
-    required List<String> closeDays, // ["monday","tuesday"]
-    String? latitude, // "23.78"
-    String? longitude, // "90.41"
-    String? imagePath, // local file path
-    required String token, // Bearer token
+    required String startAtUi,
+    required String closeAtUi,
+    required List<String> closeDays,
+    String? latitude,
+    String? longitude,
+    String? imagePath,
+    required List<File> documents,
+    required String token,
   }) async {
     final startAt = toApiTime(startAtUi);
     final closeAt = toApiTime(closeAtUi);
 
-    // Build "lat,long" (no space) only if valid
     String? location;
     final lat = double.tryParse(latitude ?? '');
     final lon = double.tryParse(longitude ?? '');
@@ -108,37 +120,49 @@ class ShopApi {
       location = '$lat,$lon';
     }
 
-    final url = Uri.parse(
-      AppUrls.editBusinessProfile(id), // note trailing slash
-    );
-
-    final req = http.MultipartRequest('PUT', url);
+    final url = Uri.parse(AppUrls.editBusinessProfile(id));
+    final req = http.MultipartRequest('PATCH', url);
     req.headers['Authorization'] = 'Bearer $token';
 
-    // Text fields
+    // --- Text fields ---
     req.fields['name'] = name;
     req.fields['address'] = address;
     req.fields['about_us'] = aboutUs;
     req.fields['capacity'] = capacity.toString();
-    req.fields['start_at'] = startAt; // "HH:mm:ss"
-    req.fields['close_at'] = closeAt; // "HH:mm:ss"
+    req.fields['start_at'] = startAt;
+    req.fields['close_at'] = closeAt;
     if (location != null) req.fields['location'] = location;
-
-    // close_days as JSON string (works well with DRF)
     req.fields['close_days'] = jsonEncode(
       closeDays.map((e) => e.toLowerCase()).toList(),
     );
 
-    // File
+    // --- Shop image file ---
     if (imagePath != null && imagePath.isNotEmpty) {
       req.files.add(
         await http.MultipartFile.fromPath(
-          'shop_img', // server expects this field name
+          'shop_img',
           imagePath,
           contentType: MediaType('image', 'jpeg'),
         ),
       );
     }
+
+    // --- 🚀 CORRECTION FOR VERIFICATION FILES ---
+    // Only add files to the request if the user has selected new ones.
+    // If `documents` is empty, the `verification_files` field will not be sent,
+    // and the backend should not clear the existing files.
+    if (documents.isNotEmpty) {
+      for (var file in documents) {
+        req.files.add(
+          await http.MultipartFile.fromPath(
+            'verification_files',
+            file.path,
+            contentType: MediaType('application', 'octet-stream'),
+          ),
+        );
+      }
+    }
+    // --- END CORRECTION (The else block has been removed) ---
 
     log('Uploading multipart to $url');
     log('Fields: ${req.fields}');

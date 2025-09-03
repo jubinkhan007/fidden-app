@@ -2,6 +2,7 @@
 
 import 'package:fidden/core/utils/constants/app_sizes.dart';
 import 'package:fidden/core/utils/constants/icon_path.dart';
+import 'package:fidden/features/inbox/screens/inbox_screen.dart';
 import 'package:fidden/features/user/booking/presentation/screens/booking_screen.dart';
 import 'package:fidden/features/user/home/presentation/screen/home_screen.dart';
 // import 'package:fidden/features/user/booking/presentation/screens/booking_screen.dart';
@@ -21,14 +22,25 @@ class UserNavBarController extends GetxController {
     _selectedIndex.value = index;
   }
 
-  final List<Widget> screens = [HomeScreen(), BookingScreen(), ProfileScreen()];
+  final List<Widget> screens = [
+    HomeScreen(),
+    BookingScreen(),
+    const InboxScreen(),
+    ProfileScreen(),
+  ];
 
-  final List<String> labels = const ['Home', "Booking", 'Profile'];
+  final List<String> labels = const ['Home', "Booking", "Inbox", 'Profile'];
 
   final List activeIcons = [
     Image.asset(IconPath.homeActive, height: getWidth(24), width: getWidth(24)),
     Image.asset(
       IconPath.bookingActive,
+      height: getWidth(24),
+      width: getWidth(24),
+    ),
+    Image.asset(
+      IconPath.messageIcon,
+      color: Colors.deepPurpleAccent,
       height: getWidth(24),
       width: getWidth(24),
     ),
@@ -47,6 +59,11 @@ class UserNavBarController extends GetxController {
     ),
     Image.asset(
       IconPath.bookingInActive,
+      height: getWidth(20),
+      width: getWidth(20),
+    ),
+    Image.asset(
+      IconPath.messageIcon,
       height: getWidth(20),
       width: getWidth(20),
     ),

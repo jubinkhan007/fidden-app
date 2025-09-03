@@ -29,6 +29,7 @@ class AddBusinessOwnerProfileScreen extends StatefulWidget {
 
 class _AddBusinessOwnerProfileScreenState
     extends State<AddBusinessOwnerProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
   final controller1 = Get.find<BusinessOwnerProfileController>();
   final nameTEController = TextEditingController();
   final aboutUsTEController = TextEditingController();
@@ -54,6 +55,58 @@ class _AddBusinessOwnerProfileScreenState
     capacityTEController.dispose();
     locationTEController.dispose();
     super.dispose();
+  }
+
+  Widget _buildFilePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CustomText(
+          text: "Verification Documents",
+          color: const Color(0xff141414),
+          fontSize: getWidth(17),
+          fontWeight: FontWeight.w600,
+        ),
+        SizedBox(height: getHeight(10)),
+        GestureDetector(
+          onTap: () => controller1.pickDocuments(),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Obx(() {
+              if (controller1.documents.isEmpty) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.upload_file, color: Colors.grey),
+                    SizedBox(width: getWidth(10)),
+                    const Text("Select documents (images, pdf, etc.)"),
+                  ],
+                );
+              }
+              return Wrap(
+                spacing: 8.0,
+                runSpacing: 4.0,
+                children: controller1.documents.map((file) {
+                  return Chip(
+                    label: Text(
+                      file.path.split('/').last,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onDeleted: () => controller1.documents.remove(file),
+                  );
+                }).toList(),
+              );
+            }),
+          ),
+        ),
+        SizedBox(height: getHeight(24)),
+      ],
+    );
   }
 
   @override
@@ -94,292 +147,356 @@ class _AddBusinessOwnerProfileScreenState
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: getWidth(24)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: getHeight(24)),
-            Obx(
-              () => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: Stack(
-                      children: [
-                        SizedBox(
-                          width: getWidth(150),
-                          height: getHeight(150),
-                          child: CircleAvatar(
-                            backgroundImage:
-                                controller1.profileImage.value != null
-                                ? FileImage(controller1.profileImage.value!)
-                                : controller1
-                                          .profileDetails
-                                          .value
-                                          .data
-                                          ?.image !=
-                                      null
-                                ? NetworkImage(
-                                    "${controller1.profileDetails.value.data?.image}",
-                                  )
-                                : const AssetImage(ImagePath.profileImage)
-                                      as ImageProvider,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: getHeight(24)),
+              Obx(
+                () => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.center,
+                      child: Stack(
+                        children: [
+                          SizedBox(
+                            width: getWidth(150),
+                            height: getHeight(150),
+                            child: CircleAvatar(
+                              backgroundImage:
+                                  controller1.profileImage.value != null
+                                  ? FileImage(controller1.profileImage.value!)
+                                  : controller1
+                                            .profileDetails
+                                            .value
+                                            .data
+                                            ?.image !=
+                                        null
+                                  ? NetworkImage(
+                                      "${controller1.profileDetails.value.data?.image}",
+                                    )
+                                  : const AssetImage(ImagePath.profileImage)
+                                        as ImageProvider,
+                            ),
                           ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          bottom: 10,
-                          child: GestureDetector(
-                            onTap: () {
-                              controller1.pickImage();
-                            },
-                            child: SizedBox(
-                              height: getHeight(35),
-                              width: getWidth(35),
-                              child: CircleAvatar(
-                                backgroundColor: Colors.white,
-                                child: Image.asset(
-                                  IconPath.uploadImageIcon,
-                                  height: getHeight(17),
-                                  width: getWidth(17),
+                          Positioned(
+                            right: 0,
+                            bottom: 10,
+                            child: GestureDetector(
+                              onTap: () {
+                                controller1.pickImage();
+                              },
+                              child: SizedBox(
+                                height: getHeight(35),
+                                width: getWidth(35),
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.white,
+                                  child: Image.asset(
+                                    IconPath.uploadImageIcon,
+                                    height: getHeight(17),
+                                    width: getWidth(17),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: getHeight(20)),
-                  CustomTextAndTextFormField(
-                    controller: nameTEController,
-                    text: 'Shop Name',
-                    hintText: "Enter your shop name",
-                  ),
-                  VerticalSpace(height: getHeight(20)),
-                  CustomText(
-                    text: "Address",
-                    color: const Color(0xff141414),
-                    fontSize: getWidth(17),
-                    fontWeight: FontWeight.w600,
-                  ),
-                  SizedBox(height: getHeight(10)),
-                  CustomTexFormField(
-                    hintText: 'Select your address',
-                    controller: locationTEController,
-                    readOnly: true,
-                    suffixIcon: GestureDetector(
-                      onTap: () async {
-                        final LatLng? selected = await Get.to(
-                          () => const MapScreenProfile(),
-                        );
-                        if (selected == null) {
-                          Get.snackbar(
-                            'No location selected',
-                            'Tap on the map and press Done.',
+                    SizedBox(height: getHeight(20)),
+                    CustomTextAndTextFormField(
+                      controller: nameTEController,
+                      text: 'Shop Name',
+                      hintText: "Enter your shop name",
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Shop name is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    VerticalSpace(height: getHeight(20)),
+                    CustomText(
+                      text: "Address",
+                      color: const Color(0xff141414),
+                      fontSize: getWidth(17),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    SizedBox(height: getHeight(10)),
+                    CustomTexFormField(
+                      hintText: 'Select your address',
+                      controller: locationTEController,
+                      readOnly: true,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Address is required';
+                        }
+                        return null;
+                      },
+                      suffixIcon: GestureDetector(
+                        onTap: () async {
+                          final LatLng? selected = await Get.to(
+                            () => const MapScreenProfile(),
                           );
-                          return;
-                        }
+                          if (selected == null) {
+                            Get.snackbar(
+                              'No location selected',
+                              'Tap on the map and press Done.',
+                            );
+                            return;
+                          }
 
-                        // save raw coords first
-                        controller1.lat.value = selected.latitude
-                            .toStringAsFixed(6);
-                        controller1.long.value = selected.longitude
-                            .toStringAsFixed(6);
+                          // save raw coords first
+                          controller1.lat.value = selected.latitude
+                              .toStringAsFixed(6);
+                          controller1.long.value = selected.longitude
+                              .toStringAsFixed(6);
 
-                        var address = await _getAddressFromLatLng(selected);
-                        if (address.trim().isEmpty) {
-                          address =
-                              "${controller1.lat.value}, ${controller1.long.value}";
-                        }
+                          var address = await _getAddressFromLatLng(selected);
+                          if (address.trim().isEmpty) {
+                            address =
+                                "${controller1.lat.value}, ${controller1.long.value}";
+                          }
 
-                        locationTEController.text = address;
-                        if (mounted) setState(() {});
-                      },
+                          locationTEController.text = address;
+                          if (mounted) setState(() {});
+                        },
 
-                      child: const Icon(
-                        Icons.location_on_outlined,
-                        color: AppColors.primaryColor,
-                      ),
-                    ),
-                  ),
-                  VerticalSpace(height: getHeight(20)),
-                  CustomTextAndTextFormField(
-                    controller: capacityTEController,
-                    text: 'Shop Capacity',
-                    hintText: "Capacity of your shop",
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Capacity is required';
-                      }
-                      if (int.tryParse(value) == null) {
-                        return 'Please enter a valid number';
-                      }
-                      return null;
-                    },
-                  ),
-                  VerticalSpace(height: getHeight(20)),
-                  CustomTextAndTextFormField(
-                    controller: aboutUsTEController,
-                    text: 'About Us',
-                    hintText: "Write here",
-                    maxLines: 3,
-                  ),
-                  VerticalSpace(height: getHeight(20)),
-                ],
-              ),
-            ),
-            CustomText(
-              text: "Business Hours",
-              color: const Color(0xff141414),
-              fontSize: getWidth(17),
-              fontWeight: FontWeight.w600,
-            ),
-            const SizedBox(height: 12),
-
-            // Times (explicit labels, no seconds)
-            Obx(() {
-              return Row(
-                children: [
-                  Expanded(
-                    child: _timeTile(
-                      label: 'Opens at',
-                      value: controller1.startTime.value.isEmpty
-                          ? (controller1.profileDetails.value.data?.startTime ??
-                                '09:00 AM')
-                          : controller1.startTime.value,
-                      onTap: () async {
-                        final t = await showTimePicker(
-                          context: context,
-                          initialTime: _parseOrNow(
-                            controller1.startTime.value.isEmpty
-                                ? (controller1
-                                          .profileDetails
-                                          .value
-                                          .data
-                                          ?.startTime ??
-                                      '09:00 AM')
-                                : controller1.startTime.value,
-                          ),
-                        );
-                        if (t != null) {
-                          controller1.startTime.value = t.format(
-                            context,
-                          ); // <-- no seconds
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _timeTile(
-                      label: 'Closes at',
-                      value: controller1.endTime.value.isEmpty
-                          ? (controller1.profileDetails.value.data?.endTime ??
-                                '08:00 PM')
-                          : controller1.endTime.value,
-                      onTap: () async {
-                        final t = await showTimePicker(
-                          context: context,
-                          initialTime: _parseOrNow(
-                            controller1.endTime.value.isEmpty
-                                ? (controller1
-                                          .profileDetails
-                                          .value
-                                          .data
-                                          ?.endTime ??
-                                      '08:00 PM')
-                                : controller1.endTime.value,
-                          ),
-                        );
-                        if (t != null) {
-                          controller1.endTime.value = t.format(
-                            context,
-                          ); // <-- no seconds
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              );
-            }),
-
-            SizedBox(height: getHeight(16)),
-
-            // One card to select multiple OPEN days
-            _DaysMultiSelectCard(
-              title: 'Open Days',
-              selectedDays: controller1
-                  .openDays, // RxSet<String> in controller (see below)
-              onChanged: (set) => controller1.openDays.value = set.toSet(),
-            ),
-
-            SizedBox(height: getHeight(12)),
-
-            // Closed days shown differently (computed)
-            Obx(() {
-              final closed = _allDays
-                  .where((d) => !controller1.openDays.contains(d))
-                  .toList();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Closed on',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: closed.isEmpty
-                        ? [const Chip(label: Text('None'))]
-                        : closed
-                              .map(
-                                (d) => Chip(
-                                  label: Text(d),
-                                  backgroundColor: const Color(
-                                    0xFFFFEBEE,
-                                  ), // light red
-                                  labelStyle: const TextStyle(
-                                    color: Color(0xFFB71C1C),
-                                  ),
-                                  shape: StadiumBorder(
-                                    side: BorderSide(color: Color(0xFFFFCDD2)),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                  ),
-                ],
-              );
-            }),
-            SizedBox(height: getHeight(24)),
-            Obx(
-              () => controller1.isLoading.value
-                  ? const SpinKitWave(color: AppColors.primaryColor, size: 30.0)
-                  : CustomButton(
-                      onPressed: () {
-                        controller1.createBusinessProfile(
-                          businessName: nameTEController.text,
-                          businessAddress: locationTEController.text,
-                          aboutUs: aboutUsTEController.text,
-                          capacity: capacityTEController.text,
-                        );
-                      },
-                      child: Text(
-                        "Save",
-                        style: TextStyle(
-                          fontSize: getWidth(18),
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                        child: const Icon(
+                          Icons.location_on_outlined,
+                          color: AppColors.primaryColor,
                         ),
                       ),
                     ),
-            ),
-            VerticalSpace(height: getHeight(42)),
-          ],
+                    VerticalSpace(height: getHeight(20)),
+                    CustomTextAndTextFormField(
+                      controller: capacityTEController,
+                      text: 'Shop Capacity',
+                      hintText: "Capacity of your shop",
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Capacity is required';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Please enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                    VerticalSpace(height: getHeight(20)),
+                    CustomTextAndTextFormField(
+                      controller: aboutUsTEController,
+                      text: 'About Us',
+                      hintText: "Write here",
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'About Us is required';
+                        }
+                        return null;
+                      },
+                      maxLines: 3,
+                    ),
+                    VerticalSpace(height: getHeight(20)),
+                  ],
+                ),
+              ),
+              CustomText(
+                text: "Business Hours",
+                color: const Color(0xff141414),
+                fontSize: getWidth(17),
+                fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 12),
+
+              // Times (explicit labels, no seconds)
+              Obx(() {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _timeTile(
+                        label: 'Opens at',
+                        value: controller1.startTime.value.isEmpty
+                            ? (controller1
+                                      .profileDetails
+                                      .value
+                                      .data
+                                      ?.startTime ??
+                                  '09:00 AM')
+                            : controller1.startTime.value,
+                        onTap: () async {
+                          final t = await showTimePicker(
+                            context: context,
+                            initialTime: _parseOrNow(
+                              controller1.startTime.value.isEmpty
+                                  ? (controller1
+                                            .profileDetails
+                                            .value
+                                            .data
+                                            ?.startTime ??
+                                        '09:00 AM')
+                                  : controller1.startTime.value,
+                            ),
+                          );
+                          if (t != null) {
+                            controller1.startTime.value = t.format(
+                              context,
+                            ); // <-- no seconds
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _timeTile(
+                        label: 'Closes at',
+                        value: controller1.endTime.value.isEmpty
+                            ? (controller1.profileDetails.value.data?.endTime ??
+                                  '08:00 PM')
+                            : controller1.endTime.value,
+                        onTap: () async {
+                          final t = await showTimePicker(
+                            context: context,
+                            initialTime: _parseOrNow(
+                              controller1.endTime.value.isEmpty
+                                  ? (controller1
+                                            .profileDetails
+                                            .value
+                                            .data
+                                            ?.endTime ??
+                                        '08:00 PM')
+                                  : controller1.endTime.value,
+                            ),
+                          );
+                          if (t != null) {
+                            controller1.endTime.value = t.format(
+                              context,
+                            ); // <-- no seconds
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }),
+
+              SizedBox(height: getHeight(16)),
+
+              // One card to select multiple OPEN days
+              _DaysMultiSelectCard(
+                title: 'Open Days',
+                selectedDays: controller1
+                    .openDays, // RxSet<String> in controller (see below)
+                onChanged: (set) => controller1.openDays.value = set.toSet(),
+              ),
+
+              SizedBox(height: getHeight(12)),
+
+              // Closed days shown differently (computed)
+              Obx(() {
+                final closed = _allDays
+                    .where((d) => !controller1.openDays.contains(d))
+                    .toList();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Closed on',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: closed.isEmpty
+                          ? [const Chip(label: Text('None'))]
+                          : closed
+                                .map(
+                                  (d) => Chip(
+                                    label: Text(d),
+                                    backgroundColor: const Color(
+                                      0xFFFFEBEE,
+                                    ), // light red
+                                    labelStyle: const TextStyle(
+                                      color: Color(0xFFB71C1C),
+                                    ),
+                                    shape: StadiumBorder(
+                                      side: BorderSide(
+                                        color: Color(0xFFFFCDD2),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                    ),
+                  ],
+                );
+              }),
+              SizedBox(height: getHeight(24)),
+              _buildFilePicker(),
+              Obx(
+                () => controller1.isLoading.value
+                    ? const SpinKitWave(
+                        color: AppColors.primaryColor,
+                        size: 30.0,
+                      )
+                    : CustomButton(
+                        onPressed: () {
+                          final formValid =
+                              _formKey.currentState?.validate() ?? false;
+
+                          if (!formValid) return;
+
+                          // extra checks
+                          if (controller1.startTime.value.isEmpty ||
+                              controller1.endTime.value.isEmpty) {
+                            Get.snackbar(
+                              'Missing info',
+                              'Please select opening and closing times.',
+                            );
+                            return;
+                          }
+                          if (controller1.openDays.isEmpty) {
+                            Get.snackbar(
+                              'Missing info',
+                              'Please select open days.',
+                            );
+                            return;
+                          }
+                          if (controller1.documents.isEmpty) {
+                            Get.snackbar(
+                              'Missing info',
+                              'Please upload verification documents.',
+                            );
+                            return;
+                          }
+
+                          controller1.createBusinessProfile(
+                            businessName: nameTEController.text,
+                            businessAddress: locationTEController.text,
+                            aboutUs: aboutUsTEController.text,
+                            capacity: capacityTEController.text,
+                          );
+                        },
+
+                        child: Text(
+                          "Save",
+                          style: TextStyle(
+                            fontSize: getWidth(18),
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+              ),
+              VerticalSpace(height: getHeight(42)),
+            ],
+          ),
         ),
       ),
     );

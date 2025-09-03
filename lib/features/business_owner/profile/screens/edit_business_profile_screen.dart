@@ -9,7 +9,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../../core/utils/constants/app_colors.dart';
 import '../../../../../core/utils/constants/app_sizes.dart';
-
 import '../../../../core/utils/constants/app_spacers.dart';
 import '../../../../core/utils/constants/icon_path.dart';
 import '../../../../core/utils/constants/image_path.dart';
@@ -55,15 +54,187 @@ class _EditBusinessOwnerProfileScreenState
     super.dispose();
   }
 
-  Widget _buildStatusBanner(String message) {
+  void _showDeleteConfirmationDialog() {
+    Get.defaultDialog(
+      title: "Delete Profile",
+      middleText:
+          "Are you sure you want to delete your business profile? This action cannot be undone.",
+      content: Obx(() {
+        if (controller1.isDeleting.value) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: CircularProgressIndicator(),
+          );
+        }
+        return const SizedBox.shrink();
+      }),
+      textConfirm: "Delete",
+      confirmTextColor: Colors.white,
+      textCancel: "Cancel",
+      // SIMPLIFY THE onConfirm LOGIC
+      onConfirm: controller1.isDeleting.value
+          ? null
+          : () {
+              // No async/await needed here
+              if (widget.id != null) {
+                // Just call the controller's method. It handles everything else.
+                controller1.deleteBusinessProfile(widget.id!);
+              }
+            },
+    );
+  }
+
+  // ---------- UI Helpers ----------
+
+  Widget _buildFilePicker({required bool isDisabled}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // CustomText(
+        //   text: "Verification Documents",
+        //   color: const Color(0xff141414),
+        //   fontSize: getWidth(17),
+        //   fontWeight: FontWeight.w600,
+        // ),
+        // SizedBox(height: getHeight(10)),
+        GestureDetector(
+          onTap: isDisabled ? null : () => controller1.pickDocuments(),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: isDisabled ? Colors.grey.shade300 : Colors.grey.shade400,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              color: isDisabled ? Colors.grey.shade100 : Colors.transparent,
+            ),
+            child: Obx(() {
+              // ---  CORRECTION IS HERE ---
+              final uploadedFiles =
+                  controller1.profileDetails.value.data?.verificationFiles ??
+                  [];
+              final newFiles = controller1.documents;
+              // --- END CORRECTION ---
+
+              if (uploadedFiles.isEmpty && newFiles.isEmpty) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.upload_file,
+                      color: isDisabled ? Colors.grey.shade400 : Colors.grey,
+                    ),
+                    SizedBox(width: getWidth(10)),
+                    Text(
+                      "Select documents (images, pdf, etc.)",
+                      style: TextStyle(
+                        color: isDisabled ? Colors.grey.shade400 : Colors.black,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Wrap(
+                spacing: 8.0,
+                runSpacing: 4.0,
+                children: [
+                  ...uploadedFiles.map(
+                    (fileUrl) => Chip(
+                      label: Text(
+                        fileUrl.file.split('/').last,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      backgroundColor: Colors.blue.shade50,
+                    ),
+                  ),
+                  ...newFiles.map(
+                    (file) => Chip(
+                      label: Text(
+                        file.path.split('/').last,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      onDeleted: isDisabled
+                          ? null
+                          : () => controller1.documents.remove(file),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ),
+        SizedBox(height: getHeight(24)),
+      ],
+    );
+  }
+
+  Widget _sectionCard({
+    required String title,
+    String? subtitle,
+    required List<Widget> children,
+    EdgeInsets padding = const EdgeInsets.fromLTRB(16, 14, 16, 16),
+  }) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.only(bottom: getHeight(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: getWidth(16),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: getWidth(12.5),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusBanner(String message) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12.0),
-      margin: EdgeInsets.only(bottom: getHeight(20)),
+      margin: EdgeInsets.only(bottom: getHeight(12)),
       decoration: BoxDecoration(
-        color: Colors.amber.shade100,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber.shade600, width: 1.5),
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade300, width: 1),
       ),
       child: Row(
         children: [
@@ -75,6 +246,7 @@ class _EditBusinessOwnerProfileScreenState
               style: TextStyle(
                 color: Colors.amber.shade900,
                 fontWeight: FontWeight.w500,
+                height: 1.3,
               ),
             ),
           ),
@@ -82,6 +254,228 @@ class _EditBusinessOwnerProfileScreenState
       ),
     );
   }
+
+  Widget _avatarPicker({required bool disabled}) {
+    return Center(
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: getWidth(60),
+            backgroundImage: controller1.profileImage.value != null
+                ? FileImage(controller1.profileImage.value!)
+                : controller1.profileDetails.value.data?.image != null
+                ? NetworkImage(
+                        "${controller1.profileDetails.value.data?.image}",
+                      )
+                      as ImageProvider
+                : const AssetImage(ImagePath.profileImage),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 2,
+            child: InkWell(
+              onTap: disabled ? null : () => controller1.pickImage(),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: disabled
+                      ? Colors.grey.shade300
+                      : AppColors.primaryColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.edit,
+                  size: 16,
+                  color: disabled ? Colors.grey.shade600 : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _addressPicker({required bool disabled}) {
+    final hint = 'Select your address';
+    final hasValue = locationTEController.text.trim().isNotEmpty;
+
+    return InkWell(
+      onTap: disabled ? null : _openMapFlow,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          color: disabled ? Colors.grey.shade100 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.location_on_outlined,
+              color: disabled ? Colors.grey : AppColors.primaryColor,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Address',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: getWidth(12.5),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasValue ? locationTEController.text : hint,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: getWidth(14),
+                      color: hasValue ? Colors.black : Colors.grey.shade500,
+                      fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.map_outlined,
+              color: disabled ? Colors.grey.shade400 : Colors.grey.shade700,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _timeTile({
+    required String label,
+    required String value,
+    required VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Row(
+          children: [
+            const Icon(Icons.access_time, color: Colors.grey),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(value, style: const TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+            Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _daysMultiSelect({required bool disabled}) {
+    return Obx(() {
+      final sel = controller1.openDays.toSet();
+      return InkWell(
+        onTap: disabled
+            ? null
+            : () async {
+                final result = await showModalBottomSheet<Set<String>>(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.white,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(18),
+                    ),
+                  ),
+                  builder: (_) => const _DaysPickerSheet(),
+                );
+                if (result != null) controller1.openDays.value = result.toSet();
+              },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            color: disabled ? Colors.grey.shade100 : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Open Days',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              sel.isEmpty
+                  ? Text(
+                      'Tap to choose days',
+                      style: TextStyle(color: Colors.grey.shade500),
+                    )
+                  : Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: sel
+                          .map(
+                            (d) => Chip(
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              label: Text(d),
+                              backgroundColor: const Color(0xFFE8F5E9),
+                              labelStyle: const TextStyle(
+                                color: Color(0xFF1B5E20),
+                              ),
+                              shape: const StadiumBorder(
+                                side: BorderSide(color: Color(0xFFC8E6C9)),
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          )
+                          .toList(),
+                    ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  // ---------- Build ----------
 
   @override
   Widget build(BuildContext context) {
@@ -94,21 +488,22 @@ class _EditBusinessOwnerProfileScreenState
       'Saturday',
       'Sunday',
     ];
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
-        backgroundColor: const Color(0xffffffff),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
         leading: IconButton(
-          onPressed: () {
-            Get.back();
-          },
-          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Get.back(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
         title: CustomText(
           text: "Business Profile",
           color: const Color(0xff212121),
           fontWeight: FontWeight.bold,
-          fontSize: getWidth(24),
+          fontSize: getWidth(20),
         ),
         centerTitle: true,
         actions: [
@@ -119,446 +514,282 @@ class _EditBusinessOwnerProfileScreenState
           ),
         ],
       ),
+      // Sticky bottom actions
+      bottomNavigationBar: Obx(() {
+        final isPending =
+            controller1.profileDetails.value.data?.status == 'pending';
+        return SafeArea(
+          top: false,
+          child: Container(
+            // clamp the bar
+            height: 76,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48, // clamp the button
+                    child: OutlinedButton(
+                      onPressed: isPending
+                          ? null
+                          // CALL THE NEW DIALOG METHOD
+                          : () => _showDeleteConfirmationDialog(),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.red.shade300),
+                        shape: const StadiumBorder(),
+                      ),
+                      child: Text(
+                        "Delete",
+                        style: TextStyle(
+                          color: isPending ? Colors.grey : Colors.red.shade700,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: SizedBox(
+                    height: 48, // clamp the button
+                    child: controller1.isLoading.value
+                        ? const Center(
+                            child: SpinKitWave(
+                              color: AppColors.primaryColor,
+                              size: 26,
+                            ),
+                          )
+                        : CustomButton(
+                            onPressed: isPending
+                                ? null
+                                : () {
+                                    controller1.updateBusinessProfile(
+                                      businessName: nameTEController.text,
+                                      businessAddress:
+                                          locationTEController.text,
+                                      aboutUs: aboutUsTEController.text,
+                                      capacity: capacityTEController.text,
+                                      id: widget.id.toString(),
+                                      openDays: controller1.openDays.toList(),
+                                      closeDays: const [],
+                                      startAt: controller1.startTime.value,
+                                      closeAt: controller1.endTime.value,
+                                    );
+                                  },
+                            child: const Text("Save & Continue"),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+
       body: Obx(() {
         final profileData = controller1.profileDetails.value.data;
         final bool isPending = profileData?.status == 'pending';
         return RefreshIndicator(
           onRefresh: () => controller1.fetchProfileDetails(),
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: getWidth(24)),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              getWidth(16),
+              getHeight(16),
+              getWidth(16),
+              getHeight(16),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: getHeight(24)),
                 if (isPending)
-                  _buildStatusBanner(
+                  _statusBanner(
                     "Your business profile is under review. You will be notified once it is approved.",
                   ),
-                Obx(
-                  () => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Align(
-                        alignment: Alignment.center,
-                        child: Stack(
-                          children: [
-                            SizedBox(
-                              width: getWidth(150),
-                              height: getHeight(150),
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    controller1.profileImage.value != null
-                                    ? FileImage(controller1.profileImage.value!)
-                                    : controller1
-                                              .profileDetails
-                                              .value
-                                              .data
-                                              ?.image !=
-                                          null
-                                    ? NetworkImage(
-                                        "${controller1.profileDetails.value.data?.image}",
-                                      )
-                                    : const AssetImage(ImagePath.profileImage)
-                                          as ImageProvider,
-                              ),
-                            ),
-                            Positioned(
-                              right: 0,
-                              bottom: 10,
-                              child: GestureDetector(
-                                onTap: isPending
-                                    ? null
-                                    : () {
-                                        controller1.pickImage();
-                                      },
-                                child: SizedBox(
-                                  height: getHeight(35),
-                                  width: getWidth(35),
-                                  child: CircleAvatar(
-                                    backgroundColor: Colors.white,
-                                    child: Image.asset(
-                                      IconPath.uploadImageIcon,
-                                      height: getHeight(17),
-                                      width: getWidth(17),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: getHeight(20)),
-                      CustomTextAndTextFormField(
-                        controller: nameTEController,
-                        text: 'Shop Name',
-                        hintText: "Enter your shop name",
-                        readOnly: isPending,
-                      ),
-                      VerticalSpace(height: getHeight(20)),
-                      CustomText(
-                        text: "Address",
-                        color: const Color(0xff141414),
-                        fontSize: getWidth(17),
-                        fontWeight: FontWeight.w600,
-                      ),
-                      SizedBox(height: getHeight(10)),
-                      CustomTexFormField(
-                        hintText: 'Select your address',
-                        controller: locationTEController,
-                        readOnly: true,
-                        suffixIcon: GestureDetector(
-                          onTap: isPending
-                              ? null
-                              : () async {
-                                  LatLng? initialPosition;
-                                  final existingAddress = locationTEController
-                                      .text
-                                      .trim();
-
-                                  if (existingAddress.isNotEmpty) {
-                                    try {
-                                      // If address exists, convert it to coordinates
-                                      List<Location> locations =
-                                          await locationFromAddress(
-                                            existingAddress,
-                                          );
-                                      if (locations.isNotEmpty) {
-                                        initialPosition = LatLng(
-                                          locations.first.latitude,
-                                          locations.first.longitude,
-                                        );
-                                      }
-                                    } catch (e) {
-                                      // Handle case where address can't be found
-                                      print("Could not geocode address: $e");
-                                    }
-                                  } else {
-                                    // If no address, get user's current location
-                                    try {
-                                      final position = await LocationService()
-                                          .getCurrentPosition();
-                                      if (position != null) {
-                                        initialPosition = LatLng(
-                                          position.latitude,
-                                          position.longitude,
-                                        );
-                                      }
-                                    } catch (e) {
-                                      print(
-                                        "Could not get current location: $e",
+                _sectionCard(
+                  title: 'Basic Info',
+                  children: [
+                    _avatarPicker(disabled: isPending),
+                    VerticalSpace(height: getHeight(16)),
+                    CustomTextAndTextFormField(
+                      controller: nameTEController,
+                      text: 'Shop Name',
+                      hintText: "Enter your shop name",
+                      readOnly: isPending,
+                    ),
+                  ],
+                ),
+                _sectionCard(
+                  title: 'Location',
+                  subtitle: 'Choose from map or use your current location.',
+                  children: [_addressPicker(disabled: isPending)],
+                ),
+                _sectionCard(
+                  title: 'Capacity & About',
+                  children: [
+                    CustomTextAndTextFormField(
+                      controller: capacityTEController,
+                      text: 'Shop Capacity',
+                      hintText: "Capacity of your shop",
+                      readOnly: isPending,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Capacity is required';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Please enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                    VerticalSpace(height: getHeight(12)),
+                    CustomTextAndTextFormField(
+                      controller: aboutUsTEController,
+                      text: 'About Us',
+                      hintText: "Write here",
+                      readOnly: isPending,
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+                _sectionCard(
+                  title: 'Business Hours',
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _timeTile(
+                            label: 'Opens at',
+                            value: controller1.startTime.value.isEmpty
+                                ? (controller1
+                                          .profileDetails
+                                          .value
+                                          .data
+                                          ?.startTime ??
+                                      '09:00 AM')
+                                : controller1.startTime.value,
+                            onTap: isPending
+                                ? null
+                                : () async {
+                                    final t = await showTimePicker(
+                                      context: context,
+                                      initialTime: _parseOrNow(
+                                        controller1.startTime.value.isEmpty
+                                            ? (controller1
+                                                      .profileDetails
+                                                      .value
+                                                      .data
+                                                      ?.startTime ??
+                                                  '09:00 AM')
+                                            : controller1.startTime.value,
+                                      ),
+                                    );
+                                    if (t != null) {
+                                      controller1.startTime.value = t.format(
+                                        context,
                                       );
                                     }
-                                  }
-
-                                  // Open map with the determined initial position
-                                  LatLng? selectedLocation = await Get.to(
-                                    () => MapScreenProfile(
-                                      initialPosition: initialPosition,
-                                    ),
-                                  );
-
-                                  if (selectedLocation != null) {
-                                    String address =
-                                        await _getAddressFromLatLng(
-                                          selectedLocation,
-                                        );
-                                    locationTEController.text = address;
-                                    controller1.lat.value = selectedLocation
-                                        .latitude
-                                        .toString();
-                                    controller1.long.value = selectedLocation
-                                        .longitude
-                                        .toString();
-                                  }
-                                  // --- MODIFIED LOGIC ENDS HERE ---
-                                },
-                          child: const Icon(
-                            Icons.location_on_outlined,
-                            color: AppColors.primaryColor,
-                          ),
-                        ),
-                      ),
-                      VerticalSpace(height: getHeight(20)),
-                      CustomTextAndTextFormField(
-                        controller: capacityTEController,
-                        text: 'Shop Capacity',
-                        hintText: "Capacity of your shop",
-                        readOnly: isPending,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Capacity is required';
-                          }
-                          if (int.tryParse(value) == null) {
-                            return 'Please enter a valid number';
-                          }
-                          return null;
-                        },
-                      ),
-                      VerticalSpace(height: getHeight(20)),
-                      CustomTextAndTextFormField(
-                        controller: aboutUsTEController,
-                        text: 'About Us',
-                        hintText: "Write here",
-                        readOnly: isPending,
-                        maxLines: 3,
-                      ),
-                      VerticalSpace(height: getHeight(20)),
-                    ],
-                  ),
-                ),
-                CustomText(
-                  text: "Business Hours",
-                  color: const Color(0xff141414),
-                  fontSize: getWidth(17),
-                  fontWeight: FontWeight.w600,
-                ),
-                const SizedBox(height: 12),
-
-                // Times (explicit labels, no seconds)
-                Obx(() {
-                  // Add Obx wrapper here
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: _timeTile(
-                          label: 'Opens at',
-                          value: controller1.startTime.value.isEmpty
-                              ? (controller1
-                                        .profileDetails
-                                        .value
-                                        .data
-                                        ?.startTime ??
-                                    '09:00 AM')
-                              : controller1.startTime.value,
-                          onTap: isPending
-                              ? null
-                              : () async {
-                                  final t = await showTimePicker(
-                                    context: context,
-                                    initialTime: _parseOrNow(
-                                      controller1.startTime.value.isEmpty
-                                          ? (controller1
-                                                    .profileDetails
-                                                    .value
-                                                    .data
-                                                    ?.startTime ??
-                                                '09:00 AM')
-                                          : controller1.startTime.value,
-                                    ),
-                                  );
-                                  if (t != null) {
-                                    controller1.startTime.value = t.format(
-                                      context,
-                                    );
-                                  }
-                                },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _timeTile(
-                          label: 'Closes at',
-                          value: controller1.endTime.value.isEmpty
-                              ? (controller1
-                                        .profileDetails
-                                        .value
-                                        .data
-                                        ?.endTime ??
-                                    '08:00 PM')
-                              : controller1.endTime.value,
-                          onTap: isPending
-                              ? null
-                              : () async {
-                                  final t = await showTimePicker(
-                                    context: context,
-                                    initialTime: _parseOrNow(
-                                      controller1.endTime.value.isEmpty
-                                          ? (controller1
-                                                    .profileDetails
-                                                    .value
-                                                    .data
-                                                    ?.endTime ??
-                                                '08:00 PM')
-                                          : controller1.endTime.value,
-                                    ),
-                                  );
-                                  if (t != null) {
-                                    controller1.endTime.value = t.format(
-                                      context,
-                                    );
-                                  }
-                                },
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-                SizedBox(height: getHeight(16)),
-
-                // One card to select multiple OPEN days
-                _DaysMultiSelectCard(
-                  title: 'Open Days',
-                  selectedDays: controller1
-                      .openDays, // RxSet<String> in controller (see below)
-                  onChanged:
-                      isPending //  DISABLE CHANGE
-                      ? (_) {}
-                      : (set) => controller1.openDays.value = set.toSet(),
-                ),
-
-                SizedBox(height: getHeight(12)),
-
-                // Closed days shown differently (computed)
-                Obx(() {
-                  final closed = _allDays
-                      .where((d) => !controller1.openDays.contains(d))
-                      .toList();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Closed on',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: closed.isEmpty
-                            ? [const Chip(label: Text('None'))]
-                            : closed
-                                  .map(
-                                    (d) => Chip(
-                                      label: Text(d),
-                                      backgroundColor: const Color(
-                                        0xFFFFEBEE,
-                                      ), // light red
-                                      labelStyle: const TextStyle(
-                                        color: Color(0xFFB71C1C),
-                                      ),
-                                      shape: StadiumBorder(
-                                        side: BorderSide(
-                                          color: Color(0xFFFFCDD2),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                      ),
-                    ],
-                  );
-                }),
-                // const SizedBox(height: 12),
-                // Row(
-                //   children: [
-                //     Expanded(
-                //       child: _dayField(isStart: true, controller: controller1),
-                //     ),
-                //     const SizedBox(width: 12),
-                //     Expanded(
-                //       child: _dayField(isStart: false, controller: controller1),
-                //     ),
-                //   ],
-                // ),
-                // const SizedBox(height: 12),
-                // Row(
-                //   children: [
-                //     Expanded(
-                //       child: _timeField(isStart: true, controller: controller1),
-                //     ),
-                //     const SizedBox(width: 12),
-                //     Expanded(
-                //       child: _timeField(isStart: false, controller: controller1),
-                //     ),
-                //   ],
-                // ),
-                SizedBox(height: getHeight(24)),
-                Obx(
-                  () => controller1.isLoading.value
-                      ? const SpinKitWave(
-                          color: AppColors.primaryColor,
-                          size: 30.0,
-                        )
-                      : CustomButton(
-                          onPressed: isPending
-                              ? null
-                              : () {
-                                  controller1.updateBusinessProfile(
-                                    businessName: nameTEController.text,
-                                    businessAddress: locationTEController.text,
-                                    aboutUs: aboutUsTEController.text,
-                                    capacity: capacityTEController.text,
-                                    id: widget.id.toString(),
-                                    openDays: controller1.openDays.toList(),
-                                    closeDays: const [
-                                      // or compute if needed
-                                    ],
-                                    startAt: controller1.startTime.value,
-                                    closeAt: controller1.endTime.value,
-                                  );
-                                },
-                          child: Text(
-                            "Save & Continue",
-                            style: TextStyle(
-                              fontSize: getWidth(18),
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                ),
-                VerticalSpace(height: getHeight(16)),
-                Obx(
-                  () => controller1.isLoading.value
-                      ? const SizedBox.shrink() // Hide while another action is running
-                      : SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red[700],
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            onPressed:
-                                isPending //  DISABLE BUTTON
-                                ? null
-                                : () {
-                                    // Show confirmation dialog before deleting
-                                    Get.defaultDialog(
-                                      title: "Delete Profile",
-                                      middleText:
-                                          "Are you sure you want to delete your business profile? This action cannot be undone.",
-                                      textConfirm: "Delete",
-                                      confirmTextColor: Colors.white,
-                                      textCancel: "Cancel",
-                                      onConfirm: () {
-                                        if (widget.id != null) {
-                                          controller1.deleteBusinessProfile(
-                                            widget.id!,
-                                          );
-                                        }
-                                      },
-                                    );
                                   },
-                            child: Text(
-                              "Delete Business Profile",
-                              style: TextStyle(
-                                fontSize: getWidth(16),
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _timeTile(
+                            label: 'Closes at',
+                            value: controller1.endTime.value.isEmpty
+                                ? (controller1
+                                          .profileDetails
+                                          .value
+                                          .data
+                                          ?.endTime ??
+                                      '08:00 PM')
+                                : controller1.endTime.value,
+                            onTap: isPending
+                                ? null
+                                : () async {
+                                    final t = await showTimePicker(
+                                      context: context,
+                                      initialTime: _parseOrNow(
+                                        controller1.endTime.value.isEmpty
+                                            ? (controller1
+                                                      .profileDetails
+                                                      .value
+                                                      .data
+                                                      ?.endTime ??
+                                                  '08:00 PM')
+                                            : controller1.endTime.value,
+                                      ),
+                                    );
+                                    if (t != null) {
+                                      controller1.endTime.value = t.format(
+                                        context,
+                                      );
+                                    }
+                                  },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _daysMultiSelect(disabled: isPending),
+                    const SizedBox(height: 8),
+                    Obx(() {
+                      final closed = _allDays
+                          .where((d) => !controller1.openDays.contains(d))
+                          .toList();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Closed on',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: closed.isEmpty
+                                ? [const Chip(label: Text('None'))]
+                                : closed
+                                      .map(
+                                        (d) => Chip(
+                                          label: Text(d),
+                                          backgroundColor: const Color(
+                                            0xFFFFEBEE,
+                                          ),
+                                          labelStyle: const TextStyle(
+                                            color: Color(0xFFB71C1C),
+                                          ),
+                                          shape: const StadiumBorder(
+                                            side: BorderSide(
+                                              color: Color(0xFFFFCDD2),
+                                            ),
+                                          ),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      )
+                                      .toList(),
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
                 ),
-                VerticalSpace(height: getHeight(42)),
+                // Attach docs section (kept simple)
+                _sectionCard(
+                  title: 'Verification Documents',
+                  children: [_buildFilePicker(isDisabled: isPending)],
+                ),
+                SizedBox(height: getHeight(80)), // spacer above sticky bar
               ],
             ),
           ),
@@ -567,15 +798,60 @@ class _EditBusinessOwnerProfileScreenState
     );
   }
 
+  // ---------- Map & Geocoding ----------
+
+  Future<void> _openMapFlow() async {
+    LatLng? initialPosition;
+    final existingAddress = locationTEController.text.trim();
+
+    if (existingAddress.isNotEmpty) {
+      try {
+        final locations = await locationFromAddress(existingAddress);
+        if (locations.isNotEmpty) {
+          initialPosition = LatLng(
+            locations.first.latitude,
+            locations.first.longitude,
+          );
+        }
+      } catch (_) {}
+    } else {
+      try {
+        final position = await LocationService().getCurrentPosition();
+        if (position != null) {
+          initialPosition = LatLng(position.latitude, position.longitude);
+        }
+      } catch (_) {}
+    }
+
+    final selected = await Get.to(
+      () => MapScreenProfile(initialPosition: initialPosition),
+    );
+    if (selected != null && selected is LatLng) {
+      final address = await _getAddressFromLatLng(selected);
+      locationTEController.text = address;
+      controller1.lat.value = selected.latitude.toString();
+      controller1.long.value = selected.longitude.toString();
+    }
+  }
+
   Future<String> _getAddressFromLatLng(LatLng position) async {
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(
+      final placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
       if (placemarks.isNotEmpty) {
-        Placemark place = placemarks.first;
-        return "${place.street}, ${place.locality}, ${place.country}";
+        final place = placemarks.first;
+        // More complete address line
+        final parts = [
+          place.street,
+          place.subLocality,
+          place.locality,
+          place.administrativeArea,
+          place.country,
+          place.postalCode,
+        ].where((s) => (s ?? '').toString().trim().isNotEmpty).toList();
+        return parts.join(', ');
       }
       return "Unknown location";
     } catch (e) {
@@ -610,11 +886,11 @@ class CustomTextAndTextFormField extends StatelessWidget {
       children: [
         CustomText(
           text: text,
-          color: Color(0xff141414),
-          fontSize: getWidth(17),
-          fontWeight: FontWeight.w600,
+          color: const Color(0xff141414),
+          fontSize: getWidth(14.5),
+          fontWeight: FontWeight.w700,
         ),
-        SizedBox(height: getHeight(10)),
+        SizedBox(height: getHeight(8)),
         CustomTexFormField(
           maxLines: maxLines ?? 1,
           readOnly: readOnly ?? false,
@@ -628,241 +904,33 @@ class CustomTextAndTextFormField extends StatelessWidget {
   }
 }
 
-Widget _dayField({
-  required bool isStart,
-  required BusinessOwnerProfileController controller,
-}) {
-  return Obx(() {
-    final value = isStart ? controller.startDay.value : controller.endDay.value;
-
-    final profileDay = isStart
-        ? controller.profileDetails.value.data?.startDay
-        : controller.profileDetails.value.data?.endDay;
-
-    final displayDay = value.isEmpty
-        ? (profileDay?.isNotEmpty ?? false
-              ? profileDay
-              : (isStart ? "Monday" : "Friday"))
-        : value;
-
-    return _inputTile(
-      label: displayDay!,
-      icon: Icons.calendar_today,
-      onTap: () => controller.pickDay(isStart: isStart),
-    );
-  });
-}
-
-Widget _timeField({
-  required bool isStart,
-  required BusinessOwnerProfileController controller,
-}) {
-  return Obx(() {
-    final value = isStart
-        ? controller.startTime.value
-        : controller.endTime.value;
-    final profileDay = isStart
-        ? controller.profileDetails.value.data?.startTime
-        : controller.profileDetails.value.data?.endTime;
-
-    final displayDay = value.isEmpty
-        ? (profileDay?.isNotEmpty ?? false
-              ? profileDay
-              : (isStart ? "09:00 AM" : "08:00 PM"))
-        : value;
-
-    return _inputTile(
-      label: displayDay!,
-      icon: Icons.access_time,
-      onTap: () => controller.pickTime(isStart: isStart),
-    );
-  });
-}
-
-Widget _inputTile({
-  required String label,
-  required IconData icon,
-  required VoidCallback onTap,
-}) {
-  return InkWell(
-    onTap: onTap,
-    child: SizedBox(
-      height: 60,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-              Icon(icon, color: Colors.grey),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-TimeOfDay _parseOrNow(String s) {
-  // Accepts formats like "09:00 AM" or "9:00 AM"
-  try {
-    final reg = RegExp(r'(\d{1,2}):(\d{2})\s*([AP]M)', caseSensitive: false);
-    final m = reg.firstMatch(s.trim());
-    if (m != null) {
-      var hour = int.parse(m.group(1)!);
-      final minute = int.parse(m.group(2)!);
-      final ampm = m.group(3)!.toUpperCase();
-      if (ampm == 'PM' && hour != 12) hour += 12;
-      if (ampm == 'AM' && hour == 12) hour = 0;
-      return TimeOfDay(hour: hour, minute: minute);
-    }
-  } catch (_) {}
-  return TimeOfDay.now();
-}
-
-Widget _timeTile({
-  required String label,
-  required String value,
-  required VoidCallback? onTap,
-}) {
-  return InkWell(
-    onTap: onTap,
-    child: SizedBox(
-      height: 60,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(value, style: const TextStyle(fontSize: 16)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.access_time, color: Colors.grey),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-class _DaysMultiSelectCard extends StatelessWidget {
-  final String title;
-  final RxSet<String> selectedDays;
-  final ValueChanged<Set<String>> onChanged;
-
-  const _DaysMultiSelectCard({
-    required this.title,
-    required this.selectedDays,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final sel = selectedDays.toSet();
-      return Center(
-        child: InkWell(
-          onTap: () async {
-            final result = await showModalBottomSheet<Set<String>>(
-              context: context,
-              isScrollControlled: true,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              builder: (_) => _DaysPickerSheet(initial: sel),
-            );
-            if (result != null) onChanged(result);
-          },
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  sel.isEmpty
-                      ? const Text(
-                          'Tap to choose days',
-                          style: TextStyle(color: Colors.grey),
-                        )
-                      : Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: sel
-                              .map(
-                                (d) => Chip(
-                                  label: Text(d),
-                                  backgroundColor: const Color(
-                                    0xFFE8F5E9,
-                                  ), // light green
-                                  labelStyle: const TextStyle(
-                                    color: Color(0xFF1B5E20),
-                                  ),
-                                  shape: const StadiumBorder(
-                                    side: BorderSide(color: Color(0xFFC8E6C9)),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    });
-  }
-}
-
 class _DaysPickerSheet extends StatefulWidget {
-  final Set<String> initial;
-  const _DaysPickerSheet({required this.initial});
+  const _DaysPickerSheet();
 
   @override
   State<_DaysPickerSheet> createState() => _DaysPickerSheetState();
 }
 
 class _DaysPickerSheetState extends State<_DaysPickerSheet> {
+  static const _allDays = <String>[
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
   late Set<String> _sel;
 
   @override
   void initState() {
     super.initState();
-    _sel = {...widget.initial};
+    _sel = {...Get.find<BusinessOwnerProfileController>().openDays};
   }
 
   @override
   Widget build(BuildContext context) {
-    const _allDays = <String>[
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -883,7 +951,7 @@ class _DaysPickerSheetState extends State<_DaysPickerSheet> {
             const SizedBox(height: 12),
             const Text(
               'Select Open Days',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Padding(
@@ -935,4 +1003,21 @@ class _DaysPickerSheetState extends State<_DaysPickerSheet> {
       ),
     );
   }
+}
+
+// Time parser
+TimeOfDay _parseOrNow(String s) {
+  try {
+    final reg = RegExp(r'(\d{1,2}):(\d{2})\s*([AP]M)', caseSensitive: false);
+    final m = reg.firstMatch(s.trim());
+    if (m != null) {
+      var hour = int.parse(m.group(1)!);
+      final minute = int.parse(m.group(2)!);
+      final ampm = m.group(3)!.toUpperCase();
+      if (ampm == 'PM' && hour != 12) hour += 12;
+      if (ampm == 'AM' && hour == 12) hour = 0;
+      return TimeOfDay(hour: hour, minute: minute);
+    }
+  } catch (_) {}
+  return TimeOfDay.now();
 }

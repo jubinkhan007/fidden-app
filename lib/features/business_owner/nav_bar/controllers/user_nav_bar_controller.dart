@@ -2,6 +2,7 @@ import 'package:fidden/core/utils/constants/app_sizes.dart';
 import 'package:fidden/core/utils/constants/icon_path.dart';
 import 'package:fidden/features/business_owner/booking/screen/booking_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/business_owner_home_screen.dart';
+import 'package:fidden/features/inbox/screens/inbox_screen.dart';
 // import 'package:fidden/features/user/booking/presentation/screens/booking_screen.dart';
 // import 'package:fidden/features/user/home/presentation/screens/home_screen.dart';
 
@@ -25,15 +26,23 @@ class BusinessOwnerNavBarController extends GetxController {
   final List<Widget> screens = [
     BusinessOwnerHomeScreen(),
     BusinessOwnerBookingScreen(),
+    InboxScreen(),
     BusinessOwnerProfileScreen(),
   ];
 
-  final List<String> labels = const ['Home', "Booking", 'Profile'];
+  final List<String> labels = const ['Home', "Booking", "Inbox", 'Profile'];
 
   final List activeIcons = [
     Image.asset(IconPath.homeActive, height: getWidth(24), width: getWidth(24)),
     Image.asset(
       IconPath.bookingActive,
+      height: getWidth(24),
+      width: getWidth(24),
+    ),
+    Image.asset(
+      // TODO: Change Active Icon
+      color: Colors.deepPurpleAccent,
+      IconPath.messageIcon,
       height: getWidth(24),
       width: getWidth(24),
     ),
@@ -54,6 +63,11 @@ class BusinessOwnerNavBarController extends GetxController {
       IconPath.bookingInActive,
       height: getWidth(20),
       width: getWidth(20),
+    ),
+    Image.asset(
+      IconPath.messageIcon,
+      height: getWidth(24),
+      width: getWidth(24),
     ),
     Image.asset(
       IconPath.profileInActive,

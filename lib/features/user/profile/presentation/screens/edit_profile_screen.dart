@@ -30,12 +30,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // 3. Initialized controller text in initState
-    final profileData = controller.profileDetails.value.data;
-    if (profileData != null) {
-      nameTEController.text = profileData.name ?? '';
-      emailTEController.text = profileData.email ?? '';
-      phoneTEController.text = profileData.mobile_number ?? '';
+    void populateFields() {
+      final profileData = controller.profileDetails.value.data;
+      if (profileData != null) {
+        nameTEController.text = profileData.name ?? '';
+        emailTEController.text = profileData.email ?? '';
+        phoneTEController.text = profileData.mobile_number ?? '';
+      }
+    }
+
+    // 1. First, check if the profile data is ALREADY available.
+    if (controller.profileDetails.value.data != null) {
+      // If yes, populate the fields immediately.
+      populateFields();
+    } else {
+      // 2. If no, listen for the data to arrive just once.
+      once(controller.profileDetails, (_) => populateFields());
     }
   }
 

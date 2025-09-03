@@ -735,8 +735,15 @@ class _TrendingCard extends StatelessWidget {
   const _TrendingCard({required this.r, required this.service});
   final R r;
   final TrendingService service;
+
   @override
   Widget build(BuildContext context) {
+    // compute a safe image url (fallback if null/empty)
+    final imgUrl =
+        (service.serviceImg != null && service.serviceImg!.trim().isNotEmpty)
+        ? service.serviceImg!
+        : 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop';
+
     return GestureDetector(
       onTap: () => Get.to(() => ServiceDetailsScreen(serviceId: service.id!)),
       child: Container(
@@ -755,6 +762,7 @@ class _TrendingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ↓ a tiny bit shorter than before
             Stack(
               children: [
                 ClipRRect(
@@ -763,13 +771,12 @@ class _TrendingCard extends StatelessWidget {
                     topRight: r.r(16).topRight,
                   ),
                   child: Image.network(
-                    service.serviceImg ??
-                        'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0',
-                    height: r.h(160),
+                    imgUrl,
+                    height: r.h(150), // was 160
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (c, o, s) => Container(
-                      height: r.h(160),
+                    errorBuilder: (_, __, ___) => Container(
+                      height: r.h(150),
                       color: Colors.grey.shade200,
                       alignment: Alignment.center,
                       child: Icon(
@@ -786,74 +793,91 @@ class _TrendingCard extends StatelessWidget {
                 ),
               ],
             ),
-            Padding(
-              padding: EdgeInsets.all(r.w(14)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    service.title ?? '',
-                    style: TextStyle(
-                      fontSize: r.sp(16),
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF22242A),
-                    ),
-                  ),
-                  SizedBox(height: r.h(8)),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: r.w(16),
-                        color: const Color(0xFF6B6F7C),
+
+            // ↓ This Expanded is the key: it prevents overflow by flexing
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(r.w(14)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title: 1 line max
+                    Text(
+                      service.title ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: r.sp(16),
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF22242A),
                       ),
-                      SizedBox(width: r.w(6)),
-                      Expanded(
-                        child: Text(
-                          service.shopAddress ?? '',
+                    ),
+                    SizedBox(height: r.h(6)),
+
+                    // Location: 1 line max
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: r.w(16),
+                          color: const Color(0xFF6B6F7C),
+                        ),
+                        SizedBox(width: r.w(6)),
+                        Expanded(
+                          child: Text(
+                            service.shopAddress ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: r.sp(13),
+                              color: const Color(0xFF6B6F7C),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+
+                    // Price + rating row
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '\$${service.discountPrice ?? service.price ?? '0'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: r.sp(18),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.star,
+                          size: r.w(16),
+                          color: const Color(0xFFF7B500),
+                        ),
+                        SizedBox(width: r.w(4)),
+                        Text(
+                          service.avgRating?.toStringAsFixed(1) ?? '0.0',
+                          style: TextStyle(
+                            fontSize: r.sp(14),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(width: r.w(8)),
+                        Text(
+                          '(${service.reviewCount} Reviews)',
                           style: TextStyle(
                             fontSize: r.sp(13),
                             color: const Color(0xFF6B6F7C),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: r.h(12)),
-                  Row(
-                    children: [
-                      Text(
-                        '\$${service.discountPrice ?? service.price ?? '0'}',
-                        style: TextStyle(
-                          fontSize: r.sp(18),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.star,
-                        size: r.w(16),
-                        color: const Color(0xFFF7B500),
-                      ),
-                      SizedBox(width: r.w(4)),
-                      Text(
-                        service.avgRating?.toStringAsFixed(1) ?? '0.0',
-                        style: TextStyle(
-                          fontSize: r.sp(14),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(width: r.w(8)),
-                      Text(
-                        '(${service.reviewCount} Reviews)',
-                        style: TextStyle(
-                          fontSize: r.sp(13),
-                          color: const Color(0xFF6B6F7C),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

@@ -18,6 +18,7 @@ class BusinessOwnerNavBar extends StatelessWidget {
       bottomNavigationBar: GetX<BusinessOwnerNavBarController>(
         builder: (navController) {
           return BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
             //backgroundColor: AppColors.white,
             currentIndex: navController.currentIndex,
             selectedItemColor: const Color(0xff7A49A5),

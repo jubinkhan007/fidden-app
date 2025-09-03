@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
 import 'package:fidden/features/business_owner/profile/services/shop_api.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:flutter/material.dart';
@@ -22,12 +23,33 @@ class BusinessOwnerProfileController extends GetxController {
   var startTime = ''.obs;
   var endTime = ''.obs;
   var isLoading = false.obs;
+  var isDeleting = false.obs;
 
   var lat = "".obs;
   var long = "".obs;
 
   var profileImage = Rxn<File>();
   var imagePath = ''.obs;
+  var documents = <File>[].obs;
+
+  Future<void> pickDocuments() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
+      );
+
+      if (result != null) {
+        documents.addAll(
+          result.paths.where((path) => path != null).map((path) => File(path!)),
+        );
+        documents.refresh();
+      }
+    } catch (e) {
+      AppSnackBar.showError("Error picking files: $e");
+    }
+  }
 
   // Method to pick profile image
   Future<void> pickImage() async {
@@ -192,6 +214,7 @@ class BusinessOwnerProfileController extends GetxController {
     required String capacity,
   }) async {
     isLoading.value = true;
+    clearErrors();
     try {
       final uiStart = startTime.value.isNotEmpty
           ? startTime.value
@@ -223,6 +246,7 @@ class BusinessOwnerProfileController extends GetxController {
         latitude: lat.value.isEmpty ? null : lat.value,
         longitude: long.value.isEmpty ? null : long.value,
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
+        documents: documents,
         token: AuthService.accessToken ?? '',
       );
 
@@ -251,6 +275,7 @@ class BusinessOwnerProfileController extends GetxController {
         Get.offNamed('/all-services');
       } else {
         final body = await resp.stream.bytesToString();
+
         log('Create profile failed: ${resp.statusCode}, body: $body');
         AppSnackBar.showError('Create failed (${resp.statusCode}).');
       }
@@ -388,6 +413,7 @@ class BusinessOwnerProfileController extends GetxController {
         latitude: lat.value.isEmpty ? null : lat.value,
         longitude: long.value.isEmpty ? null : long.value,
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
+        documents: documents,
         token: AuthService.accessToken ?? '',
       );
 
@@ -398,7 +424,7 @@ class BusinessOwnerProfileController extends GetxController {
         Get.offNamed('/all-services'); // or Get.off(() => AllServiceScreen());
         return;
       } else {
-        AppSnackBar.showError('Update failed (${resp.statusCode}).');
+        AppSnackBar.showError('Update failed');
       }
     } catch (e) {
       log('Update error: $e');
@@ -458,19 +484,42 @@ class BusinessOwnerProfileController extends GetxController {
   }
 
   Future<void> deleteBusinessProfile(String shopId) async {
-    isLoading.value = true;
+    isDeleting.value = true;
     try {
       final response = await NetworkCaller().deleteRequest(
         AppUrls.deleteShop(shopId),
         token: AuthService.accessToken,
       );
 
+      // Always close the dialog, regardless of outcome
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
       if (response.isSuccess) {
         AppSnackBar.showSuccess("Business Profile deleted successfully!");
-        // Pop twice to close the dialog and the edit screen
-        Get.back();
-        Get.back();
-        // Optionally refresh the previous screen's data if needed
+
+        // Close dialog if open
+        if (Get.isDialogOpen ?? false) Get.back();
+
+        // Reset local state
+        profileDetails.value = GetBusinesModel(data: null);
+        openDays.clear();
+        startTime.value = '';
+        endTime.value = '';
+
+        // Refresh guards (services banner, etc.)
+        if (Get.isRegistered<BusinessOwnerController>()) {
+          await Get.find<BusinessOwnerController>().refreshGuardsAndServices();
+        }
+
+        // Force navigation away from Edit screen
+        // Use the correct route for your “start over” screen.
+        Future.microtask(() {
+          // optional: close any active snackbars to avoid overlay glitches
+          if (Get.isSnackbarOpen) Get.closeCurrentSnackbar();
+          Get.offAllNamed('/add-business-profile'); // or '/all-services'
+        });
       } else {
         AppSnackBar.showError(
           response.errorMessage ?? 'Failed to delete profile.',
@@ -478,9 +527,20 @@ class BusinessOwnerProfileController extends GetxController {
       }
     } catch (e) {
       log('Delete profile error: $e');
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
       AppSnackBar.showError('An error occurred while deleting the profile.');
     } finally {
-      isLoading.value = false;
+      isDeleting.value = false;
     }
+  }
+
+  final RxMap<String, String> fieldErrors = <String, String>{}.obs;
+
+  void clearErrors() => fieldErrors.clear();
+  void setFieldError(String field, String message) {
+    fieldErrors[field] = message;
+    fieldErrors.refresh();
   }
 }

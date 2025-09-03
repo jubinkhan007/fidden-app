@@ -12,7 +12,8 @@ class IconPath {
   static const String addIcon = '$_basePath/add_icon.png';
   static const String rightArrowIcon = '$_basePath/right_arrow.png';
   static const String notificationIcon = '$_basePath/notification_icon.png';
-  static const String termsAndConditionIcon = '$_basePath/terms_and_condition.png';
+  static const String termsAndConditionIcon =
+      '$_basePath/terms_and_condition.png';
   static const String logOutIcon = '$_basePath/log_out_icon.png';
   static const String uploadImageIcon = '$_basePath/upload_image.png';
   static const String dotIcon = '$_basePath/dot_icon.png';
@@ -28,9 +29,10 @@ class IconPath {
   static const String backArrowAppleIcon = '$_basePath/back_arrow_apple.png';
   static const String rightArrowAppleIcon = '$_basePath/right_arrow_icon.png';
   static const String rightArrowIconSimple = '$_basePath/arrow-right.png';
-  static const String plusIcon= '$_basePath/plus_icon.png';
-  static const String waiverFormIcon= '$_basePath/wever_form_icon.png';
-  static const String waletIcon= '$_basePath/walet_icon.png';
-  static const String signInHereIcon= '$_basePath/sign_in_here.png';
+  static const String plusIcon = '$_basePath/plus_icon.png';
+  static const String waiverFormIcon = '$_basePath/wever_form_icon.png';
+  static const String waletIcon = '$_basePath/walet_icon.png';
+  static const String signInHereIcon = '$_basePath/sign_in_here.png';
 
+  static const String messageIcon = '$_basePath/message.png';
 }

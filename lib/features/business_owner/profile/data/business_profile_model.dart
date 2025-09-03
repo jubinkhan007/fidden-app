@@ -50,6 +50,24 @@ class GetBusinesModel {
   };
 }
 
+class UploadedFile {
+  final int id;
+  final String file;
+  final DateTime? uploadedAt;
+
+  UploadedFile({required this.id, required this.file, this.uploadedAt});
+
+  factory UploadedFile.fromJson(Map<String, dynamic> json) {
+    return UploadedFile(
+      id: json['id'],
+      file: json['file'],
+      uploadedAt: json['uploaded_at'] != null
+          ? DateTime.parse(json['uploaded_at'])
+          : null,
+    );
+  }
+}
+
 class Data {
   // API/raw fields
   String? id; // "id"
@@ -84,6 +102,7 @@ class Data {
 
   bool? isVarified;
   String? status;
+  List<UploadedFile>? verificationFiles;
 
   Data({
     this.id,
@@ -107,6 +126,7 @@ class Data {
     this.updatedAt,
     this.isVarified,
     this.status,
+    this.verificationFiles,
   });
 
   /// All 7 days for computing openDays
@@ -254,6 +274,11 @@ class Data {
       updatedAt: updatedAt,
       isVarified: json['is_varified'] as bool?,
       status: json['status'] as String?,
+      verificationFiles: json['uploaded_files'] != null
+          ? (json['uploaded_files'] as List)
+                .map((fileJson) => UploadedFile.fromJson(fileJson))
+                .toList()
+          : null,
     );
   }
 
@@ -289,6 +314,7 @@ class Data {
       'updatedAt': updatedAt?.toIso8601String(),
       'is_varified': false,
       'status': status,
+      'verification_files': verificationFiles,
     };
   }
 }

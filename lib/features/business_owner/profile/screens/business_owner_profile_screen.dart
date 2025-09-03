@@ -2,6 +2,7 @@ import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/utils/constants/app_sizes.dart';
 import 'package:fidden/features/business_owner/profile/screens/waiver_form_create_screen.dart';
 import 'package:fidden/features/business_owner/profile/screens/widgets/business_owner_shimmer.dart';
+import 'package:fidden/features/business_owner/reviews/ui/reviews_screen.dart';
 import 'package:fidden/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 
@@ -104,7 +105,15 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                       Get.to(() => AddBusinessOwnerProfileScreen());
                     },
                   ),
-
+            SizedBox(height: getHeight(16)),
+            CustomProfileButton(
+              title: 'My Reviews',
+              firstImageString:
+                  IconPath.waiverFormIcon, // You can use a different icon
+              onTap: () {
+                Get.to(() => const ReviewsScreen());
+              },
+            ),
             SizedBox(height: getHeight(16)),
             CustomProfileButton(
               title: 'Waiver Form',
