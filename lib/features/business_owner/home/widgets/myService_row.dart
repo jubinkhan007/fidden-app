@@ -325,19 +325,18 @@ class ServiceCard extends StatelessWidget {
                     // title + edit icon
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            item.title ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: getWidth(15),
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF111827),
-                            ),
+                        Text(
+                          item.title ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: getWidth(15),
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF111827),
                           ),
                         ),
-                        const SizedBox(width: 6),
+
+                        const SizedBox(width: 96),
                         const Icon(
                           Icons.edit_outlined,
                           size: 18,

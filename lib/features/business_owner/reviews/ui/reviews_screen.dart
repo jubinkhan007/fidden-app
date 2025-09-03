@@ -1,8 +1,9 @@
-import 'package:fidden/features/business_owner/profile/controller/review_controller.dart';
+// lib/features/business_owner/reviews/presentation/reviews_screen.dart
+import 'package:fidden/features/business_owner/reviews/state/review_controller.dart';
+import 'package:fidden/features/business_owner/reviews/state/reviews_filter_controller.dart';
+import 'package:fidden/features/business_owner/reviews/utils/review_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../state/reviews_filter_controller.dart';
-import '../utils/review_filters.dart';
 import 'bottom_sheets/reviews_filter_sheet.dart';
 import 'widgets/chips_bar.dart';
 import 'widgets/loading_empty.dart';
@@ -10,15 +11,18 @@ import 'widgets/review_card.dart';
 import 'widgets/search_bar.dart';
 
 class ReviewsScreen extends StatelessWidget {
-  const ReviewsScreen({super.key});
+  const ReviewsScreen({super.key, required this.shopId});
+  final String shopId;
 
   @override
   Widget build(BuildContext context) {
     final c = Get.put(ReviewController());
     final f = Get.put(ReviewsFilterController());
 
-    // Seed service options NOW from your loaded reviews (until API arrives).
-    // Later: replace this with API-driven service list.
+    // fetch when screen builds first time
+    c.fetchReviews(shopId);
+
+    // Build service filter options from loaded reviews (until API filter list exists)
     ever(c.reviews, (_) {
       final names =
           c.reviews
@@ -59,7 +63,7 @@ class ReviewsScreen extends StatelessWidget {
         final filtered = applyReviewFilters(reviews: c.reviews, f: f);
 
         return RefreshIndicator(
-          onRefresh: () async => c.fetchReviews?.call(), // keep if you add it
+          onRefresh: () => c.fetchReviews(shopId),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -95,10 +99,19 @@ class ReviewsScreen extends StatelessWidget {
                   ),
                 )
               else
-                SliverList.separated(
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, i) => ReviewCard(review: filtered[i]),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    16,
+                    0,
+                    16,
+                    24,
+                  ), // left/right + bottom gap
+                  sliver: SliverList.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, i) =>
+                        ReviewCard(review: filtered[i]),
+                  ),
                 ),
             ],
           ),

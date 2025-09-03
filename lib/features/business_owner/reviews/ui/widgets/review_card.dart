@@ -1,4 +1,4 @@
-import 'package:fidden/features/business_owner/profile/controller/review_controller.dart';
+import 'package:fidden/features/business_owner/reviews/state/review_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -31,14 +31,18 @@ class ReviewCard extends StatelessWidget {
     }
 
     return Card(
+      // 1) Kill the default Card margin
+      margin: EdgeInsets.zero,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       color: Colors.white,
+
+      // 2) Trim inner padding a bit at the bottom
       child: Padding(
-        padding: const EdgeInsets.all(14.0),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -82,7 +86,7 @@ class ReviewCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      (review.rating ?? 0).toStringAsFixed(1),
+                      (review.rating).toStringAsFixed(1),
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
@@ -99,13 +103,17 @@ class ReviewCard extends StatelessWidget {
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
+
             _ExpandableText(review.comment),
-            const SizedBox(height: 12),
+
+            const SizedBox(height: 10),
+
             if ((review.reply ?? '').trim().isNotEmpty)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
@@ -121,7 +129,7 @@ class ReviewCard extends StatelessWidget {
                         color: Color(0xFF0F172A),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       review.reply!,
                       style: const TextStyle(color: Color(0xFF334155)),
@@ -133,7 +141,14 @@ class ReviewCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  icon: const Icon(Icons.reply_outlined),
+                  // 3) Shrink the button’s internal padding/tap target
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.reply_outlined, size: 18),
                   label: const Text('Reply'),
                   onPressed: () {
                     Get.dialog(
@@ -141,11 +156,9 @@ class ReviewCard extends StatelessWidget {
                         author: review.author,
                         controller: replyController,
                         onSend: () {
-                          if (replyController.text.trim().isEmpty) return;
-                          controller.addReply(
-                            review,
-                            replyController.text.trim(),
-                          );
+                          final text = replyController.text.trim();
+                          if (text.isEmpty) return;
+                          controller.addReply(review, text);
                           Get.back();
                         },
                       ),

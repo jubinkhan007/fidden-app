@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../../core/utils/constants/app_sizes.dart';
 import '../../controller/notification_controller.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});

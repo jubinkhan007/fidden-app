@@ -108,10 +108,18 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
             SizedBox(height: getHeight(16)),
             CustomProfileButton(
               title: 'My Reviews',
-              firstImageString:
-                  IconPath.waiverFormIcon, // You can use a different icon
+              firstImageString: IconPath.waiverFormIcon,
               onTap: () {
-                Get.to(() => const ReviewsScreen());
+                final shopId = controller1.profileDetails.value.data?.id
+                    ?.toString();
+                if (shopId == null || shopId.isEmpty) {
+                  Get.snackbar(
+                    'No business found',
+                    'Create your business profile first.',
+                  );
+                  return;
+                }
+                Get.to(() => ReviewsScreen(shopId: shopId));
               },
             ),
             SizedBox(height: getHeight(16)),

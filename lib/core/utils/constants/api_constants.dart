@@ -23,6 +23,12 @@ class AppUrls {
   static const String serviceDetails =
       '$_baseUrl/api/shops'; // ✅ Added this line
 
+  // owner-Review
+  static String shopReviews(String shopId) =>
+      '${AppUrls._baseUrl}/api/shops/rating-reviews/$shopId/';
+  static String replyReviews(String shopId) =>
+      '${AppUrls._baseUrl}/api/create-reply/$shopId/';
+
   static const String promoOffers = '$_baseUrl/promo-offers';
 
   //wishList
