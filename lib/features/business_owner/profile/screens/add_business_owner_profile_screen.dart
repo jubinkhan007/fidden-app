@@ -226,6 +226,33 @@ class _AddBusinessOwnerProfileScreenState
                     ),
                     SizedBox(height: getHeight(10)),
                     CustomTexFormField(
+                      onTap: () async {
+                        final LatLng? selected = await Get.to(
+                          () => const MapScreenProfile(),
+                        );
+                        if (selected == null) {
+                          Get.snackbar(
+                            'No location selected',
+                            'Tap on the map and press Done.',
+                          );
+                          return;
+                        }
+
+                        // save raw coords first
+                        controller1.lat.value = selected.latitude
+                            .toStringAsFixed(6);
+                        controller1.long.value = selected.longitude
+                            .toStringAsFixed(6);
+
+                        var address = await _getAddressFromLatLng(selected);
+                        if (address.trim().isEmpty) {
+                          address =
+                              "${controller1.lat.value}, ${controller1.long.value}";
+                        }
+
+                        locationTEController.text = address;
+                        if (mounted) setState(() {});
+                      },
                       hintText: 'Select your address',
                       controller: locationTEController,
                       readOnly: true,

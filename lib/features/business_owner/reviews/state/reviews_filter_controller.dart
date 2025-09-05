@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -12,6 +13,8 @@ class ServiceOption {
 class ReviewsFilterController extends GetxController {
   // text search
   final query = ''.obs;
+
+  late final TextEditingController searchCtrl;
 
   // rating
   final minRating = 0.obs; // 0..5
@@ -35,4 +38,16 @@ class ReviewsFilterController extends GetxController {
   // helper
   String formatDate(DateTime? d) =>
       d == null ? 'Any' : DateFormat('MMM d').format(d);
+
+  @override
+  void onInit() {
+    super.onInit();
+    searchCtrl = TextEditingController(text: query.value);
+  }
+
+  @override
+  void onClose() {
+    searchCtrl.dispose();
+    super.onClose();
+  }
 }

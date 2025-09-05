@@ -36,7 +36,7 @@ class SplashController extends GetxController {
       } else {
         // Onboarding not seen — show onboarding first
         Get.offAll(
-          () => const OnBoardingScreenOne(),
+          () => const OnboardingScreenOne(),
           transition: Transition.fade,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,

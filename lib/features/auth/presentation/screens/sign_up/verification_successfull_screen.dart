@@ -9,45 +9,58 @@ import '../../../../../routes/app_routes.dart';
 class VerificationSuccessFullScreen extends StatelessWidget {
   const VerificationSuccessFullScreen({super.key});
 
+  static const _bg = Color(0xFFF6F8FB); // matches mock
+
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    const maxW = 520.0;
+
     return Scaffold(
+      backgroundColor: _bg,
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: maxW),
             child: Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset + 16),
               child: Column(
                 children: [
-                  SizedBox(height: getHeight(270)),
-                  Image.asset(
-                    ImagePath.verificationSuccessFullImage,
-                    height: getHeight(160),
-                    width: getWidth(230),
+                  // Centered illustration + title block
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          ImagePath.verificationSuccessFullImage,
+                          height: getHeight(200),
+                          fit: BoxFit.contain,
+                        ),
+                        SizedBox(height: getHeight(28)),
+                        CustomText(
+                          text: "Verification Successful",
+                          fontSize: getWidth(22),
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF111827),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: getHeight(40)),
-                  CustomText(
-                    text: "Verification Successful!",
-                    fontSize: getWidth(16),
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xff111827),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: getHeight(280)),
-                  CustomButton(
-                    onPressed: () {
-                      Get.toNamed(AppRoute.loginScreen);
-                      // if (_formKey.currentState?.validate() ?? false) {
-                      //   loginController.login();
-                      //   //Get.toNamed(AppRoute.landingScreen);
-                      // }
-                    },
-                    child: Text(
-                      "Go to Sign in",
-                      style: TextStyle(
-                        fontSize: getWidth(18),
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+
+                  // CTA — full width pill button
+                  SizedBox(
+                    height: getHeight(56),
+                    width: double.infinity,
+                    child: CustomButton(
+                      onPressed: () => Get.toNamed(AppRoute.loginScreen),
+                      child: Text(
+                        "Go to Sign in",
+                        style: TextStyle(
+                          fontSize: getWidth(18),
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),

@@ -1,3 +1,4 @@
+// lib/features/chat/presentation/chat_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -70,14 +71,7 @@ class ChatScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: [
-          IconButton(icon: const Icon(Icons.call_outlined), onPressed: () {}),
-          IconButton(
-            icon: const Icon(Icons.videocam_outlined),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 4),
-        ],
+        // ⬇️ Removed call + video call icons
       ),
 
       body: Column(
@@ -323,11 +317,7 @@ class _Composer extends StatelessWidget {
         ),
         child: Row(
           children: [
-            IconButton(
-              tooltip: 'Attach',
-              icon: const Icon(Icons.attach_file_outlined),
-              onPressed: () {},
-            ),
+            // ⬇️ Removed attach icon
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -335,34 +325,14 @@ class _Composer extends StatelessWidget {
                   borderRadius: BorderRadius.circular(22),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.emoji_emotions_outlined,
-                        color: Color(0xFF6B7280),
-                      ),
-                      onPressed: () {},
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: controller.messageTextController,
-                        minLines: 1,
-                        maxLines: 5,
-                        decoration: const InputDecoration(
-                          hintText: 'Message...',
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.mic_none_outlined,
-                        color: Color(0xFF6B7280),
-                      ),
-                      onPressed: () {},
-                    ),
-                  ],
+                child: TextField(
+                  controller: controller.messageTextController,
+                  minLines: 1,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    hintText: 'Message...',
+                    border: InputBorder.none,
+                  ),
                 ),
               ),
             ),

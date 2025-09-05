@@ -6,8 +6,6 @@ ShopDetailsModel shopDetailsModelFromJson(String str) =>
 String shopDetailsModelToJson(ShopDetailsModel data) =>
     json.encode(data.toJson());
 
-
-
 class ShopDetailsModel {
   int? id;
   String? name;
@@ -104,6 +102,7 @@ class Review {
   String? review;
   String? reviewImg;
   DateTime? createdAt;
+  List<ReviewReply>? reply; // list of owner replies
 
   Review({
     this.id,
@@ -115,32 +114,48 @@ class Review {
     this.review,
     this.reviewImg,
     this.createdAt,
+    this.reply,
   });
 
-  factory Review.fromJson(Map<String, dynamic> json) => Review(
-    id: json["id"],
-    service: json["service"],
-    user: json["user"],
-    userName: json["user_name"],
-    profileImage: json["profile_image"],
-    rating: json["rating"],
-    review: json["review"],
-    reviewImg: json["review_img"],
-    createdAt: json["created_at"] == null
-        ? null
-        : DateTime.parse(json["created_at"]),
-  );
+  factory Review.fromJson(Map<String, dynamic> json) {
+    // handle both: service / service_id, user / user_id, profile_image / user_img, reply / replies
+    final repliesField = json['replies'] ?? json['reply'];
+
+    return Review(
+      id: json['id'],
+      service: json['service'] ?? json['service_id'],
+      user: json['user'] ?? json['user_id'],
+      userName: json['user_name'],
+      profileImage: json['profile_image'] ?? json['user_img'],
+      rating: (json['rating'] as num?)?.toInt(),
+      review: json['review'],
+      reviewImg: json['review_img'],
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at']),
+      reply: repliesField == null
+          ? []
+          : List<ReviewReply>.from(
+              (repliesField as List).whereType<Map<String, dynamic>>().map(
+                ReviewReply.fromJson,
+              ),
+            ),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
-    "id": id,
-    "service": service,
-    "user": user,
-    "user_name": userName,
-    "profile_image": profileImage,
-    "rating": rating,
-    "review": review,
-    "review_img": reviewImg,
-    "created_at": createdAt?.toIso8601String(),
+    'id': id,
+    'service': service,
+    'user': user,
+    'user_name': userName,
+    'profile_image': profileImage,
+    'rating': rating,
+    'review': review,
+    'review_img': reviewImg,
+    'created_at': createdAt?.toIso8601String(),
+    'reply': reply == null
+        ? []
+        : List<dynamic>.from(reply!.map((x) => x.toJson())),
   };
 }
 
@@ -177,5 +192,27 @@ class Service {
     "price": price,
     "discount_price": discountPrice,
     "service_img": serviceImg,
+  };
+}
+
+class ReviewReply {
+  final int? id;
+  final String? message;
+  final DateTime? createdAt;
+
+  ReviewReply({this.id, this.message, this.createdAt});
+
+  factory ReviewReply.fromJson(Map<String, dynamic> json) => ReviewReply(
+    id: json['id'],
+    message: json['message'],
+    createdAt: json['created_at'] == null
+        ? null
+        : DateTime.parse(json['created_at']),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'message': message,
+    'created_at': createdAt?.toIso8601String(),
   };
 }

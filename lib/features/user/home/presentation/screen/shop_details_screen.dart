@@ -105,19 +105,14 @@ class ShopDetailsScreen extends StatelessWidget {
                                 isFavorite
                                     ? Icons.favorite
                                     : Icons.favorite_border_rounded,
-                                onTap: () {
-                                  if (data.id != null) {
-                                    // Create a temporary shop object to pass
-                                    final shop = FavoriteShop(
-                                      id: data.id,
-                                      name: data.name,
-                                      address: data.address,
-                                      shopImg: data.shopImg,
-                                    );
-                                    wishlistController.toggleShopFavorite(shop);
-                                  }
-                                },
                                 isFavorite: isFavorite,
+                                onTap: () {
+                                  final shopId = data.id;
+                                  if (shopId == null) return;
+                                  wishlistController.toggleShopFavoriteByShopId(
+                                    shopId,
+                                  );
+                                },
                               );
                             }),
                             // --- END OBX ---
@@ -200,14 +195,15 @@ class ShopDetailsScreen extends StatelessWidget {
               ),
               SizedBox(height: getHeight(18)),
 
-              // ---- Segmented Tabs (About / Review) ----
+              // ---- Segmented Tabs (Service / About / Review) ----
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: getWidth(20)),
                 child: Row(
                   children: [
                     _TabChip(
-                      label: "About",
-                      icon: IconPath.aboutIcon,
+                      label: "Services",
+                      icon: IconPath
+                          .serviceIcon, // <-- add a service icon in IconPath
                       selected: controller.selectedTab.value == 0,
                       onTap: () => controller.selectTab(0),
                       brand: _brand,
@@ -215,16 +211,26 @@ class ShopDetailsScreen extends StatelessWidget {
                     ),
                     SizedBox(width: getWidth(6)),
                     _TabChip(
-                      label: "Review",
-                      icon: IconPath.ratingIcon,
+                      label: "About",
+                      icon: IconPath.aboutIcon,
                       selected: controller.selectedTab.value == 1,
                       onTap: () => controller.selectTab(1),
+                      brand: _brand,
+                      chipBg: _chipBg,
+                    ),
+                    SizedBox(width: getWidth(6)),
+                    _TabChip(
+                      label: "Review",
+                      icon: IconPath.ratingIcon,
+                      selected: controller.selectedTab.value == 2,
+                      onTap: () => controller.selectTab(2),
                       brand: _brand,
                       chipBg: _chipBg,
                     ),
                   ],
                 ),
               ),
+
               SizedBox(height: getHeight(14)),
 
               // ---- Tab Content ----
@@ -233,13 +239,19 @@ class ShopDetailsScreen extends StatelessWidget {
                 child: Obx(() {
                   switch (controller.selectedTab.value) {
                     case 0:
+                      return _ServiceSection(
+                        services: data.services ?? [],
+                        priceColor: _ink,
+                        subtitleColor: _muted,
+                      );
+                    case 1:
                       return _AboutSection(
                         data: data,
                         titleColor: _ink,
                         bodyColor: _muted,
                         divider: _divider,
                       );
-                    case 1:
+                    case 2:
                       return _ReviewSection(
                         reviews: data.reviews ?? [],
                         star: _warning,
@@ -506,14 +518,14 @@ class _AboutSectionState extends State<_AboutSection> {
                 ),
               ],
             ),
-            SizedBox(height: getHeight(16)),
-            Divider(color: widget.divider, height: 1),
-            SizedBox(height: getHeight(16)),
-            _ServiceSection(
-              services: widget.data.services ?? [],
-              priceColor: widget.titleColor,
-              subtitleColor: widget.bodyColor,
-            ),
+            // SizedBox(height: getHeight(16)),
+            // Divider(color: widget.divider, height: 1),
+            // SizedBox(height: getHeight(16)),
+            // _ServiceSection(
+            //   services: widget.data.services ?? [],
+            //   priceColor: widget.titleColor,
+            //   subtitleColor: widget.bodyColor,
+            // ),
           ],
         );
       },
@@ -676,11 +688,13 @@ class _ReviewSection extends StatelessWidget {
         final r = reviews[i];
         return _ReviewCard(
           image: r.profileImage ?? '',
-          name: r.userName ?? '',
+          name: r.userName ?? (r.user != null ? 'User #${r.user}' : 'User'),
           review: r.review ?? '',
           rating: (r.rating ?? 0).toDouble(),
           star: star,
           starBg: starBg,
+          // NEW:
+          replies: r.reply ?? const [],
         );
       },
     );
@@ -695,6 +709,9 @@ class _ReviewCard extends StatelessWidget {
   final Color star;
   final Color starBg;
 
+  // NEW:
+  final List<ReviewReply> replies;
+
   const _ReviewCard({
     required this.image,
     required this.name,
@@ -702,77 +719,154 @@ class _ReviewCard extends StatelessWidget {
     required this.rating,
     required this.star,
     required this.starBg,
+    this.replies = const [],
   });
 
   @override
   Widget build(BuildContext context) {
     final full = rating.floor().clamp(0, 5);
-
     return Card(
       elevation: 0,
       margin: EdgeInsets.only(bottom: getHeight(12)),
       child: Padding(
-        padding: EdgeInsets.all(getWidth(12)),
-        child: Row(
+        padding: EdgeInsets.all(getWidth(0)),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: getWidth(26),
-              child: ClipOval(
-                child: (image.isNotEmpty && image != 'null')
-                    ? Image.network(
-                        image,
-                        fit: BoxFit.cover,
-                        width: getWidth(52),
-                        height: getWidth(52),
-                      )
-                    : Image.asset(
-                        ImagePath.profileImage,
-                        fit: BoxFit.cover,
-                        width: getWidth(52),
-                        height: getWidth(52),
-                      ),
-              ),
-            ),
-            SizedBox(width: getWidth(12)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: getWidth(16),
-                    ),
-                  ),
-                  SizedBox(height: getHeight(6)),
-                  Row(
-                    children: [
-                      for (int i = 0; i < 5; i++)
-                        Padding(
-                          padding: EdgeInsets.only(right: getWidth(2)),
-                          child: Icon(
-                            Icons.star,
-                            size: getWidth(18),
-                            color: i < full ? star : starBg,
+            // header row (avatar + name + stars)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: getWidth(26),
+                  backgroundColor: const Color(0xFFE5E7EB),
+                  child: ClipOval(
+                    child: (image.isNotEmpty && image != 'null')
+                        ? Image.network(
+                            image,
+                            fit: BoxFit.cover,
+                            width: getWidth(52),
+                            height: getWidth(52),
+                            // 👇 fallback to local asset on 404/any error
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/images/host_avatar.png',
+                              fit: BoxFit.cover,
+                              width: getWidth(52),
+                              height: getWidth(52),
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/images/host_avatar.png',
+                            fit: BoxFit.cover,
+                            width: getWidth(52),
+                            height: getWidth(52),
                           ),
-                        ),
-                      SizedBox(width: getWidth(6)),
+                  ),
+                ),
+
+                SizedBox(width: getWidth(12)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        "(${rating.toStringAsFixed(1)})",
-                        style: TextStyle(fontSize: getWidth(13)),
+                        name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: getWidth(16),
+                        ),
+                      ),
+                      SizedBox(height: getHeight(6)),
+                      Row(
+                        children: [
+                          for (int i = 0; i < 5; i++)
+                            Padding(
+                              padding: EdgeInsets.only(right: getWidth(2)),
+                              child: Icon(
+                                Icons.star,
+                                size: getWidth(18),
+                                color: i < full ? star : starBg,
+                              ),
+                            ),
+                          SizedBox(width: getWidth(6)),
+                          Text(
+                            "(${rating.toStringAsFixed(1)})",
+                            style: TextStyle(fontSize: getWidth(13)),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  SizedBox(height: getHeight(8)),
-                  Text(
-                    review,
-                    style: TextStyle(fontSize: getWidth(14), height: 1.45),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+
+            SizedBox(height: getHeight(8)),
+            if (review.isNotEmpty)
+              Text(
+                review,
+                style: TextStyle(fontSize: getWidth(14), height: 1.45),
+              ),
+
+            // NEW: Owner replies
+            if (replies.isNotEmpty) ...[
+              SizedBox(height: getHeight(10)),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(getWidth(10)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Owner reply',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: getWidth(14),
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    SizedBox(height: getHeight(6)),
+                    ...replies.map((rep) {
+                      final ts = rep.createdAt;
+                      final subtitle = ts == null
+                          ? ''
+                          : DateFormat.yMMMd().add_jm().format(ts);
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: getHeight(6)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              rep.message ?? '',
+                              style: TextStyle(
+                                fontSize: getWidth(14),
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                            if (subtitle.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(top: getHeight(2)),
+                                child: Text(
+                                  subtitle,
+                                  style: TextStyle(
+                                    fontSize: getWidth(12),
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

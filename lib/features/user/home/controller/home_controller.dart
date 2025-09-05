@@ -194,7 +194,7 @@ class HomeController extends GetxController {
     isLoading.value = true;
     try {
       final response = await NetworkCaller().getRequest(
-        AppUrls.shopDetails(id), // Corrected to use the right endpoint
+        AppUrls.shopDetails(id),
         token: AuthService.accessToken,
       );
       if (response.isSuccess) {

@@ -234,7 +234,7 @@ class ServicesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: getHeight(150),
+      height: getHeight(120),
       child: ListView.separated(
         padding: EdgeInsets.zero,
         scrollDirection: Axis.horizontal,
@@ -264,145 +264,140 @@ class ServiceCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => onEdit(id),
-      child: Container(
+      child: SizedBox(
+        // <-- clamp the card height so children know their budget
+        height: getHeight(120),
         width: getWidth(300),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(.04),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // image (with rounded left edges + safe fallback)
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(.04),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
-              child: hasImage
-                  ? SafeNetworkImage(
-                      url: item.serviceImg,
-                      width: getWidth(90),
-                      height: getHeight(150),
-                      fit: BoxFit.cover,
-                      // If your SafeNetworkImage supports fallback/placeholder,
-                      // keep passing them here. Otherwise SafeNetworkImage
-                      // should already handle invalid/empty URLs gracefully.
-                    )
-                  : Container(
-                      width: getWidth(90),
-                      height: getHeight(150),
-                      color: const Color(0xFFF3F4F6),
-                      alignment: Alignment.center,
-                      child: Image.asset(
-                        IconPath.serviceIcon,
-                        width: getWidth(32),
-                        height: getWidth(32),
-                        color: const Color(0xFF9CA3AF),
-                      ),
-                    ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // text
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 2,
+            ],
+          ),
+          child: Row(
+            children: [
+              // image
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // title + edit icon
-                    Row(
-                      children: [
-                        Text(
-                          item.title ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: getWidth(15),
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF111827),
-                          ),
+                child: hasImage
+                    ? SafeNetworkImage(
+                        url: item.serviceImg,
+                        width: getWidth(90),
+                        height: getHeight(120), // <-- match the card height
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        width: getWidth(90),
+                        height: getHeight(120), // <-- match the card height
+                        color: const Color(0xFFF3F4F6),
+                        alignment: Alignment.center,
+                        child: Image.asset(
+                          IconPath.serviceIcon,
+                          width: getWidth(32),
+                          height: getWidth(32),
+                          color: const Color(0xFF9CA3AF),
                         ),
-
-                        const SizedBox(width: 96),
-                        const Icon(
-                          Icons.edit_outlined,
-                          size: 18,
-                          color: Color(0xFF9CA3AF),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-
-                    // description
-                    Text(
-                      item.description ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: getWidth(12.5),
-                        color: const Color(0xFF6B7280),
-                        height: 1.25,
                       ),
-                    ),
+              ),
 
-                    const Spacer(),
+              const SizedBox(width: 12),
 
-                    // price + meta row
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            price == 0
-                                ? 'Free'
-                                : '\$${price.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: getWidth(13.5),
-                              color: const Color(0xFF0F172A),
+              // text
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical:
+                        10, // was 12; shave a bit to avoid vertical overflow
+                    horizontal: 2,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // title + trailing edit (no fixed width gap)
+                      Row(
+                        children: [
+                          Expanded(
+                            // <-- let text take remaining space
+                            child: Text(
+                              item.title ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: getWidth(15),
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF111827),
+                                height: 1.2, // slightly tighter line-height
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4), // was 6
+                      // description
+                      Flexible(
+                        // <-- allows this block to yield space if tight
+                        child: Text(
+                          item.description ?? '',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: getWidth(12.5),
+                            color: const Color(0xFF6B7280),
+                            height: 1.25,
+                          ),
                         ),
-                        const Spacer(),
-                        // quick meta chips (optional)
-                        // if ((item.duration ?? '').toString().isNotEmpty)
-                        //   _chip('${item.duration} min'),
-                        // if ((item.category ?? '').toString().isNotEmpty)
-                        // Padding(
-                        //   padding: const EdgeInsets.only(left: 6),
-                        //   child: _chip(
-                        //     item.category.toString().length > 14
-                        //         ? '${item.category.toString().substring(0, 12)}…'
-                        //         : item.category.toString(),
-                        //   ),
-                        // ),
-                      ],
-                    ),
-                  ],
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      // price row pinned at bottom by Spacer
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              price == 0
+                                  ? 'Free'
+                                  : '\$${price.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: getWidth(13.5),
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

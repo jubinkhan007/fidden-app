@@ -7,19 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-// import 'package:pin_code_fields/pin_code_fields.dart';
-
-// import '../../../../../core/common/styles/get_text_style.dart';
-// import '../../../../../core/common/widgets/custom_app_bar.dart';
-// import '../../../../../core/common/widgets/custom_button.dart';
 
 import '../../../../../core/utils/constants/app_colors.dart';
-import '../../../../../routes/app_routes.dart';
 import '../../../controller/forget_email_and_otp_controler.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
   const VerifyOtpScreen({super.key, required this.email});
-
   final String email;
 
   @override
@@ -27,18 +20,22 @@ class VerifyOtpScreen extends StatefulWidget {
 }
 
 class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
+  // 👇 Use 4 to match the design; switch to 6 if your backend requires.
+  static const int _otpLength = 4;
+
   final TextEditingController _otpTEController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final RxInt _remainingTime = 60.obs;
-  late Timer timer;
+
+  final RxInt _remainingTime = 12.obs; // shows 00:12 in the mock
   final RxBool _enableResendCodeButton = false.obs;
+  late Timer _timer;
 
   void _startResendCodeTimer() {
     _enableResendCodeButton.value = false;
-    _remainingTime.value = 60;
-    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    _remainingTime.value = 12;
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       _remainingTime.value--;
-      if (_remainingTime.value == 0) {
+      if (_remainingTime.value <= 0) {
         t.cancel();
         _enableResendCodeButton.value = true;
       }
@@ -47,126 +44,150 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     _startResendCodeTimer();
     super.initState();
   }
 
   @override
   void dispose() {
-    // TODO: implement dispose
-    timer.cancel();
+    _timer.cancel();
     super.dispose();
+  }
+
+  String _mmss(int total) {
+    final m = (total ~/ 60).toString().padLeft(2, '0');
+    final s = (total % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(ForgetPasswordAndOtpController());
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    const bg = Color(0xFFF6F8FB); // page background to match mock
+    const fieldStroke = Color(0xFFE5E7EB);
+    const fieldFill = Colors.white;
+    const primary = Color(0xFFDC143C);
+
     return Scaffold(
+      backgroundColor: bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: getHeight(24)),
-              CustomAppBar(
+              SizedBox(height: getHeight(8)),
+              const CustomAppBar(
                 firstText: 'Verification code',
                 secondText:
-                    "Please check your phone. We have to sent the code verification to your email.",
+                    'Please check your phone. We have to sent the code verification to your number.',
               ),
-              SizedBox(height: getHeight(70)),
+              SizedBox(height: getHeight(36)),
 
+              // OTP boxes — rounded, white, subtle border
               PinCodeTextField(
                 appContext: context,
-                length: 6,
-                onChanged: (value) {},
+                length: _otpLength,
                 controller: _otpTEController,
-                pinTheme: PinTheme(
-                  shape: PinCodeFieldShape.box,
-                  borderWidth: 1.5,
-                  borderRadius: BorderRadius.circular(8),
-                  fieldHeight: 50,
-                  fieldWidth: 50,
-                  activeFillColor: Colors.transparent,
-                  selectedFillColor: Colors.transparent,
-                  inactiveFillColor: Colors.transparent,
-                  activeColor: AppColors.primaryColor,
-                  selectedColor: AppColors.primaryColor,
-                  inactiveColor: Color(0xFFE0E0E0),
-                ),
-                cursorColor: Color(0xFF007AFF),
                 keyboardType: TextInputType.number,
                 enableActiveFill: true,
+                cursorColor: Colors.black,
                 textStyle: TextStyle(
-                  fontSize: getWidth(18),
+                  fontSize: getWidth(20),
                   fontWeight: FontWeight.w700,
+                  color: Colors.black,
                 ),
+                pinTheme: PinTheme(
+                  shape: PinCodeFieldShape.box,
+                  borderRadius: BorderRadius.circular(14),
+                  fieldHeight: getWidth(56),
+                  fieldWidth: getWidth(56),
+                  borderWidth: 1.5,
+                  inactiveColor: fieldStroke,
+                  selectedColor: primary,
+                  activeColor: primary,
+                  inactiveFillColor: fieldFill,
+                  selectedFillColor: fieldFill,
+                  activeFillColor: fieldFill,
+                ),
+                onChanged: (_) {},
+                beforeTextPaste: (t) => true,
               ),
 
-              SizedBox(height: getWidth(20)),
+              SizedBox(height: getHeight(24)),
 
-              // TODO: enable button when 120s is done and invisible the text
+              // Resend countdown (centered): "Resend code in 00:12"
               Align(
                 alignment: Alignment.center,
-                child: Obx(
-                  () => _enableResendCodeButton.value == false
-                      ? RichText(
-                          text: TextSpan(
-                            style: TextStyle(color: Colors.grey),
-                            text: "This code will be expired in ",
-                            children: [
-                              TextSpan(
-                                text: "${_remainingTime.value}s",
-                                style: TextStyle(color: AppColors.primaryColor),
-                              ),
-                            ],
-                          ),
-                        )
-                      : TextButton(
-                          onPressed: controller.isResending.value
-                              ? null
-                              : () async {
-                                  final ok = await controller.resendOtp(
-                                    widget.email,
-                                  );
-                                  if (ok && mounted) _startResendCodeTimer();
-                                },
-                          child: const Text("Resend Code"),
+                child: Obx(() {
+                  if (!_enableResendCodeButton.value) {
+                    return RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF374151),
                         ),
-                ),
+                        children: [
+                          const TextSpan(text: 'Resend code in '),
+                          TextSpan(
+                            text: _mmss(_remainingTime.value),
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return TextButton(
+                    onPressed: controller.isResending.value
+                        ? null
+                        : () async {
+                            final ok = await controller.resendOtp(widget.email);
+                            if (ok) _startResendCodeTimer();
+                          },
+                    child: const Text(
+                      'Resend Code',
+                      style: TextStyle(
+                        color: primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                }),
               ),
-              SizedBox(height: getWidth(84)),
+
+              SizedBox(height: getHeight(48)),
+
+              // Pill red "Verify" button
               Obx(
                 () => controller.isLoading.value
-                    ? const SpinKitWave(
-                        color: AppColors.primaryColor,
-                        size: 30.0,
-                      )
-                    : CustomButton(
-                        onPressed: () {
-                          controller.verifyOtp2(
-                            widget.email,
-                            _otpTEController.text,
-                          );
-
-                          // if (_formKey.currentState?.validate() ?? false) {
-                          //   loginController.login();
-                          //   //Get.toNamed(AppRoute.landingScreen);
-                          // }
-                        },
-                        child: Text(
-                          "Verify",
-                          style: TextStyle(
-                            fontSize: getWidth(18),
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                    ? const Center(child: SpinKitWave(color: primary, size: 30))
+                    : SizedBox(
+                        height: getHeight(56),
+                        width: double.infinity,
+                        child: CustomButton(
+                          onPressed: () {
+                            controller.verifyOtp2(
+                              widget.email,
+                              _otpTEController.text.trim(),
+                            );
+                          },
+                          child: Text(
+                            'Verify',
+                            style: TextStyle(
+                              fontSize: getWidth(18),
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
               ),
 
-              SizedBox(height: getHeight(40)),
+              SizedBox(height: getHeight(16)),
             ],
           ),
         ),

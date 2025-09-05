@@ -18,233 +18,313 @@ import '../login/role_selection_screen.dart';
 class SignUpScreen extends StatelessWidget {
   SignUpScreen({super.key});
 
-  // final LoginController loginController = Get.find<LoginController>();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   final SignUpController signUpController = Get.put(SignUpController());
+
+  // 🎨 Tokens tuned to the screenshot
+  static const _bg = Color(0xFFF4F4F5);
+  static const _label = Color(0xFF141414);
+  static const _hint = Color(0xFF9AA2A1);
+  static const _fieldFill = Colors.white;
+  static const _fieldStroke = Color(0xFFE8E8EC);
+  static const _primary = Color(0xFFDC143C);
+  static const _divider = Color(0xFFEDEDED);
+
+  InputDecoration _decor(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: _hint, fontSize: 16, height: 1.25),
+      filled: true,
+      fillColor: _fieldFill,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _fieldStroke),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _primary, width: 1.6),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.red, width: 1.6),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final maxW = 520.0; // keeps a tight column on large phones/tablets
+
     return Scaffold(
+      backgroundColor: _bg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: getWidth(16)),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  VerticalSpace(height: getHeight(30)),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Image.asset(
-                      ImagePath.splashLogo,
-                      height: getHeight(114),
-                      width: getWidth(176),
-                    ),
-                  ),
-                  VerticalSpace(height: getHeight(20)),
-                  Align(
-                    alignment: Alignment.center,
-                    child: CustomText(
-                      text: "Create Account",
-                      fontSize: getWidth(24),
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xff191A1A),
-                    ),
-                  ),
-                  VerticalSpace(height: getHeight(50)),
-
-                  // User Name
-                  // CustomText(
-                  //     text: "User Name",
-                  //     color: Color(0xff141414),
-                  //     fontSize: getWidth(15),
-                  //     fontWeight: FontWeight.w600),
-                  // SizedBox(height: getHeight(10)),
-                  // CustomTexFormField(
-                  //   controller: signUpController.userNameTEController,
-                  //   hintText: "Enter your name",
-                  //   validator: (value) =>
-                  //   value == null || value.isEmpty ? 'Name is required' : null,
-                  // ),
-                  // VerticalSpace(height: getHeight(20)),
-                  // Dropdown (Choose your role)
-                  CustomText(
-                    text: "Choose your role",
-                    color: Color(0xff141414),
-                    fontSize: getWidth(15),
-                    fontWeight: FontWeight.w600,
-                  ),
-                  SizedBox(height: getHeight(10)),
-
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      // color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Color(0xFFE0E0E0), width: 1),
-                    ),
-                    child: Obx(
-                      () => DropdownButtonFormField<String>(
-                        //dropdownColor: Color(0xffFFFFFF),
-                        value: signUpController.selectedValue.value,
-                        onChanged: (newValue) {
-                          signUpController.selectedValue.value = newValue!;
-                        },
-                        validator: (value) =>
-                            value == null ? 'Please select an option' : null,
-                        items: signUpController.items.map((String item) {
-                          return DropdownMenuItem<String>(
-                            value: item,
-                            child: Text(
-                              item,
-                              style: TextStyle(
-                                fontSize: getWidth(14),
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        decoration: InputDecoration(
-                          filled: true,
-                          // fillColor: Color(0xffFFFFFF),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-
-                          hintText: "Select a role",
-                          hintStyle: TextStyle(
-                            color: Color(0xff616161),
-                            fontSize: getWidth(16),
-                            fontWeight: FontWeight.w400,
-                          ),
-
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 20,
-                          ),
-                        ),
-                        icon: Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.grey,
-                        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxW),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: getWidth(16)),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    VerticalSpace(height: getHeight(24)),
+                    // Logo
+                    Align(
+                      alignment: Alignment.center,
+                      child: Image.asset(
+                        ImagePath.splashLogo,
+                        height: getHeight(124),
+                        width: getWidth(186),
                       ),
                     ),
-                  ),
-                  VerticalSpace(height: getHeight(20)),
-
-                  // Email
-                  CustomText(
-                    text: "Email",
-                    color: Color(0xff141414),
-                    fontSize: getWidth(15),
-                    fontWeight: FontWeight.w600,
-                  ),
-                  SizedBox(height: getHeight(10)),
-                  CustomTexFormField(
-                    controller: signUpController.emailTEController,
-                    hintText: "Enter your email",
-                    validator: AppValidator.validateEmail,
-                  ),
-                  VerticalSpace(height: getHeight(20)),
-
-                  // Password
-                  CustomText(
-                    text: "Password",
-                    color: Color(0xff141414),
-                    fontSize: getWidth(15),
-                    fontWeight: FontWeight.w600,
-                  ),
-                  SizedBox(height: getHeight(10)),
-                  CustomTexFormField(
-                    controller: signUpController.passwordTEController,
-                    hintText: "Enter your password",
-                    isPassword: true,
-                    validator: AppValidator.validatePassword,
-                  ),
-                  VerticalSpace(height: getHeight(24)),
-                  Obx(
-                    () => signUpController.isLoading.value
-                        ? const SpinKitWave(
-                            color: AppColors.primaryColor,
-                            size: 30.0,
-                          )
-                        : CustomButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                signUpController.createAccount();
-                              }
-                            },
-                            child: Text(
-                              "Sign Up",
-                              style: TextStyle(
-                                fontSize: getWidth(18),
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                  ),
-
-                  // Sign Up Button
-                  VerticalSpace(height: getHeight(30)),
-                  Align(
-                    alignment: Alignment.center,
-                    child: CustomText(
-                      text: "Or continue with",
-                      fontSize: getWidth(14),
-                      color: Color(0xff141414),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  VerticalSpace(height: getHeight(16)),
-
-                  GestureDetector(
-                    onTap: () {
-                      Get.to(() => RoleSelectionScreen());
-                    },
-                    child: Image.asset(
-                      "assets/images/google_sign_in.png",
-                      height: getHeight(70),
-                      width: double.infinity,
-                    ),
-                  ),
-
-                  VerticalSpace(height: getHeight(24)),
-
-                  // Already have an account? Sign In
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CustomText(
-                        text: "Already have an account?",
-                        fontWeight: FontWeight.normal,
-                        fontSize: getWidth(16),
-                        color: Color(0xff677674),
-                      ),
-                      HorizontalSpace(width: getWidth(5)),
-                      CustomTextButton(
-                        isUnderline: true,
-                        fontSize: getWidth(18),
-                        onPressed: () {
-                          Get.to(
-                            () => LoginScreen(),
-                            transition: Transition.rightToLeftWithFade,
-                            duration: Duration(milliseconds: 400),
-                            curve: Curves.easeOut,
-                          );
-                        },
-                        text: "Sign In",
+                    VerticalSpace(height: getHeight(16)),
+                    // Title
+                    Align(
+                      alignment: Alignment.center,
+                      child: CustomText(
+                        text: "Create Account",
+                        fontSize: getWidth(28),
                         fontWeight: FontWeight.w700,
-                        color: Color(0xffDC143C),
+                        color: const Color(0xFF191A1A),
                       ),
-                    ],
-                  ),
-                  VerticalSpace(height: getHeight(56)),
-                ],
+                    ),
+                    VerticalSpace(height: getHeight(40)),
+
+                    // // User Name
+                    // CustomText(
+                    //   text: "User Name",
+                    //   color: _label,
+                    //   fontSize: getWidth(15),
+                    //   fontWeight: FontWeight.w700,
+                    // ),
+                    // SizedBox(height: getHeight(10)),
+                    // CustomTexFormField(
+                    //   controller: signUpController.userNameTEController,
+                    //   hintText: "Jason Morgan",
+                    //   inputDecoration: _decor("Jason Morgan"),
+                    //   validator: (v) => (v == null || v.trim().isEmpty)
+                    //       ? 'Name is required'
+                    //       : null,
+                    // ),
+                    // VerticalSpace(height: getHeight(20)),
+
+                    // Role
+                    CustomText(
+                      text: "Choose your role",
+                      color: _label,
+                      fontSize: getWidth(15),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    SizedBox(height: getHeight(10)),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: _fieldFill,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _fieldStroke),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Obx(
+                        () => DropdownButtonFormField<String>(
+                          value: signUpController.selectedValue.value,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Colors.grey,
+                          ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 14,
+                            ),
+                          ),
+                          hint: Text(
+                            "Select",
+                            style: TextStyle(
+                              color: _hint,
+                              fontSize: getWidth(16),
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          items: signUpController.items.map((e) {
+                            return DropdownMenuItem<String>(
+                              value: e,
+                              child: Text(
+                                e,
+                                style: TextStyle(
+                                  fontSize: getWidth(16),
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          validator: (v) =>
+                              v == null ? 'Please select a role' : null,
+                          onChanged: (v) =>
+                              signUpController.selectedValue.value = v!,
+                        ),
+                      ),
+                    ),
+                    VerticalSpace(height: getHeight(20)),
+
+                    // Email
+                    CustomText(
+                      text: "Email",
+                      color: _label,
+                      fontSize: getWidth(15),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    SizedBox(height: getHeight(10)),
+                    CustomTexFormField(
+                      controller: signUpController.emailTEController,
+                      hintText: "example@gmail.com",
+                      inputDecoration: _decor("example@gmail.com"),
+                      validator: AppValidator.validateEmail,
+                    ),
+                    VerticalSpace(height: getHeight(20)),
+
+                    // Password
+                    CustomText(
+                      text: "Password",
+                      color: _label,
+                      fontSize: getWidth(15),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    SizedBox(height: getHeight(10)),
+                    CustomTexFormField(
+                      controller: signUpController.passwordTEController,
+                      hintText: "Enter your password",
+                      inputDecoration: _decor("Enter your password"),
+                      isPassword: true,
+                      validator: AppValidator.validatePassword,
+                    ),
+
+                    VerticalSpace(height: getHeight(24)),
+                    // Primary CTA
+                    Obx(
+                      () => signUpController.isLoading.value
+                          ? const Center(
+                              child: SpinKitWave(
+                                color: AppColors.primaryColor,
+                                size: 30.0,
+                              ),
+                            )
+                          : SizedBox(
+                              height: getHeight(64),
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0,
+                                  backgroundColor: _primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  if (_formKey.currentState?.validate() ??
+                                      false) {
+                                    signUpController.createAccount();
+                                  }
+                                },
+                                child: Text(
+                                  "Sign Up",
+                                  style: TextStyle(
+                                    fontSize: getWidth(18),
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+
+                    VerticalSpace(height: getHeight(28)),
+                    // Or continue with
+                    Align(
+                      alignment: Alignment.center,
+                      child: CustomText(
+                        text: "Or continue with",
+                        fontSize: getWidth(14),
+                        color: _label,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    VerticalSpace(height: getHeight(16)),
+
+                    // Google button (white, bordered)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => Get.to(() => RoleSelectionScreen()),
+                      child: Container(
+                        height: getHeight(56),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: _divider),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: getWidth(16)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              "assets/images/google_logo.png", // replace if your asset differs
+                              height: getHeight(22),
+                              width: getHeight(22),
+                            ),
+                            SizedBox(width: getWidth(10)),
+                            Text(
+                              "Google",
+                              style: TextStyle(
+                                fontSize: getWidth(16),
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1F1F1F),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    VerticalSpace(height: getHeight(24)),
+                    // Footer
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CustomText(
+                          text: "Already have an account?",
+                          fontWeight: FontWeight.normal,
+                          fontSize: getWidth(16),
+                          color: const Color(0xFF677674),
+                        ),
+                        HorizontalSpace(width: getWidth(5)),
+                        CustomTextButton(
+                          isUnderline: true,
+                          fontSize: getWidth(18),
+                          onPressed: () {
+                            Get.to(
+                              () => LoginScreen(),
+                              transition: Transition.rightToLeftWithFade,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOut,
+                            );
+                          },
+                          text: "Sign In",
+                          fontWeight: FontWeight.w700,
+                          color: _primary,
+                        ),
+                      ],
+                    ),
+                    VerticalSpace(height: getHeight(40)),
+                  ],
+                ),
               ),
             ),
           ),

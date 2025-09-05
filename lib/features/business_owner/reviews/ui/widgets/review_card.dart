@@ -14,8 +14,11 @@ class ReviewCard extends StatelessWidget {
     final replyController = TextEditingController();
 
     Widget _avatar() {
-      final url = review.avatarUrl;
-      if ((url).toString().trim().isEmpty) {
+      final url = review.avatarUrl; // String?
+      final isEmpty = url == null || url.trim().isEmpty;
+
+      if (isEmpty) {
+        // initials fallback
         return CircleAvatar(
           backgroundColor: const Color(0xFFE2E8F0),
           child: Text(
@@ -27,6 +30,7 @@ class ReviewCard extends StatelessWidget {
           ),
         );
       }
+
       return CircleAvatar(backgroundImage: NetworkImage(url));
     }
 
@@ -113,7 +117,7 @@ class ReviewCard extends StatelessWidget {
             if ((review.reply ?? '').trim().isNotEmpty)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
@@ -129,7 +133,7 @@ class ReviewCard extends StatelessWidget {
                         color: Color(0xFF0F172A),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       review.reply!,
                       style: const TextStyle(color: Color(0xFF334155)),
@@ -138,34 +142,51 @@ class ReviewCard extends StatelessWidget {
                 ),
               )
             else
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  // 3) Shrink the button’s internal padding/tap target
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 0),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  icon: const Icon(Icons.reply_outlined, size: 18),
-                  label: const Text('Reply'),
-                  onPressed: () {
-                    Get.dialog(
-                      _ReplyDialog(
-                        author: review.author,
-                        controller: replyController,
-                        onSend: () {
-                          final text = replyController.text.trim();
-                          if (text.isEmpty) return;
-                          controller.addReply(review, text);
-                          Get.back();
-                        },
+              Obx(() {
+                final loading = controller.isReplying(review.id);
+                return Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: const Color(0xFF5B44EE),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
                       ),
-                    );
-                  },
-                ),
-              ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.reply_outlined, size: 18),
+                    label: Text(loading ? 'Sending…' : 'Reply'),
+                    onPressed: loading
+                        ? null
+                        : () {
+                            Get.dialog(
+                              _ReplyDialog(
+                                author: review.author,
+                                onSend: (msg) => controller.sendReply(
+                                  review: review,
+                                  message: msg,
+                                ),
+                              ),
+                              barrierDismissible: true,
+                            );
+                          },
+                  ),
+                );
+              }),
           ],
         ),
       ),
@@ -173,15 +194,18 @@ class ReviewCard extends StatelessWidget {
   }
 }
 
-class _ReplyDialog extends StatelessWidget {
-  const _ReplyDialog({
-    required this.author,
-    required this.controller,
-    required this.onSend,
-  });
+class _ReplyDialog extends StatefulWidget {
+  const _ReplyDialog({required this.author, required this.onSend});
   final String author;
-  final TextEditingController controller;
-  final VoidCallback onSend;
+  final ValueChanged<String> onSend;
+
+  @override
+  State<_ReplyDialog> createState() => _ReplyDialogState();
+}
+
+class _ReplyDialogState extends State<_ReplyDialog> {
+  final controller = TextEditingController();
+  bool sending = false;
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +218,7 @@ class _ReplyDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Reply to $author',
+              'Reply to ${widget.author}',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
@@ -211,16 +235,33 @@ class _ReplyDialog extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Get.back(),
+                    onPressed: sending ? null : () => Get.back(),
                     child: const Text('Cancel'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: onSend,
-                    icon: const Icon(Icons.send),
-                    label: const Text('Send'),
+                    onPressed: sending
+                        ? null
+                        : () async {
+                            final msg = controller.text.trim();
+                            if (msg.isEmpty) return;
+                            setState(() => sending = true);
+                            widget.onSend(msg);
+                            if (mounted) Get.back(); // close on success
+                          },
+                    icon: sending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send),
+                    label: Text(sending ? 'Sending…' : 'Send'),
                   ),
                 ),
               ],

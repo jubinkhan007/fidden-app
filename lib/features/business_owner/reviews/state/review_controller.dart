@@ -1,4 +1,6 @@
-// lib/features/business_owner/reviews/controller/review_controller.dart
+// lib/features/business_owner/reviews/state/review_controller.dart
+import 'dart:async';
+import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/services/Auth_service.dart';
@@ -10,50 +12,123 @@ class ReviewController extends GetxController {
   final reviews = <Review>[].obs;
   final isLoading = false.obs;
 
-  // Call this from the screen (or onInit if you pass shopId into the controller)
-  Future<void> fetchReviews(String shopId) async {
+  // keep "replying" feature as-is
+  final _replyingIds = <String>{}.obs;
+  bool isReplying(String id) => _replyingIds.contains(id);
+
+  // --- NEW: remember the last query + debounce ---
+  String _lastQuery = '';
+  Timer? _debounce;
+
+  /// Call on every keystroke from the search bar
+  void search(String shopId, String q) {
+    _lastQuery = q;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      fetchReviews(shopId, query: q.trim().isEmpty ? null : q.trim());
+    });
+  }
+
+  Future<void> fetchReviews(String shopId, {String? query}) async {
     isLoading.value = true;
     try {
+      final url = (query == null || query.isEmpty)
+          ? AppUrls.shopReviews(shopId)
+          : '${AppUrls.shopReviews(shopId)}?search=${Uri.encodeQueryComponent(query)}';
+
       final res = await NetworkCaller().getRequest(
-        AppUrls.shopReviews(shopId),
+        url,
         token: AuthService.accessToken,
       );
 
-      if (!res.isSuccess || res.responseData is! Map) {
-        if (kDebugMode)
-          debugPrint('[reviews] bad response: ${res.responseData}');
+      if (!res.isSuccess || res.responseData == null) {
         reviews.clear();
         return;
       }
 
-      final map = res.responseData as Map<String, dynamic>;
-      final list = (map['reviews'] as List? ?? <dynamic>[])
+      // 🔧 NEW: accept either Map or JSON string
+      dynamic data = res.responseData;
+      if (data is String) {
+        try {
+          data = jsonDecode(data);
+        } catch (_) {
+          reviews.clear();
+          return;
+        }
+      }
+      if (data is! Map<String, dynamic>) {
+        reviews.clear();
+        return;
+      }
+
+      final Map<String, dynamic> root = data as Map<String, dynamic>;
+
+      // supports both: {results:{...}} and flat {...}
+      final Map<String, dynamic> payload =
+          (root['results'] is Map<String, dynamic>)
+          ? root['results'] as Map<String, dynamic>
+          : root;
+
+      final List<Review> list = (payload['reviews'] as List? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(_mapApiReview)
           .toList();
 
       reviews.assignAll(list);
     } catch (e) {
-      if (kDebugMode) debugPrint('[reviews] error: $e');
       reviews.clear();
     } finally {
       isLoading.value = false;
     }
   }
 
-  /// Client-side reply (local only). Replace with POST when your API is ready.
-  void addReply(Review review, String replyText) {
-    review.reply = replyText;
-    reviews.refresh();
+  // Pull-to-refresh should keep current search text
+  Future<void> refreshCurrent(String shopId) =>
+      fetchReviews(shopId, query: _lastQuery.isEmpty ? null : _lastQuery);
+
+  Future<void> sendReply({
+    required Review review,
+    required String message,
+  }) async {
+    if (message.trim().isEmpty) return;
+    final id = review.id;
+
+    _replyingIds.add(id);
+    _replyingIds.refresh();
+
+    try {
+      final res = await NetworkCaller().postRequest(
+        AppUrls.replyReviews(id),
+        token: AuthService.accessToken,
+        body: {'message': message.trim()},
+      );
+
+      if (res.isSuccess) {
+        review.reply = message.trim(); // optimistic update
+        reviews.refresh();
+        Get.snackbar('Reply sent', 'Your reply has been posted.');
+      } else {
+        final detail = res.responseData is Map
+            ? (res.responseData['detail'] ?? 'Failed to send reply')
+            : 'Failed to send reply';
+        Get.snackbar('Error', detail.toString());
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('sendReply error: $e');
+      Get.snackbar('Error', 'Could not send reply. Please try again.');
+    } finally {
+      _replyingIds.remove(id);
+      _replyingIds.refresh();
+    }
   }
 
-  // ---- mapping helper ----
+  // ---- mapping helper (unchanged except id toString) ----
   Review _mapApiReview(Map<String, dynamic> j) {
-    // replies: take latest message if exists
+    // take newest reply if present
     String? replyText;
-    final replies =
-        (j['reply'] as List?)?.whereType<Map<String, dynamic>>().toList() ??
-        const [];
+    final replies = (j['reply'] as List? ?? j['replies'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList();
     if (replies.isNotEmpty) {
       replies.sort((a, b) {
         final ad =
@@ -69,13 +144,14 @@ class ReviewController extends GetxController {
 
     final authorName = (j['user_name'] as String?)?.trim();
     final userId = j['user_id']?.toString();
-    final fallbackAuthor = authorName?.isNotEmpty == true
+    final fallbackAuthor = (authorName?.isNotEmpty == true)
         ? authorName!
         : (userId != null ? 'User #$userId' : 'User');
 
     return Review(
+      id: (j['id'] ?? '').toString(),
       author: fallbackAuthor,
-      avatarUrl: (j['user_img'] as String?)?.trim() ?? '',
+      avatarUrl: (j['user_img'] as String?)?.trim(),
       rating: ((j['rating'] as num?) ?? 0).toDouble(),
       comment: (j['review'] as String?)?.trim() ?? '',
       date:

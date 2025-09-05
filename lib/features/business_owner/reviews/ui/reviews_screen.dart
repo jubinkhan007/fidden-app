@@ -19,10 +19,10 @@ class ReviewsScreen extends StatelessWidget {
     final c = Get.put(ReviewController());
     final f = Get.put(ReviewsFilterController());
 
-    // fetch when screen builds first time
-    c.fetchReviews(shopId);
+    // fetch once
+    WidgetsBinding.instance.addPostFrameCallback((_) => c.fetchReviews(shopId));
 
-    // Build service filter options from loaded reviews (until API filter list exists)
+    // build service options when reviews change
     ever(c.reviews, (_) {
       final names =
           c.reviews
@@ -51,72 +51,103 @@ class ReviewsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Obx(() {
-        if (c.isLoading.value) return const ReviewsLoadingList();
-        if (c.reviews.isEmpty) {
-          return const ReviewsEmptyState(
-            title: 'No reviews yet',
-            subtitle: 'You’ll see new reviews from customers here.',
-          );
-        }
 
-        final filtered = applyReviewFilters(reviews: c.reviews, f: f);
-
-        return RefreshIndicator(
-          onRefresh: () => c.fetchReviews(shopId),
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: ReviewsSearchBar(
-                    hint: 'Search by name, service, comment…',
-                    onChanged: (t) => f.query.value = t,
-                    onClear: () => f.query.value = '',
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: ReviewsChipsBar(
-                  filters: f,
-                  onTapFilterSheet: () => openReviewsFilterSheet(f, context),
-                  onClearDates: () {
-                    f.dateFrom.value = null;
-                    f.dateTo.value = null;
+      // ⬇️ No Obx here — the shell never rebuilds
+      body: RefreshIndicator(
+        onRefresh: () => c.fetchReviews(shopId),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // Static header: always stays in the tree
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: ReviewsSearchBar(
+                  controller: f.searchCtrl,
+                  hint: 'Search by name, service, comment…',
+                  onChanged: (t) {
+                    f.query.value = t;
+                    c.search(shopId, t);
+                  },
+                  onClear: () {
+                    f.query.value = '';
+                    c.search(shopId, '');
                   },
                 ),
               ),
-              if (filtered.isEmpty)
-                const SliverToBoxAdapter(
+            ),
+            SliverToBoxAdapter(
+              child: ReviewsChipsBar(
+                filters: f,
+                onTapFilterSheet: () => openReviewsFilterSheet(f, context),
+                onClearDates: () {
+                  f.dateFrom.value = null;
+                  f.dateTo.value = null;
+                },
+              ),
+            ),
+
+            // ⬇️ Only the list area reacts to changes
+            Obx(() {
+              // thin top progress indicator while fetching, without nuking UI
+              final loadingBar = c.isLoading.value
+                  ? const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: LinearProgressIndicator(minHeight: 2),
+                      ),
+                    )
+                  : const SliverToBoxAdapter(child: SizedBox.shrink());
+
+              if (c.reviews.isEmpty && !c.isLoading.value) {
+                return SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: ReviewsEmptyState(
+                    padding: const EdgeInsets.all(24.0),
+                    child: const ReviewsEmptyState(
+                      title: 'No reviews yet',
+                      subtitle: "You'll see new reviews from customers here.",
+                    ),
+                  ),
+                );
+              }
+
+              final filtered = applyReviewFilters(reviews: c.reviews, f: f);
+
+              if (!c.isLoading.value && filtered.isEmpty) {
+                return SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: const ReviewsEmptyState(
                       title: 'No results',
                       subtitle:
                           'Try adjusting your search or clearing filters.',
                     ),
                   ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    0,
-                    16,
-                    24,
-                  ), // left/right + bottom gap
-                  sliver: SliverList.separated(
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) =>
-                        ReviewCard(review: filtered[i]),
+                );
+              }
+
+              return SliverList(
+                // include the loading bar as a first item when loading
+                delegate: SliverChildListDelegate([
+                  if (c.isLoading.value) const SizedBox(height: 2),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: Column(
+                      children: List.generate(
+                        filtered.length,
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: ReviewCard(review: filtered[i]),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-            ],
-          ),
-        );
-      }),
+                ]),
+              );
+            }),
+          ],
+        ),
+      ),
     );
   }
 }

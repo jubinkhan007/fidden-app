@@ -1,116 +1,135 @@
-import 'package:fidden/core/commom/widgets/custom_button.dart';
-import 'package:fidden/core/commom/widgets/custom_text.dart';
-import 'package:fidden/core/utils/constants/app_colors.dart';
-import 'package:fidden/core/utils/constants/app_sizes.dart';
-import 'package:fidden/core/utils/constants/image_path.dart';
-
+import 'package:fidden/features/splash/presentation/screens/on_boarding_two_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/src/routes/transitions_type.dart';
 
-import '../../../../core/utils/constants/icon_path.dart';
-import 'on_boarding_two_screen.dart';
-
-class OnBoardingScreenOne extends StatelessWidget {
-  const OnBoardingScreenOne({super.key});
+class OnboardingScreenOne extends StatelessWidget {
+  const OnboardingScreenOne({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 520, // Adjust as needed
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage(
-                        ImagePath.oneBoardingOneImage,
-                      ), // Replace with your image path
-                      fit: BoxFit.cover, // Ensure the image covers the area
-                    ),
-                  ),
-                ),
-                Container(
-                  width: double.infinity,
-                  height: 520, // Adjust as needed
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(
-                          0xffF4F4F4,
-                        ).withOpacity(0), // Transparent at the top
-                        Color(0xffF4F4F4), // Solid at the bottom
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    // Using MediaQuery for responsive sizing
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-            //Image.asset(ImagePath.fiddenLoginImage,width: getWidth(430),),
-            SizedBox(height: getHeight(31)),
-            Padding(
-              padding: EdgeInsets.only(left: getWidth(24), right: getWidth(24)),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F4F4), // A light grey background
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background Image
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: screenHeight * 0.65, // Image takes up top 65% of the screen
+            child: Image.asset(
+              'assets/images/onBoarding_one_image.jpg', // Make sure this path is correct in your pubspec.yaml
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Gradient Overlay for fade effect
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: screenHeight * 0.66, // Slightly larger to ensure full fade
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xFFF4F4F4)],
+                  stops: [0.7, 1.0], // Gradient starts fading around 70% down
+                ),
+              ),
+            ),
+          ),
+          // Content Area
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.08, // 8% horizontal padding
+                vertical: screenHeight * 0.05, // 5% vertical padding
+              ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CustomText(
-                    text: "Tailor Your Experience",
-                    color: AppColors.black,
-                    fontSize: getWidth(25),
-                    fontWeight: FontWeight.bold,
-                  ),
-                  SizedBox(height: getHeight(12)),
-                  CustomText(
-                    text:
-                        "Select your services and preferences to get the best recommendations.",
-                    color: AppColors.black,
-                    fontSize: getWidth(16),
-                    fontWeight: FontWeight.w500,
+                  const Text(
+                    "Tailor Your Experience",
                     textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: getHeight(40)),
-                  CustomButton(
-                    onPressed: () {
-                      Get.to(
-                        () => OnBoardingScreenTwo(),
-                        transition: Transition.rightToLeftWithFade,
-                        duration: Duration(milliseconds: 400),
-                        curve: Curves.easeOut,
-                      );
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Next",
-                          style: TextStyle(
-                            color: Color(0xffFFFFFF),
-                            fontSize: getWidth(16),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        //CustomText(text: "Next",color: Color(0xffFFFFFF),fontSize: getWidth(16),fontWeight: FontWeight.w600,),
-                        SizedBox(width: getWidth(10)),
-                        Image.asset(
-                          IconPath.rightArrowIconSimple,
-                          height: getHeight(20),
-                          width: getWidth(20),
-                        ),
-                      ],
+                    style: TextStyle(
+                      fontFamily: 'Inter', // Using Inter font for a modern look
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827), // A dark, near-black color
                     ),
                   ),
-                  SizedBox(height: getHeight(20)),
+                  SizedBox(height: screenHeight * 0.02),
+                  const Text(
+                    "Select your services and preferences to get the best recommendations.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                      color: Color(0xFF4B5563), // A muted grey for subtitle
+                      height: 1.5, // Line height for better readability
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.05),
+                  // Next Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.to(
+                          () => OnBoardingScreenTwo(),
+                          transition: Transition.rightToLeftWithFade,
+                          duration: Duration(milliseconds: 400),
+                          curve: Curves.easeOut,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(
+                          0xFFDC143C,
+                        ), // The specified red color
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0, // Flat button design
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Next",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(
+                            Icons.arrow_forward,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

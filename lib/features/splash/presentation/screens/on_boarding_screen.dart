@@ -1,122 +1,168 @@
-import 'package:fidden/core/commom/widgets/custom_button.dart';
-import 'package:fidden/core/commom/widgets/custom_text.dart';
+import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/utils/constants/app_colors.dart';
 import 'package:fidden/core/utils/constants/app_sizes.dart';
 import 'package:fidden/core/utils/constants/image_path.dart';
+import 'package:fidden/features/auth/presentation/screens/login/login_screen.dart';
 import 'package:fidden/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../../core/services/Auth_service.dart';
-import '../../../auth/presentation/screens/login/login_screen.dart';
-
-class OnBoardingScreen extends StatelessWidget {
-  const OnBoardingScreen({super.key});
+class OnBoardingThreeScreen extends StatelessWidget {
+  const OnBoardingThreeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 420, // Adjust as needed
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage(
-                        ImagePath.fiddenLoginImage,
-                      ), // Replace with your image path
-                      fit: BoxFit.cover, // Ensure the image covers the area
-                    ),
-                  ),
-                ),
-                Container(
-                  width: double.infinity,
-                  height: 420, // Adjust as needed
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(
-                          0xffF4F4F4,
-                        ).withOpacity(0), // Transparent at the top
-                        Color(0xffF4F4F4), // Solid at the bottom
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    // Using MediaQuery for responsive sizing
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-            //Image.asset(ImagePath.fiddenLoginImage,width: getWidth(430),),
-            SizedBox(height: getHeight(31)),
-            Padding(
-              padding: EdgeInsets.only(left: getWidth(24), right: getWidth(24)),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F4F4), // A light grey background
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background Image
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: screenHeight * 0.65, // Image takes up top 65% of the screen
+            child: Image.asset(
+              ImagePath.fiddenLoginImage, // Correct image from your assets
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // Gradient Overlay for the fade-to-background effect
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height:
+                screenHeight * 0.66, // Slightly larger to ensure a smooth fade
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFFF4F4F4).withOpacity(0.8),
+                    const Color(0xFFF4F4F4),
+                  ],
+                  stops: const [0.6, 0.9, 1.0], // Controls the fade points
+                ),
+              ),
+            ),
+          ),
+
+          // Content Area (Text and Buttons)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.08, // 8% horizontal padding
+                vertical: screenHeight * 0.05, // 5% vertical padding
+              ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CustomText(
-                    text: "Customized to Your Needs",
-                    color: AppColors.black,
-                    fontSize: getWidth(25),
-                    fontWeight: FontWeight.bold,
-                  ),
-                  SizedBox(height: getHeight(12)),
-                  CustomText(
-                    text:
-                        "From haircuts and massages to skincare, find tailored services that match your style and beauty needs.",
-                    color: AppColors.black,
-                    fontSize: getWidth(16),
-                    fontWeight: FontWeight.w500,
+                  const Text(
+                    "Customized to Your Needs",
                     textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827), // A dark, near-black color
+                    ),
                   ),
-                  SizedBox(height: getHeight(40)),
-                  CustomButton(
-                    onPressed: () async {
-                      await AuthService.setOnboardingSeen(true);
-                      Get.to(
-                        () => LoginScreen(),
-                        transition: Transition.rightToLeftWithFade,
-                        duration: Duration(milliseconds: 400),
-                        curve: Curves.easeOut,
-                      );
-                    },
-                    child: Text(
-                      "Log in",
-                      style: TextStyle(
-                        color: Color(0xffFFFFFF),
-                        fontSize: getWidth(16),
-                        fontWeight: FontWeight.w700,
+                  SizedBox(height: screenHeight * 0.02),
+                  const Text(
+                    "From haircuts and massages to skincare, find tailored services that match your style and beauty needs.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                      color: Color(0xFF4B5563), // Muted grey for subtitle
+                      height: 1.5, // Line height for readability
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.05),
+
+                  // Log in Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await AuthService.setOnboardingSeen(
+                          true,
+                        ); // Mark onboarding as complete
+                        Get.offAll(
+                          () => LoginScreen(),
+                        ); // Navigate to Login Screen
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors
+                            .primaryColor, // Your app's primary red color
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        "Log in",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                  SizedBox(height: getHeight(20)),
-                  CustomButton(
-                    onPressed: () async {
-                      await AuthService.setOnboardingSeen(true);
-                      Get.toNamed(AppRoute.signUpScreen);
-                    },
-                    color: Color(0xffF4F4F4),
-                    borderColor: Color(0xff7A49A5),
-                    child: Text(
-                      "Register",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: getWidth(16),
-                        fontWeight: FontWeight.w700,
+                  SizedBox(height: screenHeight * 0.02),
+
+                  // Register Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        await AuthService.setOnboardingSeen(
+                          true,
+                        ); // Mark onboarding as complete
+                        Get.toNamed(
+                          AppRoute.signUpScreen,
+                        ); // Navigate to Sign Up screen
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(
+                          color: Color(0xFF7A49A5),
+                          width: 1.5,
+                        ), // Purple border
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Register",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827), // Dark text color
+                        ),
                       ),
                     ),
                   ),
-                  SizedBox(height: getHeight(30)),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

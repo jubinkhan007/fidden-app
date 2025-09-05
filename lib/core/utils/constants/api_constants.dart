@@ -11,6 +11,7 @@ class AppUrls {
 
   static const String login = '$_baseUrl/accounts/login/';
   static const String socialLogin = '$_baseUrl/accounts/login/google/';
+  static const String refreshToken = '$_baseUrl/accounts/token/refresh/';
 
   // User
   static const String getMyProfile = '$_baseUrl/accounts/profile/';
@@ -26,8 +27,8 @@ class AppUrls {
   // owner-Review
   static String shopReviews(String shopId) =>
       '${AppUrls._baseUrl}/api/shops/rating-reviews/$shopId/';
-  static String replyReviews(String shopId) =>
-      '${AppUrls._baseUrl}/api/create-reply/$shopId/';
+  static String replyReviews(String reviewId) =>
+      '${AppUrls._baseUrl}/api/create-reply/$reviewId/';
 
   static const String promoOffers = '$_baseUrl/promo-offers';
 

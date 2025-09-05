@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
-import 'package:fidden/features/business_owner/home/screens/all_service_screen.dart';
 import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
 import 'package:fidden/features/user/shops/presentation/screens/all_shops_screen.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/all_services_screen.dart';
@@ -26,11 +25,8 @@ class _WishlistScreenState extends State<WishlistScreen>
   @override
   void initState() {
     super.initState();
-    // Ensure a single instance and reuse it everywhere
     c = Get.put(WishlistController(), permanent: true);
     _tab = TabController(length: 2, vsync: this);
-
-    // Always refresh when we land on this screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshAll();
     });
@@ -78,7 +74,6 @@ class _WishlistScreenState extends State<WishlistScreen>
           child: Obx(
             () => TabBar(
               controller: _tab,
-              isScrollable: false,
               indicatorColor: Colors.black,
               labelColor: Colors.black,
               unselectedLabelColor: Colors.black54,
@@ -105,6 +100,10 @@ class _WishlistScreenState extends State<WishlistScreen>
   }
 }
 
+// ===================================================================
+//                        WIDGETS SECTION
+// ===================================================================
+
 class _ShopsTab extends StatelessWidget {
   const _ShopsTab({required this.controller});
   final WishlistController controller;
@@ -122,30 +121,28 @@ class _ShopsTab extends StatelessWidget {
           ctaLabel: 'Browse Shops',
         );
       }
-
       return ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         itemCount: controller.favoriteShops.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, __) {
+          return Column(
+            children: [
+              Padding(padding: EdgeInsetsGeometry.fromLTRB(0, 12, 0, 0)),
+              Divider(height: 0, indent: 16, endIndent: 16),
+              Padding(padding: EdgeInsetsGeometry.fromLTRB(0, 0, 0, 12)),
+            ],
+          );
+        },
         itemBuilder: (context, i) {
           final s = controller.favoriteShops[i];
-          return Dismissible(
+          return _NewWishlistCard(
             key: ValueKey('shop_${s.id}_${i}'),
-            direction: DismissDirection.endToStart,
-            background: _swipeBg(),
-            onDismissed: (_) =>
+            imageUrl: s.shopImg,
+            title: s.name ?? '—',
+            subtitle: s.address ?? '—',
+            onTap: () => Get.to(() => ShopDetailsScreen(id: s.id!.toString())),
+            onRemove: () =>
                 controller.removeShopFromWishlistByWishlistId(s.id!),
-            child: _WishlistCard(
-              imageUrl: s.shopImg,
-              title: s.name ?? '—',
-              subtitle: s.address ?? '—',
-              trailing: _RemoveIconButton(
-                onTap: () =>
-                    controller.removeShopFromWishlistByWishlistId(s.id!),
-              ),
-              onTap: () =>
-                  Get.to(() => ShopDetailsScreen(id: s.id!.toString())),
-            ),
           );
         },
       );
@@ -170,42 +167,27 @@ class _ServicesTab extends StatelessWidget {
           ctaLabel: 'Browse Services',
         );
       }
-
       return ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         itemCount: controller.favoriteServices.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, __) =>
+            const Divider(height: 1, indent: 16, endIndent: 16),
         itemBuilder: (context, i) {
           final s = controller.favoriteServices[i];
-          return Dismissible(
+          return _NewWishlistCard(
             key: ValueKey('service_${s.id}_${i}'),
-            direction: DismissDirection.endToStart,
-            background: _swipeBg(),
-            // NOTE: If your controller expects wishlistId, this passes wishlist id.
-            onDismissed: (_) =>
+            imageUrl: s.serviceImg,
+            title: s.title ?? '—',
+            subtitle: s.shopAddress ?? '—',
+            price: s.price,
+            onTap: () {
+              final sid = s.serviceNo ?? s.id;
+              if (sid != null) {
+                Get.to(() => ServiceDetailsScreen(serviceId: sid));
+              }
+            },
+            onRemove: () =>
                 controller.removeServiceFromWishlistByWishlistId(s.id!),
-            child: _WishlistCard(
-              imageUrl: s.serviceImg,
-              title: s.title ?? '—',
-              subtitle: s.shopAddress ?? '—',
-              price: s.price,
-              trailing: _RemoveIconButton(
-                onTap: () =>
-                    controller.removeServiceFromWishlistByWishlistId(s.id!),
-              ),
-              onTap: () {
-                // If your model uses a different field name, change s.serviceId accordingly.
-                final sid = s.id; // mapped from JSON key "service_id"
-                if (sid != null) {
-                  Get.to(() => ServiceDetailsScreen(serviceId: sid));
-                } else {
-                  Get.snackbar(
-                    'Unavailable',
-                    'Service id missing for this item.',
-                  );
-                }
-              },
-            ),
           );
         },
       );
@@ -213,181 +195,117 @@ class _ServicesTab extends StatelessWidget {
   }
 }
 
-class _WishlistCard extends StatelessWidget {
-  const _WishlistCard({
+//  UPDATED Wishlist Card Layout
+class _NewWishlistCard extends StatelessWidget {
+  const _NewWishlistCard({
+    super.key,
     required this.imageUrl,
     required this.title,
     required this.subtitle,
     this.price,
-    required this.trailing,
-    this.onTap,
+    required this.onTap,
+    required this.onRemove,
   });
 
   final String? imageUrl;
   final String title;
   final String subtitle;
   final String? price;
-  final Widget trailing;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final placeholder =
         'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop';
 
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: 8.0,
+        ), // Reduced vertical padding
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment
+              .center, //  Aligns items vertically in the center
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: imageUrl ?? placeholder,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    Container(color: const Color(0xFFEFF1F5)),
+                errorWidget: (_, __, ___) =>
+                    Container(color: const Color(0xFFEFF1F5)),
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Stack(
+            ),
+            const SizedBox(width: 16),
+            // Details Column
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment
+                    .center, //  Vertically centers content in column
                 children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: AspectRatio(
-                      aspectRatio: 16 / 9,
-                      child: CachedNetworkImage(
-                        imageUrl: imageUrl ?? placeholder,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) =>
-                            Container(color: const Color(0xFFEFF1F5)),
-                        errorWidget: (_, __, ___) =>
-                            Container(color: const Color(0xFFEFF1F5)),
-                      ),
+                  Text(
+                    title,
+                    maxLines: 1, //  Changed to 1 line for consistent alignment
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.55),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
-                  if (price != null && price!.trim().isNotEmpty)
-                    Positioned(
-                      right: 12,
-                      bottom: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '\$${price!}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14.5,
-                          ),
-                        ),
+                  if (price != null && price!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$$price/person',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
+                  ],
                 ],
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CustomText(
-                            text: title,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            maxLines: 1,
-                            textOverflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    trailing,
-                  ],
+            ),
+            const SizedBox(width: 16), // Spacing between text and button
+            OutlinedButton.icon(
+              onPressed: onRemove,
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('Remove'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.black87,
+                side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _RemoveIconButton extends StatelessWidget {
-  const _RemoveIconButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.red.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.all(8),
-          child: Icon(Icons.delete_outline, color: Colors.red),
-        ),
-      ),
-    );
-  }
-}
-
-Widget _swipeBg() => Container(
-  alignment: Alignment.centerRight,
-  padding: const EdgeInsets.symmetric(horizontal: 20),
-  decoration: BoxDecoration(
-    color: Colors.red.withOpacity(0.15),
-    borderRadius: BorderRadius.circular(16),
-  ),
-  child: const Icon(Icons.delete_outline, color: Colors.red, size: 28),
-);
+// Other widgets (_EmptyState, _ShimmerList, etc.) remain the same
+// ...
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({
@@ -425,7 +343,6 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(color: Colors.grey.shade700),
             ),
             const SizedBox(height: 16),
-            // Optional CTA (wire up navigation if you want)
             OutlinedButton(
               onPressed: () {
                 if (ctaLabel.contains('Shop')) {
@@ -463,14 +380,34 @@ class _ShimmerList extends StatelessWidget {
       highlightColor: const Color(0xFFF6F8FC),
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        itemCount: 4,
+        itemCount: 5,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (_, __) => Container(
-          height: 220,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
+        itemBuilder: (_, __) => Row(
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 16,
+                    width: double.infinity,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(height: 14, width: 150, color: Colors.white),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

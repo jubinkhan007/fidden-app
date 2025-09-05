@@ -46,7 +46,7 @@ class AppRoute {
     //Splash Screen: initial screen
     GetPage(name: init, page: () => SplashScreen()),
     //GetPage(name: init, page: () => AgreementScreen()),
-    GetPage(name: onboarding, page: () => OnBoardingScreen()),
+    GetPage(name: onboarding, page: () => OnBoardingThreeScreen()),
     GetPage(name: loginScreen, page: () => LoginScreen()),
     GetPage(name: forgetEmailScreen, page: () => ForgetEmailScreen()),
     GetPage(name: wishListScreen, page: () => const WishlistScreen()),

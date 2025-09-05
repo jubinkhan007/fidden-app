@@ -179,11 +179,12 @@ class _EditBusinessOwnerProfileScreenState
     EdgeInsets padding = const EdgeInsets.fromLTRB(16, 14, 16, 16),
   }) {
     return Card(
+      color: Colors.grey.shade100,
       elevation: 0,
       margin: EdgeInsets.only(bottom: getHeight(16)),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: Colors.white),
       ),
       child: Padding(
         padding: padding,
@@ -581,7 +582,10 @@ class _EditBusinessOwnerProfileScreenState
                                       closeAt: controller1.endTime.value,
                                     );
                                   },
-                            child: const Text("Save & Continue"),
+                            child: const Text(
+                              "Save & Continue",
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                   ),
                 ),
@@ -826,11 +830,16 @@ class _EditBusinessOwnerProfileScreenState
     final selected = await Get.to(
       () => MapScreenProfile(initialPosition: initialPosition),
     );
+
     if (selected != null && selected is LatLng) {
       final address = await _getAddressFromLatLng(selected);
-      locationTEController.text = address;
-      controller1.lat.value = selected.latitude.toString();
-      controller1.long.value = selected.longitude.toString();
+
+      setState(() {
+        // <— force rebuild so the address shows immediately
+        locationTEController.text = address;
+        controller1.lat.value = selected.latitude.toString();
+        controller1.long.value = selected.longitude.toString();
+      });
     }
   }
 
