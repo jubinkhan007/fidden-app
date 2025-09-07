@@ -1,10 +1,9 @@
+// lib/features/user/shops/data/shop_details_model.dart
+
 import 'dart:convert';
 
 ShopDetailsModel shopDetailsModelFromJson(String str) =>
     ShopDetailsModel.fromJson(json.decode(str));
-
-String shopDetailsModelToJson(ShopDetailsModel data) =>
-    json.encode(data.toJson());
 
 class ShopDetailsModel {
   int? id;
@@ -57,7 +56,7 @@ class ShopDetailsModel {
         ? []
         : List<String>.from(json["close_days"]!.map((x) => x)),
     ownerId: json["owner_id"],
-    avgRating: json["avg_rating"]?.toDouble(),
+    avgRating: (json["avg_rating"] as num?)?.toDouble(),
     reviewCount: json["review_count"],
     services: json["services"] == null
         ? []
@@ -66,97 +65,62 @@ class ShopDetailsModel {
         ? []
         : List<Review>.from(json["reviews"]!.map((x) => Review.fromJson(x))),
   );
-
-  Map<String, dynamic> toJson() => {
-    "id": id,
-    "name": name,
-    "address": address,
-    "location": location,
-    "capacity": capacity,
-    "start_at": startAt,
-    "close_at": closeAt,
-    "about_us": aboutUs,
-    "shop_img": shopImg,
-    "close_days": closeDays == null
-        ? []
-        : List<dynamic>.from(closeDays!.map((x) => x)),
-    "owner_id": ownerId,
-    "avg_rating": avgRating,
-    "review_count": reviewCount,
-    "services": services == null
-        ? []
-        : List<dynamic>.from(services!.map((x) => x.toJson())),
-    "reviews": reviews == null
-        ? []
-        : List<dynamic>.from(reviews!.map((x) => x.toJson())),
-  };
 }
 
 class Review {
   int? id;
-  int? service;
+  int? serviceId;
+  String? serviceName;
   int? user;
   String? userName;
-  String? profileImage;
+  dynamic profileImage;
   int? rating;
   String? review;
-  String? reviewImg;
-  DateTime? createdAt;
-  List<ReviewReply>? reply; // list of owner replies
+  List<ReviewReply>? reply;
 
   Review({
     this.id,
-    this.service,
+    this.serviceId,
+    this.serviceName,
     this.user,
     this.userName,
     this.profileImage,
     this.rating,
     this.review,
-    this.reviewImg,
-    this.createdAt,
     this.reply,
   });
 
-  factory Review.fromJson(Map<String, dynamic> json) {
-    // handle both: service / service_id, user / user_id, profile_image / user_img, reply / replies
-    final repliesField = json['replies'] ?? json['reply'];
+  factory Review.fromJson(Map<String, dynamic> json) => Review(
+    id: json["id"],
+    serviceId: json["service_id"],
+    serviceName: json["service_name"],
+    user: json["user_id"],
+    userName: json["user_name"],
+    profileImage: json["user_img"],
+    rating: json["rating"],
+    review: json["review"],
+    reply: (json['replies'] as List<dynamic>?)
+        ?.map((e) => ReviewReply.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
+}
 
-    return Review(
-      id: json['id'],
-      service: json['service'] ?? json['service_id'],
-      user: json['user'] ?? json['user_id'],
-      userName: json['user_name'],
-      profileImage: json['profile_image'] ?? json['user_img'],
-      rating: (json['rating'] as num?)?.toInt(),
-      review: json['review'],
-      reviewImg: json['review_img'],
+class ReviewReply {
+  final int id;
+  final String? message;
+  final DateTime? createdAt;
+
+  ReviewReply({required this.id, this.message, this.createdAt});
+
+  factory ReviewReply.fromJson(Map<String, dynamic> json) {
+    return ReviewReply(
+      id: json['id'] as int,
+      message: json['message'] as String?,
       createdAt: json['created_at'] == null
           ? null
-          : DateTime.parse(json['created_at']),
-      reply: repliesField == null
-          ? []
-          : List<ReviewReply>.from(
-              (repliesField as List).whereType<Map<String, dynamic>>().map(
-                ReviewReply.fromJson,
-              ),
-            ),
+          : DateTime.parse(json['created_at'] as String),
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'service': service,
-    'user': user,
-    'user_name': userName,
-    'profile_image': profileImage,
-    'rating': rating,
-    'review': review,
-    'review_img': reviewImg,
-    'created_at': createdAt?.toIso8601String(),
-    'reply': reply == null
-        ? []
-        : List<dynamic>.from(reply!.map((x) => x.toJson())),
-  };
 }
 
 class Service {
@@ -165,6 +129,9 @@ class Service {
   String? description;
   double? price;
   double? discountPrice;
+  int? categoryId;
+  String? categoryName;
+  String? categoryImg;
   String? serviceImg;
 
   Service({
@@ -173,6 +140,9 @@ class Service {
     this.description,
     this.price,
     this.discountPrice,
+    this.categoryId,
+    this.categoryName,
+    this.categoryImg,
     this.serviceImg,
   });
 
@@ -180,39 +150,11 @@ class Service {
     id: json["id"],
     title: json["title"],
     description: json["description"],
-    price: json["price"],
-    discountPrice: json["discount_price"],
+    price: (json["price"] as num?)?.toDouble(),
+    discountPrice: (json["discount_price"] as num?)?.toDouble(),
+    categoryId: json["category_id"],
+    categoryName: json["category_name"],
+    categoryImg: json["category_img"],
     serviceImg: json["service_img"],
   );
-
-  Map<String, dynamic> toJson() => {
-    "id": id,
-    "title": title,
-    "description": description,
-    "price": price,
-    "discount_price": discountPrice,
-    "service_img": serviceImg,
-  };
-}
-
-class ReviewReply {
-  final int? id;
-  final String? message;
-  final DateTime? createdAt;
-
-  ReviewReply({this.id, this.message, this.createdAt});
-
-  factory ReviewReply.fromJson(Map<String, dynamic> json) => ReviewReply(
-    id: json['id'],
-    message: json['message'],
-    createdAt: json['created_at'] == null
-        ? null
-        : DateTime.parse(json['created_at']),
-  );
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'message': message,
-    'created_at': createdAt?.toIso8601String(),
-  };
 }

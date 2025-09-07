@@ -15,6 +15,8 @@ class AuthService {
   static String? _refreshToken;
   static String? _role;
 
+  static final RxInt tokenRefreshCount = 0.obs;
+
   // Initialize SharedPreferences (call during app startup)
   static Future<void> init() async {
     _preferences = await SharedPreferences.getInstance();
@@ -38,10 +40,13 @@ class AuthService {
       await _preferences.setString(_roleKey, role);
       _accessToken = accessToken;
       _refreshToken = refreshToken;
+      _role = role;
       log(
         'Token and role saved successfully: $accessToken, $refreshToken, $role',
       );
-      _role = role;
+
+      // Notify listeners of the token change
+      tokenRefreshCount.value++;
     } catch (e) {
       log('Error saving token and role: $e');
     }

@@ -12,8 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-import 'book_appoint_ment_screen.dart';
-
 const fallbackImg =
     'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0';
 
@@ -34,7 +32,7 @@ class ShopDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(ShopDetailsController());
-    final wishlistController = Get.find<WishlistController>(); //the controller
+    final wishlistController = Get.find<WishlistController>();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.fetchShopDetails(id);
@@ -74,13 +72,12 @@ class ShopDetailsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ---- Header photo with overlaid icons ----
+              // ... (Header photo and Title section remain the same) ...
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: getWidth(24)),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Stack(
-                    // Wrap with Stack to overlay widgets
                     children: [
                       AspectRatio(
                         aspectRatio: 16 / 10,
@@ -91,13 +88,11 @@ class ShopDetailsScreen extends StatelessWidget {
                               Container(color: _divider),
                         ),
                       ),
-                      // -- Positioned icons on the top right --
                       Positioned(
                         top: 12,
                         right: 12,
                         child: Row(
                           children: [
-                            // --- WRAP WITH OBX ---
                             Obx(() {
                               final isFavorite = wishlistController
                                   .isShopFavorite(data.id ?? 0);
@@ -115,7 +110,6 @@ class ShopDetailsScreen extends StatelessWidget {
                                 },
                               );
                             }),
-                            // --- END OBX ---
                             SizedBox(width: getWidth(8)),
                             _buildIcon(
                               Icons.ios_share_rounded,
@@ -131,8 +125,6 @@ class ShopDetailsScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: getHeight(12)),
-
-              // ---- Title + meta ----
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: getWidth(24)),
                 child: Column(
@@ -194,16 +186,13 @@ class ShopDetailsScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: getHeight(18)),
-
-              // ---- Segmented Tabs (Service / About / Review) ----
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: getWidth(20)),
                 child: Row(
                   children: [
                     _TabChip(
                       label: "Services",
-                      icon: IconPath
-                          .serviceIcon, // <-- add a service icon in IconPath
+                      icon: IconPath.serviceIcon,
                       selected: controller.selectedTab.value == 0,
                       onTap: () => controller.selectTab(0),
                       brand: _brand,
@@ -230,19 +219,16 @@ class ShopDetailsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
               SizedBox(height: getHeight(14)),
-
-              // ---- Tab Content ----
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: getWidth(24)),
                 child: Obx(() {
                   switch (controller.selectedTab.value) {
                     case 0:
                       return _ServiceSection(
-                        services: data.services ?? [],
                         priceColor: _ink,
                         subtitleColor: _muted,
+                        controller: controller, // Pass the controller here
                       );
                     case 1:
                       return _AboutSection(
@@ -267,53 +253,51 @@ class ShopDetailsScreen extends StatelessWidget {
           ),
         );
       }),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(
-          getWidth(24),
-          0,
-          getWidth(24),
-          getHeight(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
-          child: SizedBox(
-            width: double.infinity,
-            height: getHeight(54),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                backgroundColor: _cta,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () {
-                // You might need to adjust this navigation logic
-                // based on how your booking flow works now.
-                // Get.to(() => AppointmentScreen(businessId: id));
-              },
-              child: Text(
-                "Booking Now",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: getWidth(16),
-                  fontWeight: FontWeight.w700,
+      bottomNavigationBar:
+          // ... (Bottom navigation bar remains the same) ...
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              getWidth(24),
+              0,
+              getWidth(24),
+              getHeight(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
+              child: SizedBox(
+                width: double.infinity,
+                height: getHeight(54),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    backgroundColor: _cta,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () {},
+                  child: Text(
+                    "Booking Now",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: getWidth(16),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 
-  // Helper widget to build the icons
   Widget _buildIcon(
     IconData icon, {
     required VoidCallback onTap,
     bool isFavorite = false,
   }) {
+    // ... (This helper widget remains the same) ...
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -534,14 +518,14 @@ class _AboutSectionState extends State<_AboutSection> {
 }
 
 class _ServiceSection extends StatelessWidget {
-  final List<Service> services;
   final Color priceColor;
   final Color subtitleColor;
+  final ShopDetailsController controller; // Pass the controller
 
   const _ServiceSection({
-    required this.services,
     required this.priceColor,
     required this.subtitleColor,
+    required this.controller,
   });
 
   void _openServiceDetails(Service s) {
@@ -555,6 +539,9 @@ class _ServiceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final categories = controller.categories;
+    final services = controller.shopDetails.value.services ?? [];
+
     if (services.isEmpty) {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: getHeight(24)),
@@ -576,84 +563,118 @@ class _ServiceSection extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
         SizedBox(height: getHeight(12)),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: services.length,
-          separatorBuilder: (_, __) => SizedBox(height: getHeight(12)),
-          itemBuilder: (_, i) {
-            final s = services[i];
-            final price = (s.discountPrice != null && s.discountPrice! > 0)
-                ? s.discountPrice
-                : s.price;
 
-            // safe image provider (avoid empty-string NetworkImage)
-            final ImageProvider avatarImage =
-                (s.serviceImg != null && s.serviceImg!.isNotEmpty)
-                ? NetworkImage(s.serviceImg!)
-                : const AssetImage(ImagePath.profileImage);
+        // New: Category Tabs
+        SizedBox(
+          height: getHeight(40),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: categories.length + 1, // +1 for "All"
+            separatorBuilder: (_, __) => SizedBox(width: getWidth(8)),
+            itemBuilder: (context, index) {
+              return Obx(() {
+                final isSelected =
+                    controller.selectedServiceCategoryTabIndex.value == index;
+                return ActionChip(
+                  label: Text(
+                    index == 0 ? "All" : categories[index - 1].name ?? '',
+                  ),
+                  onPressed: () {
+                    controller.selectServiceCategoryTab(index);
+                  },
+                  backgroundColor: isSelected
+                      ? Get.theme.primaryColor
+                      : const Color(0xffEDEFFB),
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.white : Colors.black,
+                  ),
+                );
+              });
+            },
+          ),
+        ),
+        SizedBox(height: getHeight(16)),
 
-            return Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => _openServiceDetails(s),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: getHeight(6)),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: getWidth(28),
-                            backgroundImage: avatarImage,
-                            backgroundColor: const Color(0xffE5E7EB),
-                          ),
-                          SizedBox(width: getWidth(12)),
-                          SizedBox(
-                            width: getWidth(200),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  s.title ?? '',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: getWidth(16),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(height: getHeight(2)),
-                                Text(
-                                  s.description ?? '',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: getWidth(13),
-                                    color: subtitleColor,
-                                  ),
-                                ),
-                              ],
+        // Service List now wrapped in Obx to be reactive
+        Obx(
+          () => ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: controller.filteredServices.length,
+            separatorBuilder: (_, __) => SizedBox(height: getHeight(12)),
+            itemBuilder: (_, i) {
+              final s = controller.filteredServices[i];
+              final price = (s.discountPrice != null && s.discountPrice! > 0)
+                  ? s.discountPrice
+                  : s.price;
+
+              final ImageProvider avatarImage =
+                  (s.serviceImg != null && s.serviceImg!.isNotEmpty)
+                  ? NetworkImage(s.serviceImg!)
+                  : const AssetImage(ImagePath.profileImage);
+
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _openServiceDetails(s),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: getHeight(6)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: getWidth(28),
+                              backgroundImage: avatarImage,
+                              backgroundColor: const Color(0xffE5E7EB),
                             ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        "\$${price?.toStringAsFixed(0) ?? '0'}",
-                        style: TextStyle(
-                          fontSize: getWidth(16),
-                          fontWeight: FontWeight.w600,
-                          color: priceColor,
+                            SizedBox(width: getWidth(12)),
+                            SizedBox(
+                              width: getWidth(200),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.title ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: getWidth(16),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  SizedBox(height: getHeight(2)),
+                                  Text(
+                                    s.description ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: getWidth(13),
+                                      color: subtitleColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        Text(
+                          "\$${price?.toStringAsFixed(0) ?? '0'}",
+                          style: TextStyle(
+                            fontSize: getWidth(16),
+                            fontWeight: FontWeight.w600,
+                            color: priceColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ],
     );

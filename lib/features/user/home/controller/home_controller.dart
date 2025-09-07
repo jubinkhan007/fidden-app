@@ -43,6 +43,11 @@ class HomeController extends GetxController {
     // Fetch all data for the home screen
     fetchAllHomeData();
 
+    // Add this listener to re-fetch data when the token is refreshed
+    ever(AuthService.tokenRefreshCount, (_) {
+      fetchAllHomeData();
+    });
+
     // Keep existing search debounce logic
     debounce(
       searchText,

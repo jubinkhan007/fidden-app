@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 // 👇 NEW
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class ServiceDetailsScreen extends StatelessWidget {
   const ServiceDetailsScreen({super.key, required this.serviceId});
@@ -241,39 +242,159 @@ class ServiceDetailsScreen extends StatelessWidget {
 
                           // Select a date
                           CustomText(
-                            text: 'Select a date',
+                            text: 'Available Dates',
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                           ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 60,
-                            child: Obx(() {
-                              final selected = c.selectedDate.value;
-                              final days = c.next7Days;
+                          const SizedBox(height: 0),
 
-                              return ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: days.length,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
+                          Obx(() {
+                            final selected = c.selectedDate.value;
+
+                            final now = DateTime.now();
+                            final today = DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                            );
+                            final windowEnd = today.add(
+                              const Duration(days: 6),
+                            );
+
+                            // Show the whole current month to avoid the “first day missing” bug,
+                            // but only ENABLE today..+6.
+                            final firstVisible = DateTime(
+                              today.year,
+                              today.month,
+                              1,
+                            );
+                            final lastVisible = DateTime(
+                              today.year,
+                              today.month + 1,
+                              0,
+                            );
+
+                            bool inWindow(DateTime d) =>
+                                !d.isBefore(today) && !d.isAfter(windowEnd);
+
+                            return TableCalendar(
+                              firstDay: firstVisible,
+                              lastDay: lastVisible,
+                              focusedDay:
+                                  selected.isBefore(firstVisible) ||
+                                      selected.isAfter(lastVisible)
+                                  ? today
+                                  : selected,
+
+                              headerStyle: const HeaderStyle(
+                                formatButtonVisible: false,
+                                titleCentered: true,
+                                leftChevronVisible: true,
+                                rightChevronVisible: true,
+                              ),
+                              startingDayOfWeek: StartingDayOfWeek.sunday,
+                              availableGestures: AvailableGestures.none,
+
+                              selectedDayPredicate: (d) =>
+                                  d.year == selected.year &&
+                                  d.month == selected.month &&
+                                  d.day == selected.day,
+
+                              onDaySelected: (sel, foc) {
+                                if (!inWindow(sel))
+                                  return; // only allow today..+6
+                                c.selectedDate.value = sel;
+                                c.fetchSlotsForDate(sel);
+                              },
+
+                              enabledDayPredicate:
+                                  inWindow, // disable past/future outside window
+
+                              calendarStyle: CalendarStyle(
+                                outsideDaysVisible: false,
+                                todayDecoration: const BoxDecoration(
+                                  color: Colors.transparent,
                                 ),
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(width: 10),
-                                itemBuilder: (_, i) {
-                                  final day = days[i];
-                                  final isSel = _isSameDay(day, selected);
-                                  return _DatePill(
-                                    date: day,
-                                    isSelected: isSel,
-                                    onTap: () => c.fetchSlotsForDate(day),
-                                  );
-                                },
-                              );
-                            }),
-                          ),
+                                selectedDecoration: BoxDecoration(
+                                  color: Get.theme.primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                                selectedTextStyle: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                // We’ll still set these, but builders below will enforce them.
+                                defaultTextStyle: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF120D1C),
+                                ),
+                                weekendTextStyle: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF120D1C),
+                                ),
+                                disabledTextStyle: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
 
-                          const SizedBox(height: 22),
+                              // Force the day text style to bold + #120D1C
+                              calendarBuilders: CalendarBuilders(
+                                defaultBuilder: (ctx, day, foc) => Center(
+                                  child: Text(
+                                    '${day.day}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: inWindow(day)
+                                          ? const Color(0xFF120D1C)
+                                          : Colors.grey.shade400,
+                                    ),
+                                  ),
+                                ),
+                                todayBuilder: (ctx, day, foc) => Center(
+                                  child: Text(
+                                    '${day.day}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF120D1C),
+                                    ),
+                                  ),
+                                ),
+                                selectedBuilder: (ctx, day, foc) => Container(
+                                  width: 35,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: Get.theme.primaryColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Text(
+                                    '', // we'll draw the number below
+                                  ),
+                                ),
+                                // draw the selected number on top in white + bold
+                                // (alternative to selectedTextStyle when overriding builders)
+                                markerBuilder: (ctx, day, evts) {
+                                  if (day.year == selected.year &&
+                                      day.month == selected.month &&
+                                      day.day == selected.day) {
+                                    return Center(
+                                      child: Text(
+                                        '${day.day}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return null;
+                                },
+                              ),
+                            );
+                          }),
+
+                          const SizedBox(height: 0),
 
                           // Select a time
                           CustomText(
