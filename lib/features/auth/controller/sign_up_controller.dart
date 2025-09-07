@@ -43,6 +43,7 @@ class SignUpController extends GetxController {
       final msg = map['message']?.toString() ?? 'Check your email for OTP';
 
       if (resp.isSuccess /* 201 per your log */ ) {
+        await AuthService.registerDeviceIfNeeded();
         AppSnackBar.showSuccess(msg);
         // No tokens at this step. Go to OTP screen.
         Get.to(

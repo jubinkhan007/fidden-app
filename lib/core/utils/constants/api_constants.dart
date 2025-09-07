@@ -1,9 +1,20 @@
+import 'dart:developer';
+
 class AppUrls {
   AppUrls._();
 
   //static const String _baseUrl = 'http://10.0.20.64:5010/api/v1';
   static const String _baseUrl =
       'https://fidden-service-provider-1.onrender.com';
+  static String socketUrl(String accessToken) {
+    log("accessToke ${accessToken}");
+    return 'wss://fidden-service-provider-1.onrender.com/ws/chat/?token=$accessToken';
+  }
+
+  static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';
+  static String replyInThread(int threadId) =>
+      '$_baseUrl/api/threads/$threadId/reply/';
+
   static const String createAccount = '$_baseUrl/accounts/register/';
   static const String forgotEmail = '$_baseUrl/accounts/request-reset/';
   static const String verifyOtp = '$_baseUrl/accounts/verify-otp/';
@@ -24,6 +35,9 @@ class AppUrls {
   static const String serviceDetails =
       '$_baseUrl/api/shops'; // ✅ Added this line
 
+  //inbox-messaging
+  static const String threads = '$_baseUrl/api/threads/';
+
   // owner-Review
   static String shopReviews(String shopId) =>
       '${AppUrls._baseUrl}/api/shops/rating-reviews/$shopId/';
@@ -39,9 +53,11 @@ class AppUrls {
   static getNearByService({required String lat, required String lon}) =>
       '$_baseUrl/find-near-by?myLat=$lat&myLon=$lon';
 
-  //Globla Search
+  //Global Search
   static String globalSearch(String q) => '${_baseUrl}/api/global-search/?q=$q';
 
+  // register-device
+  static String registerDevice = '${_baseUrl}/api/register-device/';
   // Seller
   static const String getMyService = '$_baseUrl/api/services/';
   static const String getMBusinessProfile = '$_baseUrl/api/shop/';
@@ -70,7 +86,7 @@ class AppUrls {
   //User-Home_Screen
   static const String promotions = '$_baseUrl/api/promotions/';
   static const String trendingServices = '$_baseUrl/api/users/services/?top=2';
-  static const String popularShops = '$_baseUrl/api/users/shops/?top=2';
+  static const String popularShops = '$_baseUrl/api/users/shops/?top=5';
   static const String categories = '$_baseUrl/api/categories/';
 
   // booking

@@ -1,12 +1,13 @@
-// lib/features/inbox/presentation/inbox_screen.dart
+import 'package:fidden/core/services/Auth_service.dart';
+import 'package:fidden/features/inbox/data/message_model.dart';
 import 'package:fidden/features/inbox/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controller/inbox_controller.dart';
-import '../data/conversation_model.dart';
 
 class InboxScreen extends StatelessWidget {
   const InboxScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     final c = Get.put(InboxController());
@@ -21,7 +22,9 @@ class InboxScreen extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
       ),
       body: Obx(() {
-        if (c.isLoading.value) return const _InboxSkeleton();
+        if (c.isLoading.value && c.threads.isEmpty) {
+          return const _InboxSkeleton();
+        }
 
         final items = c.filtered;
         return RefreshIndicator(
@@ -48,26 +51,41 @@ class InboxScreen extends StatelessWidget {
                 )
               else
                 SliverList.separated(
-                  itemBuilder: (_, i) => _SwipeableTile(
-                    conversation: items[i],
-                    onArchive: () {
-                      c.archive(items[i].id);
-                      Get.snackbar('Archived', 'Conversation archived');
-                    },
-                    onDelete: () {
-                      c.delete(items[i].id);
-                      Get.snackbar('Deleted', 'Conversation removed');
-                    },
-                    onTap: () {
-                      final conv = items[i]; // <-- get the item in scope
-                      Get.to(
-                        () => ChatScreen(
-                          conversationId: conv.id,
-                          recipientName: conv.name,
-                        ),
-                      );
-                    },
-                  ),
+                  itemBuilder: (_, i) {
+                    final thread = items[i];
+                    return _SwipeableTile(
+                      id: thread.id.toString(),
+                      name: c.getOtherPartyName(thread),
+                      avatarUrl: c.getOtherPartyAvatar(thread),
+                      lastMessage: c.getLastMessagePreview(
+                        thread,
+                      ), // <- "You: ..." when I’m sender
+                      time: c.getLastMessageTime(thread),
+                      unreadCount: c.getUnreadCount(thread),
+                      isUnreadForMe: c.isLastUnreadForMe(thread), // <- add this
+                      onArchive: () => c.archive(thread.id.toString()),
+                      onDelete: () => c.delete(thread.id.toString()),
+                      onTap: () async {
+                        final isOwner =
+                            (AuthService.role?.toLowerCase() == 'owner');
+                        final last = await Get.to(
+                          () => ChatScreen(
+                            threadId: thread.id,
+                            shopId: thread.shop,
+                            shopName: c.getOtherPartyName(thread),
+                            isOwner: isOwner,
+                            seedMessages: thread.messages,
+                          ),
+                        );
+                        if (last is MessageModel) {
+                          Get.find<InboxController>().patchLastMessage(
+                            thread.id,
+                            last,
+                          );
+                        }
+                      },
+                    );
+                  },
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemCount: items.length,
                 ),
@@ -97,6 +115,19 @@ class _SearchBar extends StatefulWidget {
 
 class _SearchBarState extends State<_SearchBar> {
   final _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -138,21 +169,39 @@ class _SearchBarState extends State<_SearchBar> {
 /// Dismissible + modern card
 class _SwipeableTile extends StatelessWidget {
   const _SwipeableTile({
-    required this.conversation,
+    required this.id,
+    required this.name,
+    required this.avatarUrl,
+    required this.lastMessage,
+    required this.time,
+    required this.unreadCount,
     required this.onArchive,
     required this.onDelete,
     required this.onTap,
+    required this.isUnreadForMe,
   });
 
-  final Conversation conversation;
+  final String id;
+  final String name;
+  final String avatarUrl;
+  final String lastMessage;
+  final String time;
+  final int unreadCount;
   final VoidCallback onArchive;
   final VoidCallback onDelete;
   final VoidCallback onTap;
+  final bool isUnreadForMe;
 
   @override
   Widget build(BuildContext context) {
+    final previewStyle = TextStyle(
+      color: isUnreadForMe ? Colors.black : const Color(0xFF535C69),
+      fontSize: 14,
+      fontWeight: isUnreadForMe ? FontWeight.w700 : FontWeight.w400,
+    );
+
     return Dismissible(
-      key: ValueKey(conversation.id),
+      key: ValueKey(id),
       background: _SlideBg(
         color: const Color(0xFFECFDF5),
         icon: Icons.archive_outlined,
@@ -194,10 +243,7 @@ class _SwipeableTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _Avatar(
-                  url: conversation.avatarUrl,
-                  unread: conversation.unreadCount > 0,
-                ),
+                _Avatar(url: avatarUrl, unread: unreadCount > 0),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -207,7 +253,7 @@ class _SwipeableTile extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              conversation.name,
+                              name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -219,7 +265,7 @@ class _SwipeableTile extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            conversation.time,
+                            time,
                             style: const TextStyle(
                               color: Color(0xFF8A94A6),
                               fontSize: 12,
@@ -230,16 +276,13 @@ class _SwipeableTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        conversation.lastMessage,
+                        lastMessage,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF535C69),
-                          fontSize: 14,
-                        ),
+                        style: previewStyle, // use it
                       ),
                       const SizedBox(height: 8),
-                      if (conversation.unreadCount > 0)
+                      if (unreadCount > 0)
                         Row(
                           children: [
                             Container(
@@ -252,7 +295,7 @@ class _SwipeableTile extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                '${conversation.unreadCount} new',
+                                '$unreadCount new',
                                 style: const TextStyle(
                                   color: Color(0xFF4338CA),
                                   fontWeight: FontWeight.w700,

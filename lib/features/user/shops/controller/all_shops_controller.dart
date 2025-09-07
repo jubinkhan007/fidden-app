@@ -47,7 +47,7 @@ class AllShopsController extends GetxController {
         qp['search'] = query.trim();
       }
       if (selectedCategoryId.value != null) {
-        // 👇 match your backend’s expected key (e.g. category_id / category / service_category)
+        //  match your backend’s expected key (e.g. category_id / category / service_category)
         qp['category_id'] = selectedCategoryId.value!.toString();
       }
 

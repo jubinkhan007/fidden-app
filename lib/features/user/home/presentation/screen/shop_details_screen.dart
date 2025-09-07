@@ -768,7 +768,7 @@ class _ReviewCard extends StatelessWidget {
                             fit: BoxFit.cover,
                             width: getWidth(52),
                             height: getWidth(52),
-                            // 👇 fallback to local asset on 404/any error
+                            //  fallback to local asset on 404/any error
                             errorBuilder: (_, __, ___) => Image.asset(
                               'assets/images/host_avatar.png',
                               fit: BoxFit.cover,

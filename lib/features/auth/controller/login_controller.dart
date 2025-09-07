@@ -100,6 +100,7 @@ class LoginController extends GetxController {
         );
 
         // ⬇️ hide before snackbar & navigation
+        await AuthService.registerDeviceIfNeeded();
         hideProgressIndicator();
         AppSnackBar.showSuccess(data["message"]?.toString() ?? "Logged in");
 

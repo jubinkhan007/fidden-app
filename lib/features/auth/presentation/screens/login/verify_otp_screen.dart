@@ -20,7 +20,7 @@ class VerifyOtpScreen extends StatefulWidget {
 }
 
 class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
-  // 👇 Use 4 to match the design; switch to 6 if your backend requires.
+  //  Use 4 to match the design; switch to 6 if your backend requires.
   static const int _otpLength = 4;
 
   final TextEditingController _otpTEController = TextEditingController();

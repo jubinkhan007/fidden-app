@@ -6,7 +6,7 @@ import 'package:fidden/features/user/shops/services/controller/service_details_c
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-// 👇 NEW
+//  NEW
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -22,7 +22,7 @@ class ServiceDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.put(ServiceDetailsController(serviceId));
 
-    // 👇 Ensure we have a WishlistController to manage the heart state
+    //  Ensure we have a WishlistController to manage the heart state
     final wishlist = Get.isRegistered<WishlistController>()
         ? Get.find<WishlistController>()
         : Get.put(WishlistController());
@@ -75,7 +75,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                                 ),
                                 Row(
                                   children: [
-                                    // 👇 FAVORITE (reactive)
+                                    //  FAVORITE (reactive)
                                     Obx(() {
                                       final isFav = wishlist.isServiceFavorite(
                                         serviceId,
@@ -91,7 +91,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                                       );
                                     }),
                                     const SizedBox(width: 8),
-                                    // 👇 SHARE
+                                    //  SHARE
                                     _roundIcon(
                                       icon: Icons.ios_share_rounded,
                                       onTap: () => _shareService(d),
@@ -552,7 +552,7 @@ class ServiceDetailsScreen extends StatelessWidget {
     );
   }
 
-  // 👇 NEW: Share helper
+  //  NEW: Share helper
   void _shareService(dynamic d) {
     final title = (d?.title ?? 'this service').toString();
     final shop = (d?.shopName ?? '').toString();

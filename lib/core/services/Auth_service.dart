@@ -1,4 +1,7 @@
 import 'dart:developer';
+import 'package:fidden/core/services/device_registry.dart';
+import 'package:fidden/core/services/network_caller.dart';
+import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:fidden/features/auth/presentation/screens/login/login_screen.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,7 +74,7 @@ class AuthService {
     try {
       await _preferences.remove(_accessTokenKey);
       await _preferences.remove(_roleKey);
-      //await _preferences.remove(_isSeeOnboardingKey); // 👈 explicitly remove onboarding flag
+      //await _preferences.remove(_isSeeOnboardingKey); // explicitly remove onboarding flag
       _accessToken = null;
       _refreshToken = null;
       _role = null;
@@ -84,6 +87,32 @@ class AuthService {
 
   static Future<void> goToLogin() async {
     Get.offAll(() => LoginScreen());
+  }
+
+  static Future<void> registerDeviceIfNeeded() async {
+    try {
+      final payload = await DeviceRegistry.instance.getOrCreate();
+
+      final response = await NetworkCaller().postRequest(
+        AppUrls.registerDevice,
+        body: payload.toJson(),
+        token: accessToken, // send auth if required
+      );
+
+      if (response.isSuccess) {
+        log(
+          '[DeviceRegistry] ✅ Device registered successfully: ${payload.toJson()}',
+        );
+      } else {
+        log(
+          '[DeviceRegistry] ❌ Device registration failed: '
+          'status=${response.statusCode}, '
+          'error=${response.errorMessage}',
+        );
+      }
+    } catch (e) {
+      log('[DeviceRegistry] ❌ Exception during device registration: $e');
+    }
   }
 
   static String? get accessToken => _accessToken;
