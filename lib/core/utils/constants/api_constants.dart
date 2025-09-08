@@ -115,7 +115,9 @@ class AppUrls {
       "$_baseUrl/business-profile-from/$businessId";
 
   // Notification
-  static const String allMyNotification = "$_baseUrl/notifications";
+  static const String notifications = "$_baseUrl/api/notifications/";
+  static String markNotificationAsRead(int notificationId) =>
+      '$_baseUrl/api/notifications/$notificationId/';
 
   //search
   static searchService(String text) => "$_baseUrl/service/search?service=$text";

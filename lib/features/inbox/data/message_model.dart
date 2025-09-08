@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:intl/intl.dart'; // <-- add this
+import 'package:intl/intl.dart';
 
 List<MessageModel> messageListFromJson(String str) => List<MessageModel>.from(
   json.decode(str).map((x) => MessageModel.fromJson(x)),
@@ -11,7 +11,7 @@ class MessageModel {
   final String senderEmail;
   final String content;
   final DateTime timestamp;
-  bool isRead;
+  final bool isRead;
 
   MessageModel({
     required this.id,
@@ -22,20 +22,34 @@ class MessageModel {
     required this.isRead,
   });
 
-  //  Add this computed getter used by ChatScreen
+  /// Pretty time label for UI
   String get timeLabel {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final msgDay = DateTime(timestamp.year, timestamp.month, timestamp.day);
-
-    if (msgDay == today) {
-      return DateFormat('h:mm a').format(timestamp); // e.g., 5:30 PM
-    }
-    if (msgDay == today.subtract(const Duration(days: 1))) {
-      return 'Yesterday';
-    }
+    if (msgDay == today) return DateFormat('h:mm a').format(timestamp);
+    if (msgDay == today.subtract(const Duration(days: 1))) return 'Yesterday';
     final sameYear = now.year == timestamp.year;
     return DateFormat(sameYear ? 'd MMM' : 'd MMM yyyy').format(timestamp);
+  }
+
+  /// ✅ Move copyWith into the model to avoid extension ambiguity
+  MessageModel copyWith({
+    int? id,
+    int? sender,
+    String? senderEmail,
+    String? content,
+    DateTime? timestamp,
+    bool? isRead,
+  }) {
+    return MessageModel(
+      id: id ?? this.id,
+      sender: sender ?? this.sender,
+      senderEmail: senderEmail ?? this.senderEmail,
+      content: content ?? this.content,
+      timestamp: timestamp ?? this.timestamp,
+      isRead: isRead ?? this.isRead,
+    );
   }
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {

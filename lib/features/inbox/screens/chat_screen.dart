@@ -30,6 +30,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _input = TextEditingController();
 
   late final int _myUserId; // <- add
+  late final String _myEmail;
 
   @override
   void initState() {
@@ -38,6 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
     // who am I?
     final profile = Get.find<ProfileController>();
     _myUserId = int.tryParse(profile.profileDetails.value.data?.id ?? '') ?? -1;
+    _myEmail = profile.profileDetails.value.data?.email ?? '';
 
     c = Get.put(
       ChatController(
@@ -87,7 +89,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     final myActorId = widget.isOwner
                         ? widget.shopId
                         : _myUserId;
-                    final isMe = m.sender == myActorId; // <- key line
+                    final isMe =
+                        (m.sender == myActorId) ||
+                        (!widget.isOwner &&
+                            _myEmail.isNotEmpty &&
+                            m.senderEmail == _myEmail); // <- key line
 
                     return Align(
                       alignment: isMe

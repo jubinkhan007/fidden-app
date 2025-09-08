@@ -1,15 +1,20 @@
 import 'dart:async';
-import 'dart:convert';
+import 'package:fidden/core/ws/ws_service.dart';
 import 'package:fidden/features/inbox/controller/inbox_controller.dart';
+import 'package:fidden/features/inbox/data/message_model.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 import 'package:get/get.dart';
-import 'package:web_socket_channel/io.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
-import '../../inbox/data/message_model.dart';
+
+// imports stay the same
+import 'package:fidden/features/inbox/controller/inbox_controller.dart';
+import 'package:fidden/features/inbox/data/thread_data_model.dart';
+import 'package:fidden/features/user/profile/controller/profile_controller.dart';
+
+// ...
 
 class ChatController extends GetxController {
   ChatController({
@@ -21,7 +26,7 @@ class ChatController extends GetxController {
   }) {
     if (seedMessages != null && seedMessages.isNotEmpty) {
       final sorted = [...seedMessages]
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp)); // newest first
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
       messages.assignAll(sorted);
     }
   }
@@ -31,197 +36,126 @@ class ChatController extends GetxController {
   final String shopName;
   final bool isOwner;
 
-  // UI observables
   final messages = <MessageModel>[].obs;
   final sending = false.obs;
 
-  // socket pieces
-  WebSocketChannel? _ch;
-  StreamSubscription? _sub;
-  Timer? _reconnectTimer;
+  late WsService _ws;
+  StreamSubscription? _msgSub;
+  StreamSubscription? _ackSub;
 
-  bool _closing = false;
-  bool _markReadSent = false;
-  late final int myUserId;
+  // NEW: resolved once at init
+  int _myActorIdResolved = -1;
+  int get _myActorId => _myActorIdResolved;
 
-  // track server message ids to avoid duplicates when server echoes
-  final Set<int> _seenServerIds = <int>{};
+  void _computeMyActorId() {
+    if (isOwner) {
+      _myActorIdResolved = shopId;
+      return;
+    }
 
-  /// If your backend needs a join frame, set the event name here.
-  /// If it doesn't need joining, set to null.
-  static const String? _subscribeEvent =
-      null; // 'join', 'subscribe_thread', or null
+    // Prefer the thread user id (correct actor id for end-user)
+    Thread? t;
+    if (Get.isRegistered<InboxController>()) {
+      final inbox = Get.find<InboxController>();
+      for (final th in inbox.threads) {
+        if (th.id == threadId) {
+          t = th;
+          break;
+        }
+      }
+    }
+    if (t != null) {
+      _myActorIdResolved = t.user;
+      return;
+    }
+
+    // Fallback to profile numeric id
+    final profile = Get.find<ProfileController>();
+    final raw = profile.profileDetails.value.data?.id;
+    _myActorIdResolved = int.tryParse('${raw ?? ''}') ?? -1;
+  }
 
   @override
   void onInit() {
     super.onInit();
-    final profile = Get.find<ProfileController>();
-    myUserId = int.tryParse(profile.profileDetails.value.data?.id ?? '') ?? -1;
-    _connect();
-  }
 
-  // ───────────────────────── CONNECT / RECONNECT ─────────────────────────
+    _computeMyActorId(); // <<< IMPORTANT
 
-  void _connect() {
-    final token = AuthService.accessToken ?? '';
-    if (token.isEmpty) {
-      print('WS ABORT: empty token');
-      return;
-    }
+    _ws = Get.put(WsService(), permanent: true);
+    _ws.ensureConnected();
+    _ws.subscribeThread(threadId);
 
-    final url = AppUrls.socketUrl(token);
-    final headers = {
-      // keep if your proxy/back-end enforces Origin; otherwise you can remove
-      'Origin': 'https://fidden-service-provider-1.onrender.com',
-    };
+    _msgSub = _ws.messages$.listen((ev) {
+      if (ev.threadId != threadId) return;
 
-    // Request log
-    print('──────── WS REQUEST ────────');
-    print('GET $url');
-    headers.forEach((k, v) => print('$k: $v'));
-    print('────────────────────────────');
+      final already = messages.any((m) => m.id == ev.message.id);
+      if (!already) messages.insert(0, ev.message);
 
-    _cleanupChannel(); // ensure no leftover channel/listener
+      _touchInbox(ev.message);
 
-    try {
-      _ch = IOWebSocketChannel.connect(
-        Uri.parse(url),
-        pingInterval: const Duration(seconds: 20),
-        headers: headers,
-      );
-
-      print('──────── WS CONNECTED ──────');
-      print('channel ready');
-      print('────────────────────────────');
-
-      _sub = _ch!.stream.listen(
-        _onSocketData,
-        onError: (e, st) {
-          print('WS onError => $e');
-          if (!_closing) _scheduleReconnect();
-        },
-        onDone: () {
-          print('WS onDone (closed by server/client).');
-          if (!_closing) _scheduleReconnect();
-        },
-        cancelOnError: true,
-      );
-
-      // Join thread first (if required), then mark as read
-      if (_subscribeEvent != null) {
-        Future.microtask(_subscribeToThread);
+      // mark as read only if message is from the other actor
+      if (ev.message.sender != _myActorId && ev.message.isRead == false) {
+        _markTheseRead([ev.message.id]);
       }
-      Future.delayed(const Duration(milliseconds: 100), _sendMarkReadOnce);
-    } catch (e) {
-      print('──────── WS CONNECT FAIL ───');
-      print(e);
-      print('────────────────────────────');
-      _scheduleReconnect();
-    }
-  }
-
-  void _scheduleReconnect() {
-    if (_closing || (_reconnectTimer?.isActive ?? false)) return;
-    // clean up before retrying
-    _cleanupChannel();
-    _reconnectTimer = Timer(const Duration(seconds: 2), _connect);
-  }
-
-  void _cleanupChannel() {
-    _sub?.cancel();
-    _sub = null;
-    _ch?.sink.close();
-    _ch = null;
-  }
-
-  // ───────────────────────── SEND HELPERS ─────────────────────────
-
-  void _sendFrame(Map<String, dynamic> frame) {
-    final s = jsonEncode(frame);
-    print('WS ⇒ $s');
-    _ch?.sink.add(s);
-  }
-
-  void _subscribeToThread() {
-    _sendFrame({
-      'type': _subscribeEvent, // 'subscribe' | 'join' | 'subscribe_thread'
-      'thread_id': threadId,
     });
-  }
 
-  void _sendMarkReadOnce() {
-    if (_markReadSent) return;
-    _markReadSent = true;
-    _sendFrame({'action': 'mark_read', 'thread_id': threadId});
-  }
-
-  // ───────────────────────── RECEIVE ─────────────────────────
-
-  void _onSocketData(dynamic raw) {
-    final s = raw is List<int>
-        ? utf8.decode(raw, allowMalformed: true)
-        : raw.toString();
-    print('WS ⇐ $s');
-
-    try {
-      final data = jsonDecode(s) as Map<String, dynamic>;
-      final type = (data['type'] ?? '').toString();
-
-      if (type == 'chat_message' || type == 'message') {
-        final payload = Map<String, dynamic>.from(
-          (data['message'] ?? data['payload'] ?? const {}),
-        );
-        if (payload.isEmpty) return;
-
-        final m = MessageModel.fromJson(payload);
-
-        // De-dupe based on real server id
-        if (m.id is int && m.id > 0) {
-          if (_seenServerIds.contains(m.id)) return;
-          _seenServerIds.add(m.id);
-
-          // If this is *my* message and I inserted an optimistic copy, replace it
-          if (_tryReplaceOptimistic(m)) return;
+    _ackSub = _ws.markReadAcks$.listen((ack) {
+      if (ack.threadId != threadId) return;
+      if (ack.messageIds.isEmpty) {
+        for (var i = 0; i < messages.length; i++) {
+          final m = messages[i];
+          if (!m.isRead && m.sender != _myActorId) {
+            messages[i] = m.copyWith(isRead: true);
+          }
         }
-
-        // reverse:true in ListView → newest must be at index 0
-        messages.insert(0, m);
-        _touchInbox(m);
+      } else {
+        final set = ack.messageIds.toSet();
+        for (var i = 0; i < messages.length; i++) {
+          final m = messages[i];
+          if (!m.isRead && set.contains(m.id)) {
+            messages[i] = m.copyWith(isRead: true);
+          }
+        }
       }
+      messages.refresh();
+    });
 
-      // You could handle other server frames here (acks, pings, etc.)
-    } catch (e, st) {
-      print('WS parse error: $e\n$st');
+    // mark initial incoming as read
+    Future.microtask(markThreadRead);
+  }
+
+  void markThreadRead() {
+    final ids = messages
+        .where((m) => m.isRead == false && m.sender != _myActorId)
+        .map((m) => m.id)
+        .toList();
+    if (ids.isEmpty) return;
+
+    _ws.sendMarkRead(threadId, ids);
+
+    // optimistic flip
+    for (var i = 0; i < messages.length; i++) {
+      final m = messages[i];
+      if (!m.isRead && m.sender != _myActorId) {
+        messages[i] = m.copyWith(isRead: true);
+      }
     }
+    messages.refresh();
   }
 
-  bool _tryReplaceOptimistic(MessageModel incoming) {
-    final myActorId = isOwner ? shopId : myUserId;
-    if (incoming.sender != myActorId) return false;
+  // ... send(), _markTheseRead(), _touchInbox(), onClose() stay unchanged
 
-    final idx = messages.indexWhere(
-      (x) =>
-          x.id < 0 &&
-          x.sender == myActorId &&
-          x.content == incoming.content &&
-          (incoming.timestamp.difference(x.timestamp).inSeconds).abs() <= 10,
-    );
-    if (idx == -1) return false;
-
-    messages[idx] = incoming;
-    _touchInbox(incoming);
-    return true;
+  void _markTheseRead(List<int> ids) {
+    if (ids.isEmpty) return;
+    _ws.sendMarkRead(threadId, ids);
+    for (var i = 0; i < messages.length; i++) {
+      final m = messages[i];
+      if (!m.isRead && ids.contains(m.id)) {
+        messages[i] = m.copyWith(isRead: true);
+      }
+    }
+    messages.refresh();
   }
-
-  void _touchInbox(MessageModel m) {
-    if (!Get.isRegistered<InboxController>()) return;
-    Get.find<InboxController>().patchLastMessage(threadId, m);
-  }
-
-  // ───────────────────────── PUBLIC API ─────────────────────────
-
-  /// Your ChatScreen also calls this once after first frame.
-  void markThreadRead() => _sendMarkReadOnce();
 
   Future<void> send(String content) async {
     final text = content.trim();
@@ -230,6 +164,7 @@ class ChatController extends GetxController {
     sending.value = true;
     try {
       final body = {'content': text};
+      // The HTTP request logic remains the same.
       if (isOwner) {
         await NetworkCaller().postRequest(
           AppUrls.replyInThread(threadId),
@@ -244,30 +179,23 @@ class ChatController extends GetxController {
         );
       }
 
-      // optimistic insert (negative id)
-      final myActorId = isOwner ? shopId : myUserId;
-      messages.insert(
-        0,
-        MessageModel(
-          id: -DateTime.now().millisecondsSinceEpoch,
-          sender: myActorId,
-          senderEmail: '',
-          content: text,
-          timestamp: DateTime.now(),
-          isRead: false,
-        ),
-      );
+      // REMOVE the optimistic update block.
+      // The WebSocket listener will now be responsible for adding the message.
     } finally {
       sending.value = false;
     }
   }
 
+  void _touchInbox(MessageModel m) {
+    if (!Get.isRegistered<InboxController>()) return;
+    final inbox = Get.find<InboxController>();
+    inbox.patchLastMessage(threadId, m);
+  }
+
   @override
   void onClose() {
-    _closing = true;
-    _reconnectTimer?.cancel();
-    _reconnectTimer = null;
-    _cleanupChannel();
+    _msgSub?.cancel();
+    _ackSub?.cancel();
     super.onClose();
   }
 }
