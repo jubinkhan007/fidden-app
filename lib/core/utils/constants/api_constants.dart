@@ -79,6 +79,11 @@ class AppUrls {
   static String shopDetails(String id) =>
       '$_baseUrl/api/users/shops/details/$id';
 
+  // owner-dashboard
+  // NEW: 7-day revenue for a shop
+  static String shopRevenues(int shopId, {int day = 7}) =>
+      '$_baseUrl/api/shop/$shopId/revenues/?day=$day';
+
   //categories
   static const String getCategories = '$_baseUrl/api/categories/';
   static const String allServices = '$_baseUrl/api/users/services';

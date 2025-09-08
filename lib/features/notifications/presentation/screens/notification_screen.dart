@@ -8,7 +8,7 @@ class NotificationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Get.put(NotificationController());
+    final c = Get.find<NotificationController>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),

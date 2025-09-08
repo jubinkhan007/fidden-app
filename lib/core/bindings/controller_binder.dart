@@ -1,6 +1,8 @@
 //lib/core/bindings/controller_binder.dart
 
 import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
+import 'package:fidden/features/business_owner/profile/controller/busines_owner_profile_controller.dart';
+import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/user/shops/controller/all_shops_controller.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:get/get.dart';
@@ -47,7 +49,10 @@ class ControllerBinder extends Bindings {
     //       () => BookingController(),
     //   fenix: true,
     // );
-
+    Get.lazyPut<BusinessOwnerProfileController>(
+      () => BusinessOwnerProfileController(),
+      fenix: true,
+    );
     Get.lazyPut<BusinessOwnerController>(
       () => BusinessOwnerController(),
       fenix: true,
@@ -55,5 +60,6 @@ class ControllerBinder extends Bindings {
 
     Get.lazyPut(() => AllShopsController(), fenix: true);
     Get.lazyPut(() => WishlistController(), fenix: true);
+    Get.lazyPut(() => NotificationController());
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/user/home/controller/home_controller.dart';
 import 'package:fidden/features/user/home/data/category_model.dart';
 import 'package:fidden/features/user/home/data/promotion_offers_model.dart';
@@ -12,6 +13,7 @@ import 'package:fidden/features/user/shops/presentation/screens/all_shops_screen
 import 'package:fidden/features/user/shops/services/presentation/screens/all_services_screen.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
+import 'package:fidden/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'shop_details_screen.dart';
@@ -250,7 +252,7 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: r.h(18)),
+          SizedBox(height: r.h(9)),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -266,7 +268,7 @@ class _Header extends StatelessWidget {
                         fontSize: r.sp(22),
                       ),
                     ),
-                    SizedBox(height: r.h(6)),
+                    SizedBox(height: r.h(10)),
                     Row(
                       children: [
                         Icon(
@@ -284,9 +286,11 @@ class _Header extends StatelessWidget {
                         ),
                       ],
                     ),
+                    //SizedBox(height: 2,)
                   ],
                 ),
               ),
+
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -297,30 +301,36 @@ class _Header extends StatelessWidget {
                       color: Color(0xFF4D1020),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.notifications,
-                      color: Colors.white,
-                      size: r.w(22),
-                    ),
-                  ),
-                  Positioned(
-                    right: r.w(2),
-                    top: r.w(2),
-                    child: Container(
-                      width: r.w(16),
-                      height: r.w(16),
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '1',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: r.sp(10),
-                          height: 1,
-                        ),
+                    child: Obx(
+                      () => Stack(
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              Get.toNamed(AppRoute.notificationScreen);
+                            },
+
+                            icon: const Icon(
+                              color: Colors.white,
+                              Icons.notifications_none_outlined,
+                              size: 28,
+                            ),
+                          ),
+                          if (Get.find<NotificationController>()
+                              .hasUnread
+                              .value)
+                            Positioned(
+                              top: 10,
+                              right: 10,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),

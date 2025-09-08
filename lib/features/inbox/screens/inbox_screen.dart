@@ -77,11 +77,13 @@ class InboxScreen extends StatelessWidget {
                             seedMessages: thread.messages,
                           ),
                         );
+
+                        // Mark the entire thread as read in the inbox controller's memory
+                        c.markThreadAsRead(thread.id); // <-- ADD THIS LINE
+
                         if (last is MessageModel) {
-                          Get.find<InboxController>().patchLastMessage(
-                            thread.id,
-                            last,
-                          );
+                          // This will update the last message preview and re-sort the list
+                          c.patchLastMessage(thread.id, last);
                         }
                       },
                     );

@@ -1,14 +1,24 @@
 import 'dart:convert';
 import 'package:fidden/features/business_owner/home/model/business_owner_booking_model.dart';
 import 'package:fidden/features/business_owner/home/model/get_my_service_model.dart';
+import 'package:fidden/features/business_owner/home/model/revenue_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../../profile/controller/busines_owner_profile_controller.dart';
+
+final RxnInt myShopId = RxnInt();
+int? _asInt(dynamic v) {
+  if (v == null) return null;
+  if (v is int) return v;
+  if (v is String) return int.tryParse(v);
+  return null;
+}
 
 class BusinessOwnerController extends GetxController {
   final pageController = PageController();
@@ -26,16 +36,33 @@ class BusinessOwnerController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Chain the calls to ensure correct order
-    _initProfileAndGuards().then((_) {
-      fetchAllMyService();
-      fetchBusinessOwnerBooking();
+
+    // Fetch whenever myShopId becomes available
+    ever<int?>(myShopId, (id) {
+      if (id != null && id > 0) {
+        debugPrint('[revenue] myShopId updated -> $id, fetching…');
+        fetchShopRevenues(shopId: id);
+      }
+    });
+
+    // Ensure we fetch after guards resolve the shop id
+    _initProfileAndGuards().then((_) async {
+      final id = myShopId.value;
+      if (id != null && id > 0) {
+        await fetchShopRevenues(shopId: id);
+      }
+      await fetchAllMyService();
+      await fetchBusinessOwnerBooking();
     });
   }
 
   Future<void> refreshGuardsAndServices() async {
     await _initProfileAndGuards();
     await fetchAllMyService();
+    final id = myShopId.value;
+    if (id != null && id > 0) {
+      await fetchShopRevenues(shopId: id);
+    }
   }
 
   Future<void> _initProfileAndGuards() async {
@@ -46,36 +73,35 @@ class BusinessOwnerController extends GetxController {
       final data = profileController.profileDetails.value.data;
 
       if (data == null) {
-        // no shop
         shopMissing.value = true;
         shopMissingMessage.value =
             'You must create a shop before adding services.';
         isShopVerified.value = false;
         verificationMessage.value = '';
+        myShopId.value = null; // <- no shop
         return;
       }
 
-      // ✅ Profile exists → clear the “missing” flag
+      // capture shop id (adapt if your field name differs)
+      // If your profile data nests shop info, change `data.id` accordingly.
+      myShopId.value = _asInt(data.id);
+
       shopMissing.value = false;
       shopMissingMessage.value = '';
 
-      // If backend hasn’t set the flag yet, you can decide how strict to be:
-      // strict:
-      // final verified = (data.isVarified == true);
-      // permissive (treat null as verified so owners can add services):
+      // treat null as verified; set strict if you prefer
       final verified = (data.isVarified != false);
-
       isShopVerified.value = verified;
       verificationMessage.value = verified
           ? ''
           : 'Your shop is pending verification. Please complete verification to add services.';
     } catch (e) {
       debugPrint("Error initializing guards: $e");
-      // Be conservative, but don’t hard-lock the user forever
-      shopMissing.value = false; // don’t claim “no profile” on transient error
+      shopMissing.value = false;
       shopMissingMessage.value = '';
-      isShopVerified.value = true; // or false, depending on your policy
+      isShopVerified.value = true;
       verificationMessage.value = '';
+      myShopId.value = myShopId.value; // keep whatever we had
     }
   }
 
@@ -166,4 +192,65 @@ class BusinessOwnerController extends GetxController {
   }
 
   bool get canAddService => !shopMissing.value && isShopVerified.value;
+
+  // NEW: revenue state
+  final totalRevenue = 0.0.obs;
+  final revenue7d = <RevenuePoint>[].obs;
+  final isRevenueLoading = false.obs;
+
+  // Optional: formatted string for the card
+  final _currency = NumberFormat.simpleCurrency(); // uses device locale
+  String get totalRevenueFormatted => _currency.format(totalRevenue.value);
+
+  // Call this when you know the shop id (owner always has one)
+  Future<void> fetchShopRevenues({required int shopId, int day = 7}) async {
+    debugPrint("inside fetchShopRevenues");
+    try {
+      isRevenueLoading.value = true;
+
+      final res = await NetworkCaller().getRequest(
+        AppUrls.shopRevenues(shopId, day: day),
+        token: AuthService.accessToken,
+      );
+
+      if (res.isSuccess && res.statusCode == 200) {
+        final map = (res.responseData is Map)
+            ? Map<String, dynamic>.from(res.responseData as Map)
+            : json.decode(res.responseData.toString()) as Map<String, dynamic>;
+
+        final parsed = RevenueResponse.fromJson(map);
+        totalRevenue.value = parsed.totalRevenue;
+
+        final pts = [...parsed.points]..sort((a, b) => a.ts.compareTo(b.ts));
+        revenue7d.assignAll(pts);
+        debugPrint(
+          '[revenue] points=${revenue7d.length} total=${totalRevenue.value}',
+        );
+        debugPrint(
+          '[revenue] ${pts.map((p) => '${DateFormat('EEE').format(p.ts)}=${p.revenue}').join(', ')}',
+        );
+      } else {
+        // keep old values; optionally log
+        if (kDebugMode) {
+          debugPrint(
+            '[revenue] status=${res.statusCode} isSuccess=${res.isSuccess}',
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[revenue] error: $e');
+    } finally {
+      isRevenueLoading.value = false;
+    }
+  }
+
+  // Ensure we load it on startup (owner view)
+  @override
+  void onReady() {
+    super.onReady();
+    final id = myShopId.value;
+    if (id != null && id > 0) {
+      fetchShopRevenues(shopId: id);
+    }
+  }
 }

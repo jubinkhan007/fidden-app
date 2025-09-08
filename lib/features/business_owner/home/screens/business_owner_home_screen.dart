@@ -4,6 +4,7 @@ import 'package:fidden/features/business_owner/home/screens/add_service_screen.d
 import 'package:fidden/features/business_owner/home/screens/edit_service_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/reminder_screen.dart';
 import 'package:fidden/features/business_owner/home/widgets/myService_row.dart';
+import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/splash/controller/splash_controller.dart';
 import 'package:fidden/features/user/booking/presentation/screens/view_waiver_form_screen.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
@@ -43,9 +44,31 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          IconButton(
-            onPressed: () => Get.toNamed(AppRoute.notificationScreen),
-            icon: const Icon(Icons.notifications_none, size: 28),
+          Obx(
+            () => Stack(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    Get.toNamed(AppRoute.notificationScreen);
+                  },
+
+                  icon: const Icon(Icons.notifications_none_outlined, size: 28),
+                ),
+                if (Get.find<NotificationController>().hasUnread.value)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -154,7 +177,9 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _buildSectionTitle("Weekly Revenue"),
                     const SizedBox(height: 16),
-                    const RevenueChart(),
+                    Obx(
+                      () => RevenueChart(data: controller.revenue7d.toList()),
+                    ),
 
                     SizedBox(height: getHeight(24)),
                     _buildSectionTitle("Booking Stats"),

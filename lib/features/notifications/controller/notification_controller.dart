@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 class NotificationController extends GetxController {
   final notifications = <NotificationModel>[].obs;
   final isLoading = true.obs;
+  final hasUnread = false.obs;
 
   @override
   void onInit() {
@@ -30,6 +31,7 @@ class NotificationController extends GetxController {
         notifications.value = responseData
             .map((json) => NotificationModel.fromJson(json))
             .toList();
+        _updateUnreadStatus();
       } else {
         AppSnackBar.showError(
           response.errorMessage ?? "Failed to load notifications.",
@@ -89,6 +91,7 @@ class NotificationController extends GetxController {
 
       // 3a. If the API call fails, revert the UI change and show an error
       if (!response.isSuccess) {
+        _updateUnreadStatus();
         notifications[index] = originalNotification;
         notifications.refresh();
         AppSnackBar.showError(
@@ -102,5 +105,9 @@ class NotificationController extends GetxController {
       notifications.refresh();
       AppSnackBar.showError("An error occurred: $e");
     }
+  }
+
+  void _updateUnreadStatus() {
+    hasUnread.value = notifications.any((n) => !n.isRead);
   }
 }

@@ -228,6 +228,29 @@ class InboxController extends GetxController {
     return thread.messages.first;
   }
 
+  void markThreadAsRead(int threadId) {
+    final idx = threads.indexWhere((t) => t.id == threadId);
+    if (idx == -1) return;
+
+    final thread = threads[idx];
+    bool wasUpdated = false;
+
+    // Iterate through messages and mark them as read
+    for (var i = 0; i < thread.messages.length; i++) {
+      final message = thread.messages[i];
+      // Only update unread messages from the other party
+      if (!message.isRead && message.sender != _myUserId) {
+        thread.messages[i] = message.copyWith(isRead: true);
+        wasUpdated = true;
+      }
+    }
+
+    // Refresh the UI only if a change was made
+    if (wasUpdated) {
+      threads.refresh();
+    }
+  }
+
   String getLastMessageText(Thread thread) {
     return _getLastMessage(thread)?.content ?? 'No messages yet.';
   }

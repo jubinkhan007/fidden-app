@@ -1,37 +1,54 @@
+import 'dart:math' as math;
+import 'package:fidden/features/business_owner/home/model/revenue_model.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class RevenueChart extends StatelessWidget {
-  const RevenueChart({super.key});
+  final List<RevenuePoint> data;
+  const RevenueChart({super.key, required this.data});
 
-  // example weekly data (Sun..Sat)
-  List<FlSpot> get _spots => const [
-    FlSpot(0, 3),
-    FlSpot(1, 4),
-    FlSpot(2, 3.5),
-    FlSpot(3, 5),
-    FlSpot(4, 4),
-    FlSpot(5, 6),
-    FlSpot(6, 6.5),
+  static const _fallbackWeek = [
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
   ];
 
-  static const _week = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
   String _yLabel(double v) {
-    // compact axis labels: 0, 2, 4, 6, 8...
-    if (v % 2 != 0) return '';
-    // format 1000 -> 1k, etc. (you can swap to NumberFormat if needed)
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
-    return v.toStringAsFixed(0);
+    final actual = v * 1000.0;
+    if (actual >= 1e6) return '${(actual / 1e6).toStringAsFixed(1)}M';
+    if (actual >= 1e3) return '${(actual / 1e3).toStringAsFixed(0)}k';
+    return actual.toStringAsFixed(0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final gradient = [
-      const Color(0xFF7C4DFF), // deep purple A200
-      const Color(0xFF00BFA5), // teal A700
-    ];
+    final gradient = [const Color(0xFF7C4DFF), const Color(0xFF00BFA5)];
+
+    // build labels & spots from provided data
+    final labels = data.isEmpty
+        ? _fallbackWeek
+        : data.map((p) => DateFormat('EEE').format(p.ts)).toList();
+
+    final spots = data.isEmpty
+        ? <FlSpot>[]
+        : List<FlSpot>.generate(
+            data.length,
+            (i) => FlSpot(i.toDouble(), data[i].revenue / 1000.0),
+          );
+    debugPrint(
+      '[chart] spots: ${spots.map((s) => '(${s.x}, ${s.y})').join(', ')}',
+    );
+    final ys = spots.map((s) => s.y).toList();
+    final minY = (ys.reduce(math.min) - 0.1).clamp(0.0, double.infinity);
+    final maxY = ys.reduce(math.max) + 0.1;
+    final interval = maxY <= 5
+        ? 1.0
+        : (maxY <= 10 ? 2.0 : (maxY <= 25 ? 5.0 : 10.0));
 
     return Container(
       decoration: BoxDecoration(
@@ -49,7 +66,7 @@ class RevenueChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // header
+          // header (unchanged)
           Row(
             children: [
               const Text(
@@ -57,7 +74,6 @@ class RevenueChart extends StatelessWidget {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
               const Spacer(),
-              // little legend pill
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -89,24 +105,29 @@ class RevenueChart extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // chart
+          // if no data yet, just draw an empty area (no zero-line)
           AspectRatio(
             aspectRatio: 1.75,
             child: LineChart(
               LineChartData(
                 minX: 0,
-                maxX: 6,
-                // auto y-bounds, or set minY/maxY if you prefer
+                maxX: (spots.isEmpty ? 6 : (spots.length - 1)).toDouble().clamp(
+                  0,
+                  6,
+                ),
+                minY: minY,
+                maxY: maxY,
+                clipData: FlClipData.all(),
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: true,
-                  getDrawingHorizontalLine: (v) => FlLine(
-                    color: const Color(0xFFE6EAF2),
+                  getDrawingHorizontalLine: (_) => const FlLine(
+                    color: Color(0xFFE6EAF2),
                     strokeWidth: 1,
                     dashArray: [6, 6],
                   ),
-                  getDrawingVerticalLine: (v) => FlLine(
-                    color: const Color(0xFFE6EAF2),
+                  getDrawingVerticalLine: (_) => const FlLine(
+                    color: Color(0xFFE6EAF2),
                     strokeWidth: 1,
                     dashArray: [6, 6],
                   ),
@@ -115,8 +136,8 @@ class RevenueChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
-                      interval: 1,
+                      reservedSize: 24,
+                      interval: interval,
                       getTitlesWidget: (v, _) => Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: Text(
@@ -133,15 +154,16 @@ class RevenueChart extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 30,
                       interval: 1,
-                      getTitlesWidget: (v, _) {
-                        final i = v.toInt();
-                        if (i < 0 || i >= _week.length) return const SizedBox();
+                      getTitlesWidget: (v, meta) {
+                        final i = v.round();
+                        if (i < 0 || i >= labels.length)
+                          return const SizedBox();
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
-                            _week[i],
+                            labels[i],
                             style: const TextStyle(
                               fontSize: 11,
                               color: Color(0xFF98A2B3),
@@ -174,11 +196,17 @@ class RevenueChart extends StatelessWidget {
                       vertical: 8,
                     ),
                     tooltipBgColor: Colors.black.withOpacity(0.85),
-                    getTooltipItems: (touched) => touched.map((barSpot) {
-                      final x = barSpot.x.toInt();
-                      final y = barSpot.y;
+                    getTooltipItems: (touched) => touched.map((s) {
+                      final x = s.x.toInt().clamp(
+                        0,
+                        data.isEmpty ? 0 : data.length - 1,
+                      );
+                      final amt = data.isEmpty ? 0.0 : data[x].revenue;
+                      final day = data.isEmpty
+                          ? labels[x]
+                          : DateFormat('EEE').format(data[x].ts);
                       return LineTooltipItem(
-                        '${_week[x]}\n\$${y.toStringAsFixed(2)}k',
+                        '$day\n${NumberFormat.simpleCurrency().format(amt)}',
                         const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -191,15 +219,15 @@ class RevenueChart extends StatelessWidget {
                 ),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: _spots,
+                    spots: spots,
                     isCurved: true,
                     gradient: LinearGradient(colors: gradient),
                     barWidth: 3.5,
                     isStrokeCapRound: true,
                     dotData: FlDotData(
-                      show: true,
+                      show: spots.isNotEmpty,
                       checkToShowDot: (s, _) =>
-                          s.x == _spots.last.x, // only last point
+                          spots.isNotEmpty && s.x == spots.last.x,
                       getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
                         radius: 3.5,
                         color: Colors.white,
