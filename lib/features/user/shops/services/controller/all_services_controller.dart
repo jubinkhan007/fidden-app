@@ -34,13 +34,17 @@ class AllServicesController extends GetxController {
 
   @override
   void onInit() {
-    _initLocation(); // non-blocking
+    super.onInit();
+    _bootstrap(); // ⬅️ do async bootstrap
+    searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _bootstrap() async {
+    await _initLocation(); // ⬅️ wait for GPS
     if (categoryId != null) {
       filters['category'] = categoryId;
     }
-    fetchAllServices(); // initial load (no filters)
-    searchController.addListener(_onSearchChanged);
-    super.onInit();
+    await _fetch(); // ⬅️ first fetch now includes location in body
   }
 
   void filterByCategory(int? newCategoryId) {
@@ -119,6 +123,15 @@ class AllServicesController extends GetxController {
     try {
       _position = await _locationService.getCurrentPosition();
       isLocationAvailable.value = _position != null;
+
+      // Optional: fallback to last known if current failed
+      if (_position == null) {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) {
+          _position = last;
+          isLocationAvailable.value = true;
+        }
+      }
     } catch (_) {
       isLocationAvailable.value = false;
     }
@@ -167,27 +180,35 @@ class AllServicesController extends GetxController {
     return q;
   }
 
+  Map<String, dynamic> _buildBody() {
+    // ✅ always send if we have it
+    if (_position == null) return {};
+    return {'location': '${_position!.latitude},${_position!.longitude}'};
+  }
+
+  String _withTrailingSlash(String url) => url.endsWith('/') ? url : '$url/';
+
   Future<void> _fetch() async {
+    if (isLoading.value) return;
     isLoading.value = true;
     try {
       final networkCaller = NetworkCaller();
       final token = AuthService.accessToken;
 
-      final uri = Uri.parse(
-        AppUrls.allServices,
-      ).replace(queryParameters: _buildQuery());
+      final base = _withTrailingSlash(AppUrls.allServices);
+      final q = _buildQuery();
+      final url = q.isEmpty
+          ? base
+          : Uri.parse(base).replace(queryParameters: q).toString();
 
-      final response = await networkCaller.getRequest(
-        uri.toString(),
+      final response = await networkCaller.getRequestWithBody(
+        url,
         token: token,
+        body: _buildBody(), // ⬅️ now populated after _initLocation
       );
 
-      if (response.isSuccess) {
-        if (response.responseData is Map<String, dynamic>) {
-          allServices.value = AllServicesModel.fromJson(response.responseData);
-        } else {
-          throw Exception('Unexpected response data format');
-        }
+      if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+        allServices.value = AllServicesModel.fromJson(response.responseData);
       } else {
         AppSnackBar.showError(
           response.errorMessage ?? 'Failed to fetch services.',

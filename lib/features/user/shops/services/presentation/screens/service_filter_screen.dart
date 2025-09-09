@@ -31,6 +31,11 @@ class ServiceFilterScreen extends StatefulWidget {
   final double sliderMin;
   final double sliderMax;
 
+  void _reset() {
+    // Close immediately and tell caller to clear filters
+    Get.back(result: {'__reset': true});
+  }
+
   @override
   State<ServiceFilterScreen> createState() => _ServiceFilterScreenState();
 }
@@ -127,7 +132,13 @@ class _ServiceFilterScreenState extends State<ServiceFilterScreen> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0.5,
-        actions: [TextButton(onPressed: _reset, child: const Text("Reset"))],
+        actions: [
+          TextButton(
+            // call Get.back with the reset result
+            onPressed: () => Get.back(result: {'__reset': true}),
+            child: const Text("Reset"),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

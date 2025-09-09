@@ -60,6 +60,6 @@ class ControllerBinder extends Bindings {
 
     Get.lazyPut(() => AllShopsController(), fenix: true);
     Get.lazyPut(() => WishlistController(), fenix: true);
-    Get.lazyPut(() => NotificationController());
+    Get.lazyPut(() => NotificationController(), fenix: true);
   }
 }

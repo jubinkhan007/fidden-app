@@ -1,5 +1,6 @@
 import 'package:fidden/features/business_owner/home/screens/all_service_screen.dart';
 import 'package:fidden/features/notifications/presentation/screens/notification_screen.dart';
+import 'package:fidden/features/user/booking/presentation/screens/booking_summary_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/notification_screen.dart';
 import 'package:fidden/features/user/wishlist/presentation/screens/wishlist_screen.dart';
@@ -42,6 +43,7 @@ class AppRoute {
   static String notificationScreen = "/notificationScreen";
   static String searchResultScreen = "/searchResultScreen";
   static String bookingSuccessFullScreen = "/bookingSuccessFullScreen";
+  static String bookingSummaryScreen = "/bookingSummaryScreen";
 
   static List<GetPage> routes = [
     //Splash Screen: initial screen
@@ -68,6 +70,7 @@ class AppRoute {
     GetPage(name: '/all-services', page: () => const AllServiceScreen()),
     // GetPage(name: termsAndConditionScreen, page: () => TermsAndConditionScreen()),
     GetPage(name: notificationScreen, page: () => NotificationScreen()),
+    GetPage(name: bookingSummaryScreen, page: () => BookingSummaryScreen()),
     // GetPage(name: searchResultScreen, page: () => SearchResultScreen()),
     // GetPage(name: bookingSuccessFullScreen, page: () => BookingSuccessfulScreen ()),
   ];

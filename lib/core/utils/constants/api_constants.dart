@@ -86,7 +86,7 @@ class AppUrls {
 
   //categories
   static const String getCategories = '$_baseUrl/api/categories/';
-  static const String allServices = '$_baseUrl/api/users/services';
+  static const String allServices = '$_baseUrl/api/users/services/';
 
   //User-Home_Screen
   static const String promotions = '$_baseUrl/api/promotions/';
@@ -98,8 +98,12 @@ class AppUrls {
   static getServiceTime({required String businessId, required String date}) =>
       '$_baseUrl/available-schedule?businessId=$businessId&date=$date';
   static const String createBooking = '$_baseUrl/booking/create';
+  static const String slotBooking = '$_baseUrl/api/slot-booking/';
   static const String createCustomerForm = '$_baseUrl/customer-form/create';
-
+  static String cancelSlotBooking(int bookingId) =>
+      '$_baseUrl/api/slot-booking/$bookingId/cancel/';
+  static String getSlotsForShop(int shopId) =>
+      '/api/shop-details/$shopId/slots/';
   // payment
   static const String confirmPayment = "$_baseUrl/payment/payment";
   static const String saveCard = "$_baseUrl/payments/save-new-card";

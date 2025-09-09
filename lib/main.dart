@@ -27,7 +27,7 @@ void main() async {
   await GoogleSignIn.instance.initialize(
     // Get this from your Google Cloud Console for your project
     serverClientId:
-        '910463978621-34r0n3pbn9rq81ort6fgcglef6hbnu3a.apps.googleusercontent.com',
+        '772435903240-ggmvqdtveoq8i717jgiksor33v00s153.apps.googleusercontent.com',
   );
 
   await AuthService.init();

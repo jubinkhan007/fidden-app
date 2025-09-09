@@ -46,6 +46,7 @@ class ServiceResult {
   String? serviceImg;
   String? badge;
   bool? isFavorite;
+  double? distance;
 
   ServiceResult({
     this.id,
@@ -59,6 +60,7 @@ class ServiceResult {
     this.serviceImg,
     this.badge,
     this.isFavorite,
+    this.distance,
   });
 
   factory ServiceResult.fromJson(Map<String, dynamic> json) => ServiceResult(
@@ -73,6 +75,9 @@ class ServiceResult {
     serviceImg: json["service_img"],
     badge: json["badge"],
     isFavorite: json["is_favorite"],
+    distance: (json["distance"] is String)
+        ? double.tryParse(json["distance"])
+        : (json["distance"] as num?)?.toDouble(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -87,6 +92,7 @@ class ServiceResult {
     "service_img": serviceImg,
     "badge": badge,
     "is_favorite": isFavorite,
+    "distance": distance,
   };
 
   String get randomPlaceholderImage {

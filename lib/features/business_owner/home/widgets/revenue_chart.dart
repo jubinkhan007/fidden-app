@@ -40,15 +40,36 @@ class RevenueChart extends StatelessWidget {
             data.length,
             (i) => FlSpot(i.toDouble(), data[i].revenue / 1000.0),
           );
+
     debugPrint(
       '[chart] spots: ${spots.map((s) => '(${s.x}, ${s.y})').join(', ')}',
     );
-    final ys = spots.map((s) => s.y).toList();
-    final minY = (ys.reduce(math.min) - 0.1).clamp(0.0, double.infinity);
-    final maxY = ys.reduce(math.max) + 0.1;
-    final interval = maxY <= 5
-        ? 1.0
-        : (maxY <= 10 ? 2.0 : (maxY <= 25 ? 5.0 : 10.0));
+
+    // ✅ SAFE Y-AXIS BOUNDS
+    late double minY, maxY, interval;
+    if (spots.isEmpty) {
+      // sensible defaults for an empty chart
+      minY = 0.0;
+      maxY = 1.0;
+      interval = 1.0;
+    } else {
+      final ys = spots.map((s) => s.y);
+      final yMin = ys.reduce(math.min);
+      final yMax = ys.reduce(math.max);
+
+      final lower = (yMin - 0.1).clamp(0.0, double.infinity).toDouble();
+      var upper = (yMax + 0.1);
+
+      // handle flat lines (all points equal) so maxY > minY
+      if (upper <= lower) upper = lower + 1.0;
+
+      minY = lower;
+      maxY = upper;
+
+      interval = maxY <= 5
+          ? 1.0
+          : (maxY <= 10 ? 2.0 : (maxY <= 25 ? 5.0 : 10.0));
+    }
 
     return Container(
       decoration: BoxDecoration(

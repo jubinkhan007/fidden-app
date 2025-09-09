@@ -17,12 +17,14 @@ class ServiceDetailsModel {
   final double? avgRating;
   final int? reviewCount;
   final List<ServiceReview> reviews;
+  final String? shopAddress;
 
   ServiceDetailsModel({
     required this.id,
     required this.serviceImg,
     required this.title,
     this.price,
+    this.shopAddress,
     this.discountPrice,
     this.description,
     this.duration,
@@ -46,6 +48,7 @@ class ServiceDetailsModel {
       shopName: json["shop_name"] ?? '',
       avgRating: (json["avg_rating"] as num?)?.toDouble(),
       reviewCount: json["review_count"],
+      shopAddress: json["shop_address"] as String?,
       reviews: (json["reviews"] as List<dynamic>? ?? [])
           .map((e) => ServiceReview.fromJson(e))
           .toList(),

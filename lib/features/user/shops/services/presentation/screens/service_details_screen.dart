@@ -1,6 +1,12 @@
 // lib/features/user/shops/services/presentation/screen/service_details_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
+import 'package:fidden/core/services/Auth_service.dart';
+import 'package:fidden/core/services/network_caller.dart';
+import 'package:fidden/core/utils/constants/api_constants.dart';
+import 'package:fidden/features/user/booking/presentation/screens/booking_details_screen.dart';
+import 'package:fidden/features/user/booking/presentation/screens/booking_summary_screen.dart';
 import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
 import 'package:fidden/features/user/shops/services/controller/service_details_controller.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +14,7 @@ import 'package:get/get.dart';
 
 //  NEW
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -20,6 +27,7 @@ class ServiceDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final RxBool _bookingBusy = false.obs;
     final c = Get.put(ServiceDetailsController(serviceId));
 
     //  Ensure we have a WishlistController to manage the heart state
@@ -496,22 +504,119 @@ class ServiceDetailsScreen extends StatelessWidget {
                               ),
                               elevation: 0,
                             ),
-                            onPressed: () {
-                              final slotId = c.selectedSlotId.value;
-                              if (slotId == null) {
-                                Get.snackbar(
-                                  'Select a time',
-                                  'Please select a time slot to continue.',
-                                  snackPosition: SnackPosition.BOTTOM,
+                            onPressed: () async {
+                              if (_bookingBusy.value)
+                                return; // 💡 guard against double taps
+                              _bookingBusy.value = true;
+                              try {
+                                final slotId = c.selectedSlotId.value;
+                                if (slotId == null) {
+                                  Get.snackbar(
+                                    'Select a time',
+                                    'Please select a time slot to continue.',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                  );
+                                  return;
+                                }
+
+                                // find the selected slot to format the date/time
+                                DateTime? slotStartLocal;
+                                try {
+                                  final slot = c.slots.firstWhere(
+                                    (s) => s.id == slotId,
+                                  );
+                                  slotStartLocal = slot.startTimeUtc.toLocal();
+                                } catch (_) {}
+
+                                final slotLabel = (slotStartLocal != null)
+                                    ? DateFormat(
+                                        'MMMM d, yyyy, h.mm a',
+                                      ).format(slotStartLocal)
+                                    : '—';
+
+                                String? currentPriceStr;
+                                String? originalPriceStr;
+                                final details = c.details.value;
+                                if (details != null) {
+                                  final hasDiscount =
+                                      (details.discountPrice != null &&
+                                      details.discountPrice!.trim().isNotEmpty);
+                                  currentPriceStr = hasDiscount
+                                      ? details.discountPrice
+                                      : details.price;
+                                  originalPriceStr = details.price;
+                                }
+
+                                final resp = await NetworkCaller().postRequest(
+                                  AppUrls.slotBooking,
+                                  body: {'slot_id': slotId},
+                                  token: AuthService.accessToken,
                                 );
-                                return;
+
+                                if (!resp.isSuccess) {
+                                  // Many backends return an HTML debug page for IntegrityError.
+                                  final responseData =
+                                      resp.responseData
+                                          as Map<String, dynamic>? ??
+                                      {};
+                                  final body =
+                                      '${resp.responseData ?? resp.errorMessage ?? ''}';
+                                  if (body.contains('IntegrityError')) {
+                                    // Slot likely taken or duplicate booking
+                                    AppSnackBar.showError(
+                                      'That time slot was just taken. Please pick another.',
+                                    );
+                                    // refresh slots so the user sees up-to-date availability
+                                    await c.fetchSlotsForDate(
+                                      c.selectedDate.value,
+                                    );
+                                    return;
+                                  }
+                                  AppSnackBar.showError(
+                                    resp.errorMessage ??
+                                        'Failed to create booking. Please try again.',
+                                  );
+                                  return;
+                                }
+
+                                final responseData =
+                                    resp.responseData
+                                        as Map<String, dynamic>? ??
+                                    {};
+                                final bookingId = responseData['id'] as int?;
+
+                                final args = {
+                                  'bookingId': bookingId,
+                                  'serviceName': details?.title ?? '',
+                                  'shopName': details?.shopName ?? '',
+                                  'service_img': details?.serviceImg ?? '',
+                                  'shopAddress': details?.shopAddress ?? '',
+                                  'serviceDurationMinutes':
+                                      details?.duration ?? 0,
+                                  'selectedSlotLabel': slotLabel,
+                                  'price': originalPriceStr ?? '',
+                                  'discountPrice':
+                                      (details?.discountPrice
+                                              ?.trim()
+                                              .isNotEmpty ??
+                                          false)
+                                      ? details?.discountPrice
+                                      : null,
+                                  'booking': resp.responseData,
+                                };
+
+                                Get.to(
+                                  () => BookingSummaryScreen(),
+                                  arguments: args,
+                                );
+                              } catch (e) {
+                                AppSnackBar.showError('Booking failed: $e');
+                              } finally {
+                                _bookingBusy.value =
+                                    false; // ✅ re-enable button
                               }
-                              Get.snackbar(
-                                'Proceed to book',
-                                'Slot #$slotId on ${c.selectedDate.value.toString().substring(0, 10)}',
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
                             },
+
                             child: const Text(
                               'Book Now',
                               style: TextStyle(

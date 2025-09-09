@@ -73,7 +73,6 @@ class AllServicesScreen extends StatelessWidget {
                     initialDuration: f['duration'] as int?,
                     initialDistance: f['distance'] as int?,
                     initialRating: (f['rating'] as num?)?.toDouble(),
-                    // optional slider bounds:
                     sliderMin: 0,
                     sliderMax: 500,
                   ),
@@ -81,7 +80,12 @@ class AllServicesScreen extends StatelessWidget {
                 );
 
                 if (result != null) {
-                  controller.applyFilters(result);
+                  if (result['__reset'] == true) {
+                    await controller.clearFilters(); // ⬅️ show unfiltered list
+                  } else {
+                    result.removeWhere((k, v) => v == null); // optional tidy
+                    await controller.applyFilters(result);
+                  }
                 }
               },
             ),
@@ -132,6 +136,13 @@ class AllServicesScreen extends StatelessWidget {
                       ? service.discountPrice
                       : service.price;
                   final originalPrice = hasDiscount ? service.price : null;
+                  final distanceKm = service.distance; // already in KM from API
+                  final String? distanceLabel = (distanceKm != null)
+                      ? '${distanceKm.toStringAsFixed(1)} km'
+                      : null;
+                  debugPrint(
+                    "Distance Label --------------------> $distanceLabel",
+                  );
 
                   return _ServiceCard(
                     service: service,
@@ -145,6 +156,7 @@ class AllServicesScreen extends StatelessWidget {
                     originalPrice: originalPrice?.toString(),
                     isFavorite: service.isFavorite ?? false,
                     badge: service.badge,
+                    distanceLabel: distanceLabel,
                     onTap: () {
                       if (service.id != null) {
                         // Navigate to the Service Details Screen
@@ -249,6 +261,7 @@ class _ServiceCard extends StatelessWidget {
     required this.onTap,
     required this.onFavoriteToggle,
     this.badge,
+    this.distanceLabel,
   });
 
   final dynamic service;
@@ -264,6 +277,7 @@ class _ServiceCard extends StatelessWidget {
   final String? badge;
   final VoidCallback onTap;
   final VoidCallback onFavoriteToggle;
+  final String? distanceLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -417,6 +431,18 @@ class _ServiceCard extends StatelessWidget {
                             ),
                           ),
                         ),
+
+                        if (distanceLabel != null) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            distanceLabel!,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 12),
