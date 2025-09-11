@@ -70,6 +70,7 @@ class BookingConfirmationScreen extends StatelessWidget {
           onPressed: () => Get.offAll(() => const UserNavBar()),
         ),
       ),
+      // " "
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
