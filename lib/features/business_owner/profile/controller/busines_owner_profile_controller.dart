@@ -3,6 +3,8 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
+import 'package:fidden/features/business_owner/profile/data/stripe_models.dart';
+import 'package:fidden/features/business_owner/profile/screens/stripe_webview_screen.dart';
 import 'package:fidden/features/business_owner/profile/services/shop_api.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
@@ -145,19 +148,87 @@ class BusinessOwnerProfileController extends GetxController {
     }
   }
 
+  final isCheckingStripeStatus = false.obs;
+  final Rxn<StripeVerifyResponse> stripeStatus = Rxn<StripeVerifyResponse>();
+  bool _awaitingOnboarding = false;
+
   @override
   void onInit() {
     super.onInit();
-    fetchProfileDetails().then((_) {
-      final fromApi =
-          profileDetails.value.data?.openDays; // List<String>? in your model
-      if (fromApi != null && fromApi.isNotEmpty) {
-        openDays.addAll(fromApi);
-      }
-      // Pre-fill start/end times if you keep them observable strings
+    fetchProfileDetails().then((_) async {
+      final fromApi = profileDetails.value.data?.openDays;
+      if (fromApi != null && fromApi.isNotEmpty) openDays.addAll(fromApi);
+
       startTime.value = profileDetails.value.data?.startTime ?? startTime.value;
       endTime.value = profileDetails.value.data?.endTime ?? endTime.value;
+
+      // 🔎 Try verifying Stripe right away if a shop exists
+      await checkStripeStatusIfPossible();
     });
+
+    // Re-verify when app returns to foreground if we were onboarding
+    WidgetsBinding.instance.addObserver(
+      _LifecycleObserver(
+        onResumed: () async {
+          if (_awaitingOnboarding) {
+            _awaitingOnboarding = false;
+            await checkStripeStatusIfPossible();
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> checkStripeStatusIfPossible() async {
+    final shopId = profileDetails.value.data?.id?.toString();
+    if (shopId == null || shopId.isEmpty) return;
+
+    isCheckingStripeStatus.value = true;
+    try {
+      final res = await ShopApi.verifyStripeOnboarding(
+        shopId: int.parse(shopId),
+        token: AuthService.accessToken ?? '',
+      );
+      stripeStatus.value = res;
+    } catch (e) {
+      // Optionally surface a toast/snackbar
+      // AppSnackBar.showError('Stripe verify failed');
+    } finally {
+      isCheckingStripeStatus.value = false;
+    }
+  }
+
+  Future<void> startStripeOnboarding(int shopId) async {
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
+    try {
+      final link = await ShopApi.getStripeOnboardingLink(
+        shopId: shopId,
+        token: AuthService.accessToken ?? '',
+      );
+      Get.back(); // close loader
+
+      final completed = await Get.to<bool>(
+        () => StripeWebViewScreen(onboardingUrl: link.url),
+      );
+
+      // ✅ Always re-verify when you come back
+      await Future.delayed(
+        const Duration(milliseconds: 200),
+      ); // give Stripe a beat
+      await checkStripeStatusIfPossible();
+
+      if (completed == true) {
+        AppSnackBar.showSuccess('Stripe onboarding complete.');
+      }
+    } catch (e) {
+      if (Get.isDialogOpen ?? false) Get.back();
+      AppSnackBar.showError(
+        'Could not start Stripe onboarding. Please try again.',
+      );
+    }
   }
 
   var profileDetails = GetBusinesModel().obs;
@@ -171,24 +242,14 @@ class BusinessOwnerProfileController extends GetxController {
         AppUrls.getMBusinessProfile,
         token: AuthService.accessToken,
       );
-
-      if (response.isSuccess) {
-        if (response.responseData is Map<String, dynamic>) {
-          // ---  CORRECTED LOGIC ---
-          // Use the model's built-in factory method. It correctly handles
-          // both wrapped (e.g., { "data": {...} }) and unwrapped API responses.
-          profileDetails.value = GetBusinesModel.fromJson(
-            response.responseData,
-          );
-          // --- END CORRECTION ---
-        } else {
-          // This handles cases where the response is not a valid map.
-          profileDetails.value = GetBusinesModel(data: null);
-          AppSnackBar.showError('Received invalid profile data format.');
-        }
+      if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+        profileDetails.value = GetBusinesModel.fromJson(response.responseData);
+        // After fetching the profile, immediately check the Stripe status.
+        await checkStripeStatusIfPossible();
       } else {
-        // This handles API call failures (e.g. 404, 500)
         profileDetails.value = GetBusinesModel(data: null);
+        isCheckingStripeStatus.value =
+            false; // Stop loading if there's no profile
         AppSnackBar.showError(
           response.errorMessage ?? 'Failed to fetch profile.',
         );
@@ -542,5 +603,17 @@ class BusinessOwnerProfileController extends GetxController {
   void setFieldError(String field, String message) {
     fieldErrors[field] = message;
     fieldErrors.refresh();
+  }
+}
+
+class _LifecycleObserver with WidgetsBindingObserver {
+  final Future<void> Function() onResumed;
+  _LifecycleObserver({required this.onResumed});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResumed();
+    }
   }
 }

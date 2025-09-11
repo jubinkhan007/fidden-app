@@ -2,7 +2,9 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
+import 'package:fidden/features/business_owner/profile/data/stripe_models.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
@@ -176,5 +178,39 @@ class ShopApi {
       headers: streamed.headers,
       reasonPhrase: streamed.reasonPhrase,
     );
+  }
+
+  static Future<StripeOnboardingLink> getStripeOnboardingLink({
+    required int shopId,
+    required String token,
+  }) async {
+    final res = await NetworkCaller().getRequest(
+      AppUrls.stripeOnborading(shopId),
+      token: token,
+    );
+    if (!res.isSuccess) {
+      throw Exception(res.errorMessage ?? 'Failed to get onboarding link');
+    }
+    final data = (res.responseData is Map<String, dynamic>)
+        ? res.responseData
+        : json.decode(res.responseData as String);
+    return StripeOnboardingLink.fromJson(data as Map<String, dynamic>);
+  }
+
+  static Future<StripeVerifyResponse> verifyStripeOnboarding({
+    required int shopId,
+    required String token,
+  }) async {
+    final res = await NetworkCaller().getRequest(
+      AppUrls.verifyOnborading(shopId),
+      token: token,
+    );
+    if (!res.isSuccess) {
+      throw Exception(res.errorMessage ?? 'Failed to verify onboarding');
+    }
+    final data = (res.responseData is Map<String, dynamic>)
+        ? res.responseData
+        : json.decode(res.responseData as String);
+    return StripeVerifyResponse.fromJson(data as Map<String, dynamic>);
   }
 }

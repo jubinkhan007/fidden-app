@@ -105,6 +105,12 @@ class AppUrls {
   static String getSlotsForShop(int shopId) =>
       '/api/shop-details/$shopId/slots/';
   // payment
+  static String paymentIntent(int bookingId) =>
+      '$_baseUrl/payments/payment-intent/$bookingId/';
+  static String stripeOnborading(int shopId) =>
+      '$_baseUrl/payments/shop-onboarding/${shopId}/';
+  static String verifyOnborading(int shopId) =>
+      '$_baseUrl/payments/shops/verify-onboarding/${shopId}';
   static const String confirmPayment = "$_baseUrl/payment/payment";
   static const String saveCard = "$_baseUrl/payments/save-new-card";
   static String getMyCard(String customerId) =>

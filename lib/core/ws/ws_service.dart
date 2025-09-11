@@ -217,7 +217,7 @@ class WsService extends GetxService with WidgetsBindingObserver {
 
     final type = (data['type'] ?? '').toString();
 
-    // 1) Server-side “notification” frames (you logged UNHANDLED earlier)
+    // 1) Server-side “notification” frames
     if (type == 'notification') {
       final notif = Map<String, dynamic>.from(data['notification'] ?? const {});
       final nType = notif['notification_type']?.toString();
@@ -225,10 +225,8 @@ class WsService extends GetxService with WidgetsBindingObserver {
       final createdAt = notif['created_at']?.toString();
       final id = '${notif['id'] ?? createdAt ?? msg}';
 
-      // Only show once if server also sends chat_message afterwards
       if (nType == 'chat' && id.isNotEmpty && !_seenNotifyIds.contains(id)) {
         _seenNotifyIds.add(id);
-
         final payload = Map<String, dynamic>.from(notif['data'] ?? const {});
         await NotificationService.I.showMessage(
           title: 'New message',
@@ -249,14 +247,32 @@ class WsService extends GetxService with WidgetsBindingObserver {
 
       final threadId = int.tryParse('${payload['thread_id'] ?? 0}') ?? 0;
       final m = MessageModel.fromJson(payload);
-
-      // De-dupe “notification” we may have just shown above
       _seenNotifyIds.add('${m.id}');
-
       _msgCtrl.add(IncomingMessage(threadId, m));
       return;
     }
-    // Default: just log
+
+    // 3) Mark read acknowledgements from the server
+    if (type == 'mark_read') {
+      final threadId = int.tryParse('${data['thread_id'] ?? 0}') ?? 0;
+      if (threadId > 0) {
+        // The server confirms the thread was marked as read.
+        // It might optionally send back which message IDs were affected.
+        final idsData = data['message_ids'];
+        final messageIds = (idsData is List)
+            ? idsData
+                  .map((id) => int.tryParse('$id') ?? 0)
+                  .where((id) => id > 0)
+                  .toList()
+            : <int>[]; // Default to an empty list if not provided
+
+        // Add the acknowledgement to the stream for the UI to listen to.
+        _ackCtrl.add(MarkReadAck(threadId, messageIds));
+      }
+      return;
+    }
+
+    // Default: just log any other unhandled types
     print('WS[G] ⇐ [UNHANDLED:$type] $data');
   }
 

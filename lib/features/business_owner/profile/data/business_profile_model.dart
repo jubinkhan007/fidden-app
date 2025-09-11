@@ -16,6 +16,7 @@
 // }
 
 import 'dart:convert';
+import 'package:flutter/material.dart';
 
 GetBusinesModel getBusinesModelFromJson(String str) =>
     GetBusinesModel.fromJson(json.decode(str) as Map<String, dynamic>);
@@ -316,5 +317,169 @@ class Data {
       'status': status,
       'verification_files': verificationFiles,
     };
+  }
+}
+
+/// Represents the full API response for the business profile.
+class BusinessProfileResponse {
+  final bool success;
+  final int statusCode;
+  final String message;
+  final BusinessProfileModel data;
+
+  const BusinessProfileResponse({
+    required this.success,
+    required this.statusCode,
+    required this.message,
+    required this.data,
+  });
+
+  factory BusinessProfileResponse.fromJson(Map<String, dynamic> json) {
+    // Handles cases where the 'data' key might be missing and the profile is at the root.
+    final dataJson = json['data'] != null
+        ? json['data'] as Map<String, dynamic>
+        : json;
+
+    return BusinessProfileResponse(
+      success: json['success'] ?? false,
+      statusCode: json['statusCode'] ?? 500,
+      message: json['message'] ?? 'Unknown error',
+      data: BusinessProfileModel.fromJson(dataJson),
+    );
+  }
+}
+
+/// Represents the core business profile data.
+@immutable
+class BusinessProfileModel {
+  final int id;
+  final int ownerId;
+  final String name;
+  final String address;
+  final String aboutUs;
+  final String? shopImg;
+  final int capacity;
+  final TimeOfDay startAt;
+  final TimeOfDay closeAt;
+  final List<String> closeDays; // e.g., ["monday", "tuesday"]
+  final (double, double)? location; // (latitude, longitude)
+  final List<VerificationFile> verificationFiles;
+
+  // Computed properties for easier UI access
+  List<String> get openDays {
+    const allDays = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
+    final closed = closeDays.toSet();
+    return allDays.where((day) => !closed.contains(day)).toList();
+  }
+
+  const BusinessProfileModel({
+    required this.id,
+    required this.ownerId,
+    required this.name,
+    required this.address,
+    required this.aboutUs,
+    this.shopImg,
+    required this.capacity,
+    required this.startAt,
+    required this.closeAt,
+    this.closeDays = const [],
+    this.location,
+    this.verificationFiles = const [],
+  });
+
+  factory BusinessProfileModel.fromJson(Map<String, dynamic> json) {
+    return BusinessProfileModel(
+      id: _parseInt(json['id']),
+      ownerId: _parseInt(json['owner_id']),
+      name: json['name'] ?? '',
+      address: json['address'] ?? '',
+      aboutUs: json['about_us'] ?? '',
+      shopImg: json['shop_img'],
+      capacity: _parseInt(json['capacity']),
+      startAt:
+          _parseTime(json['start_at']) ?? const TimeOfDay(hour: 9, minute: 0),
+      closeAt:
+          _parseTime(json['close_at']) ?? const TimeOfDay(hour: 17, minute: 0),
+      closeDays:
+          (json['close_days'] as List?)
+              ?.map((day) => day.toString().toLowerCase())
+              .toList() ??
+          [],
+      location: _parseLocation(json['location']),
+      verificationFiles:
+          (json['uploaded_files'] as List?)
+              ?.map(
+                (file) =>
+                    VerificationFile.fromJson(file as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
+    );
+  }
+
+  // Helper to safely parse an integer from various types
+  static int _parseInt(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  // Helper to parse "HH:mm:ss" into a TimeOfDay object
+  static TimeOfDay? _parseTime(String? timeStr) {
+    if (timeStr == null) return null;
+    final parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      return TimeOfDay(
+        hour: int.tryParse(parts[0]) ?? 0,
+        minute: int.tryParse(parts[1]) ?? 0,
+      );
+    }
+    return null;
+  }
+
+  // Helper to parse "lat,lon" into a tuple
+  static (double, double)? _parseLocation(String? locStr) {
+    if (locStr == null) return null;
+    final parts = locStr.split(',');
+    if (parts.length == 2) {
+      final lat = double.tryParse(parts[0].trim());
+      final lon = double.tryParse(parts[1].trim());
+      if (lat != null && lon != null) {
+        return (lat, lon);
+      }
+    }
+    return null;
+  }
+}
+
+/// Represents a file uploaded for verification.
+@immutable
+class VerificationFile {
+  final int id;
+  final String fileUrl;
+  final DateTime? uploadedAt;
+
+  const VerificationFile({
+    required this.id,
+    required this.fileUrl,
+    this.uploadedAt,
+  });
+
+  factory VerificationFile.fromJson(Map<String, dynamic> json) {
+    return VerificationFile(
+      id: json['id'] ?? 0,
+      fileUrl: json['file'] ?? '',
+      uploadedAt: json['uploaded_at'] != null
+          ? DateTime.tryParse(json['uploaded_at'])
+          : null,
+    );
   }
 }

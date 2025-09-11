@@ -5,6 +5,7 @@ import 'package:fidden/core/utils/constants/app_sizes.dart';
 import 'package:fidden/features/auth/controller/forget_email_and_otp_controler.dart';
 import 'package:fidden/features/auth/controller/sign_up_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -20,7 +21,7 @@ class SignUpVerifyOtpScreen extends StatefulWidget {
 
 class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
   // ⛳ Make this 6 if your OTP is 6-digits.
-  static const int _otpLength = 4;
+  static const int _otpLength = 6;
 
   final _formKey = GlobalKey<FormState>();
   final _remainingTime = 30.obs;
@@ -45,6 +46,25 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Get.put(SignUpController()).forgetEmail(widget.email);
     });
+
+    final c = otpController.otpTEController;
+    c.text = ''; // clear leftovers from previous screen sessions
+    c.addListener(() {
+      // Only digits, clamp length
+      final digitsOnly = c.text.replaceAll(RegExp(r'\D'), '');
+      if (digitsOnly != c.text || digitsOnly.length > _otpLength) {
+        final clamped = digitsOnly.substring(
+          0,
+          digitsOnly.length.clamp(0, _otpLength),
+        );
+        c.value = c.value.copyWith(
+          text: clamped,
+          selection: TextSelection.collapsed(offset: clamped.length),
+          composing: TextRange.empty,
+        );
+      }
+    });
+
     _startResendCodeTimer();
   }
 
@@ -94,7 +114,7 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
                     const CustomAppBar(
                       firstText: 'Verification code',
                       secondText:
-                          'Please check your phone. We have to sent the code verification to your number.',
+                          'Please check your email. We have to sent the code verification to your mail.',
                     ),
                     SizedBox(height: getHeight(36)),
 
@@ -107,6 +127,10 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
                       cursorColor: Colors.black,
                       animationType: AnimationType.fade,
                       enableActiveFill: true,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(_otpLength),
+                      ],
                       textStyle: TextStyle(
                         fontSize: getWidth(20),
                         fontWeight: FontWeight.w700,

@@ -22,7 +22,7 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<ProfileController>();
-    final controller1 = Get.put(BusinessOwnerProfileController());
+    final controller1 = Get.find<BusinessOwnerProfileController>();
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
@@ -36,137 +36,250 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: Obx(() {
+        final _ = controller1.profileDetails.value;
         if (controller.isLoading.value) {
           return BusinessOwnerProfileShimmer();
         }
 
         final hasBusiness = controller1.profileDetails.value.data != null;
-        return Column(
-          children: [
-            SizedBox(height: getHeight(34)),
-            Column(
-              children: [
-                SizedBox(
-                  width: getWidth(150),
-                  height: getHeight(150),
-                  child: CircleAvatar(
-                    backgroundImage:
-                        controller.profileDetails.value.data?.image != null
-                        ? NetworkImage(
-                            controller.profileDetails.value.data?.image,
-                          )
-                        : AssetImage(ImagePath.profileImage),
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              SizedBox(height: getHeight(34)),
+              Column(
+                children: [
+                  SizedBox(
+                    width: getWidth(150),
+                    height: getHeight(150),
+                    child: CircleAvatar(
+                      backgroundImage:
+                          controller.profileDetails.value.data?.image != null
+                          ? NetworkImage(
+                              controller.profileDetails.value.data?.image,
+                            )
+                          : AssetImage(ImagePath.profileImage),
+                    ),
                   ),
-                ),
-                SizedBox(height: getHeight(18)),
-                CustomText(
-                  text:
-                      controller.profileDetails.value.data?.name ??
-                      'Anonymous User',
-                  color: Color(0xff232323),
-                  fontSize: getWidth(26),
-                  fontWeight: FontWeight.w600,
-                ),
-                SizedBox(height: getHeight(8)),
-                CustomText(
-                  text: controller.profileDetails.value.data?.email ?? '',
-                  color: Color(0xffA3A3A3),
-                  fontSize: getWidth(14),
-                  fontWeight: FontWeight.w500,
-                ),
-              ],
-            ),
-            SizedBox(height: getHeight(40)),
-
-            CustomProfileButton(
-              title: 'Edit Profile',
-              firstImageString: IconPath.editIcon,
-              onTap: () {
-                Get.toNamed(AppRoute.editProfileScreen);
-              },
-            ),
-            SizedBox(height: getHeight(16)),
-            hasBusiness
-                ? CustomProfileButton(
-                    title: 'Edit Business Profile',
-                    firstImageString: IconPath.editIcon,
-                    onTap: () {
-                      Get.to(
-                        () => EditBusinessOwnerProfileScreen(
-                          id: controller1.profileDetails.value.data?.id ?? '',
-                        ),
-                      );
-                    },
-                  )
-                : CustomProfileButton(
-                    title: 'Business Profile',
-                    firstImageString: IconPath.addIcon,
-                    onTap: () {
-                      Get.to(() => AddBusinessOwnerProfileScreen());
-                    },
+                  SizedBox(height: getHeight(18)),
+                  CustomText(
+                    text:
+                        controller.profileDetails.value.data?.name ??
+                        'Anonymous User',
+                    color: Color(0xff232323),
+                    fontSize: getWidth(26),
+                    fontWeight: FontWeight.w600,
                   ),
-            SizedBox(height: getHeight(16)),
-            CustomProfileButton(
-              title: 'My Reviews',
-              firstImageString: IconPath.waiverFormIcon,
-              onTap: () {
-                final shopId = controller1.profileDetails.value.data?.id
-                    ?.toString();
-                if (shopId == null || shopId.isEmpty) {
-                  Get.snackbar(
-                    'No business found',
-                    'Create your business profile first.',
+                  SizedBox(height: getHeight(8)),
+                  CustomText(
+                    text: controller.profileDetails.value.data?.email ?? '',
+                    color: Color(0xffA3A3A3),
+                    fontSize: getWidth(14),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ],
+              ),
+              SizedBox(height: getHeight(30)),
+              Obx(() {
+                final boc = Get.find<BusinessOwnerProfileController>();
+                final isLoading =
+                    boc.isCheckingStripeStatus.value; // <-- reactive read
+                final status = boc.stripeStatus.value; // <-- reactive read
+                if (isLoading) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
                   );
-                  return;
                 }
-                Get.to(() => ReviewsScreen(shopId: shopId));
-              },
-            ),
-            SizedBox(height: getHeight(16)),
-            CustomProfileButton(
-              title: 'Waiver Form',
-              firstImageString: IconPath.waiverFormIcon,
-              onTap: () {
-                Get.to(() => WaiverFormCreateScreen());
-              },
-            ),
-            SizedBox(height: getHeight(16)),
-            CustomProfileButton(
-              title: 'Notification',
-              firstImageString: IconPath.notificationIcon,
-              onTap: () {
-                Get.toNamed(AppRoute.notificationScreen);
-              },
-            ),
-            SizedBox(height: getHeight(16)),
-            CustomProfileButton(
-              title: 'Term & Policy',
-              firstImageString: IconPath.termsAndConditionIcon,
-              onTap: () {
-                Get.toNamed(AppRoute.termsAndConditionScreen);
-              },
-            ),
-            SizedBox(height: getHeight(16)),
-            CustomProfileButton(
-              title: 'Logout',
-              firstImageString: IconPath.logOutIcon,
-              onTap: () {
-                showDeleteDialog(
-                  onConfirm: () {
-                    AuthService.logoutUser();
-                    // Perform delete action here
-                    print("Message Deleted!");
-                  },
-                  title: "Log Out?",
-                  middleText:
-                      "Are you sure you want to logout form your account?",
-                  confirm: "Logout",
+
+                final isOnboarded = status?.onboarded ?? false;
+                final shopIdStr = boc.profileDetails.value.data?.id?.toString();
+
+                if (isOnboarded) {
+                  return _buildStripeStatusCard(
+                    title: "Stripe Payments Active",
+                    subtitle:
+                        "You are ready to receive payments from customers.",
+                    icon: Icons.check_circle,
+                    color: Colors.green,
+                  );
+                }
+                if (shopIdStr == null || shopIdStr.isEmpty)
+                  return const SizedBox.shrink();
+
+                final id = int.tryParse(shopIdStr);
+                return _buildStripeOnboardingCard(
+                  onPressed: id == null
+                      ? () {}
+                      : () => boc.startStripeOnboarding(id),
                 );
-              },
-            ),
-          ],
+              }),
+              CustomProfileButton(
+                title: 'Edit Profile',
+                firstImageString: IconPath.editIcon,
+                onTap: () {
+                  Get.toNamed(AppRoute.editProfileScreen);
+                },
+              ),
+              SizedBox(height: getHeight(16)),
+              hasBusiness
+                  ? CustomProfileButton(
+                      title: 'Edit Business Profile',
+                      firstImageString: IconPath.editIcon,
+                      onTap: () {
+                        Get.to(
+                          () => EditBusinessOwnerProfileScreen(
+                            id: controller1.profileDetails.value.data?.id ?? '',
+                          ),
+                        );
+                      },
+                    )
+                  : CustomProfileButton(
+                      title: 'Business Profile',
+                      firstImageString: IconPath.addIcon,
+                      onTap: () {
+                        Get.to(() => AddBusinessOwnerProfileScreen());
+                      },
+                    ),
+              SizedBox(height: getHeight(16)),
+              CustomProfileButton(
+                title: 'My Reviews',
+                firstImageString: IconPath.waiverFormIcon,
+                onTap: () {
+                  final shopId = controller1.profileDetails.value.data?.id
+                      ?.toString();
+                  if (shopId == null || shopId.isEmpty) {
+                    Get.snackbar(
+                      'No business found',
+                      'Create your business profile first.',
+                    );
+                    return;
+                  }
+                  Get.to(() => ReviewsScreen(shopId: shopId));
+                },
+              ),
+
+              SizedBox(height: getHeight(16)),
+              CustomProfileButton(
+                title: 'Waiver Form',
+                firstImageString: IconPath.waiverFormIcon,
+                onTap: () {
+                  Get.to(() => WaiverFormCreateScreen());
+                },
+              ),
+              SizedBox(height: getHeight(16)),
+              CustomProfileButton(
+                title: 'Notification',
+                firstImageString: IconPath.notificationIcon,
+                onTap: () {
+                  Get.toNamed(AppRoute.notificationScreen);
+                },
+              ),
+              SizedBox(height: getHeight(16)),
+              CustomProfileButton(
+                title: 'Term & Policy',
+                firstImageString: IconPath.termsAndConditionIcon,
+                onTap: () {
+                  Get.toNamed(AppRoute.termsAndConditionScreen);
+                },
+              ),
+              SizedBox(height: getHeight(16)),
+              CustomProfileButton(
+                title: 'Logout',
+                firstImageString: IconPath.logOutIcon,
+                onTap: () {
+                  showDeleteDialog(
+                    onConfirm: () {
+                      AuthService.logoutUser();
+                      // Perform delete action here
+                      print("Message Deleted!");
+                    },
+                    title: "Log Out?",
+                    middleText:
+                        "Are you sure you want to logout form your account?",
+                    confirm: "Logout",
+                  );
+                },
+              ),
+              SizedBox(height: getHeight(16)),
+            ],
+          ),
         );
       }),
+    );
+  }
+
+  Widget _buildStripeStatusCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 28, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(subtitle, style: const TextStyle(color: Colors.black54)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStripeOnboardingCard({required VoidCallback onPressed}) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Complete Setup to Get Paid",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Connect your shop with Stripe to securely accept payments and receive payouts directly to your bank account.",
+              style: TextStyle(color: Colors.black54),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(
+                    0xFF635BFF,
+                  ), // Stripe's brand color
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text("Connect with Stripe"),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

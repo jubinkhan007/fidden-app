@@ -165,11 +165,37 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Obx(
               () => ElevatedButton(
-                onPressed: controller.isTermsAgreed.value
-                    ? () {
-                        // TODO: Implement continue logic
-                      }
+                onPressed:
+                    (controller.isTermsAgreed.value &&
+                        !controller.isPaying.value)
+                    ? () => controller.payForBooking(
+                        bookingId: bookingId,
+                        successArgs: {
+                          'serviceName': serviceName,
+                          'selectedSlotLabel': selectedSlot,
+                          'shopName': shopName,
+                          'shopAddress': shopAddress,
+                          'bookingId': bookingId,
+                          'service_img': serviceImg,
+                          'price': servicePrice,
+                          'discountPrice': discountPrice,
+                        },
+                      )
                     : null,
+
+                child: controller.isPaying.value
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFDC143C),
                   foregroundColor: Colors.white,
@@ -177,10 +203,6 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),

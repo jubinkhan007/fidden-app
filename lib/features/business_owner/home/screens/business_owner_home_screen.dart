@@ -4,6 +4,7 @@ import 'package:fidden/features/business_owner/home/screens/add_service_screen.d
 import 'package:fidden/features/business_owner/home/screens/edit_service_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/reminder_screen.dart';
 import 'package:fidden/features/business_owner/home/widgets/myService_row.dart';
+import 'package:fidden/features/business_owner/profile/screens/add_business_owner_profile_screen.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/splash/controller/splash_controller.dart';
 import 'package:fidden/features/user/booking/presentation/screens/view_waiver_form_screen.dart';
@@ -135,7 +136,8 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                               ? controller.shopMissingMessage.value
                               : 'You must create a shop before accessing services.',
                           actionLabel: 'Create Shop',
-                          onAction: () => Get.toNamed('/add-business-profile'),
+                          onAction: () =>
+                              Get.to(const AddBusinessOwnerProfileScreen()),
                         );
                       }
 

@@ -54,7 +54,7 @@ class ServiceDetailsController extends GetxController {
   Future<void> fetchServiceDetails() async {
     isLoadingDetails.value = true;
     try {
-      final url = Uri.parse('${AppUrls.allServices}/$serviceId/');
+      final url = Uri.parse('${AppUrls.allServices}$serviceId/');
       final res = await NetworkCaller().getRequest(
         url.toString(),
         token: AuthService.accessToken,
