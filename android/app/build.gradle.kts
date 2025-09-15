@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.waywise.fidden"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

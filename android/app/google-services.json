@@ -7,20 +7,45 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:772435903240:android:5d597902feadd57b3762bd",
+        "mobilesdk_app_id": "1:772435903240:android:27550d041b33aa1c3762bd",
         "android_client_info": {
           "package_name": "com.waywise.fidden"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "772435903240-rf7fvie7dslehj6asqtnso89rrf2f1u8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.waywise.fidden",
+            "certificate_hash": "f1f7e71ba3ba62bd54521ea9cb7d0d6614486755"
+          }
+        },
+        {
+          "client_id": "772435903240-ggmvqdtveoq8i717jgiksor33v00s153.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyCMDTpYWc2CAHB2qF1p41WdVOm6qwgvFbo"
+          "current_key": "AIzaSyD9wuKkNODllB5sFKO10GVMoX8c18m4uak"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "772435903240-ggmvqdtveoq8i717jgiksor33v00s153.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "772435903240-7ovv8og4jem35j5v1ofu8gmikqj6mrgh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.waywise.fidden"
+              }
+            }
+          ]
         }
       }
     }
