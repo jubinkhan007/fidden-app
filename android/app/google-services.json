@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "772435903240",
+    "project_id": "fidden-server",
+    "storage_bucket": "fidden-server.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:772435903240:android:5d597902feadd57b3762bd",
+        "android_client_info": {
+          "package_name": "com.waywise.fidden"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMDTpYWc2CAHB2qF1p41WdVOm6qwgvFbo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
