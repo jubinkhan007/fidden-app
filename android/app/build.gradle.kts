@@ -42,4 +42,7 @@ flutter {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // implementation("androidx.multidex:multidex:2.0.1") // only if you later hit a multidex error
+    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("com.google.android.material:material:1.12.0")
+
 }
