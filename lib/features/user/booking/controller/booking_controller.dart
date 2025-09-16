@@ -3,80 +3,138 @@ import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../data/user_booking_model.dart';
-import '../presentation/screens/shop_model.dart';
 
 class BookingController extends GetxController {
+  // Tab
   var isActiveBooking = true.obs;
-  var shopList = <ShopModel>[].obs;
+  void toggleTab(bool v) => isActiveBooking.value = v;
+
+  // Data
+  final active = <BookingItem>[].obs;
+  final history = <BookingItem>[].obs;
+
+  // Pagination cursors
+  String? _nextActiveUrl;
+  String? _nextHistoryUrl;
+
+  // Loading flags
+  var initialLoading = false.obs;
+  var pagingActive = false.obs;
+  var pagingHistory = false.obs;
+
+  // Email cache (fetched from /accounts/profile/)
+  String? _email;
+
   @override
   void onInit() {
-    fetchUserBooking();
-    fetchUserCompleteBooking();
-
     super.onInit();
+    refreshAll();
   }
 
-  void toggleTab(bool isActive) {
-    isActiveBooking.value = isActive;
-  }
+  Future<void> refreshAll() async {
+    active.clear();
+    history.clear();
+    _nextActiveUrl = null;
+    _nextHistoryUrl = null;
 
-  var isLoading = false.obs;
-
-  var allUserBookingDetails = GetUserBookingModel().obs;
-
-  Future<void> fetchUserBooking() async {
-    isLoading.value = true;
+    initialLoading.value = true;
     try {
-      final response = await NetworkCaller().getRequest(
-        AppUrls.activeBooking,
-        token: AuthService.accessToken,
-      );
-
-      if (response.isSuccess) {
-        // Check if responseData is a String or Map
-        if (response.responseData is Map<String, dynamic>) {
-          allUserBookingDetails.value = GetUserBookingModel.fromJson(
-            response.responseData,
-          );
-        } else {
-          throw Exception('Unexpected response data format');
-        }
-      }
-    } catch (e) {
-      // Handle exceptions
-      Get.snackbar('Error', 'An error occurred: $e');
+      await _ensureEmail(); // <- make sure we have the email before hitting bookings
+      await Future.wait([
+        _fetchActive(reset: true),
+        _fetchHistory(reset: true),
+      ]);
     } finally {
-      isLoading.value = false;
+      initialLoading.value = false;
     }
   }
 
-  var inProgress = false.obs;
+  Future<void> loadMoreActive() async {
+    if (pagingActive.value || _nextActiveUrl == null) return;
+    await _fetchActive();
+  }
 
-  var allUserCompleteBookingDetails = GetUserBookingModel().obs;
+  Future<void> loadMoreHistory() async {
+    if (pagingHistory.value || _nextHistoryUrl == null) return;
+    await _fetchHistory();
+  }
 
-  Future<void> fetchUserCompleteBooking() async {
-    inProgress.value = true;
+  Future<void> _fetchActive({bool reset = false}) async {
+    pagingActive.value = true;
     try {
-      final response = await NetworkCaller().getRequest(
-        AppUrls.completeBooking,
+      final url = _nextActiveUrl ?? AppUrls.userBookings(_email!);
+
+      final resp = await NetworkCaller().getRequest(
+        url,
         token: AuthService.accessToken,
       );
 
-      if (response.isSuccess) {
-        // Check if responseData is a String or Map
-        if (response.responseData is Map<String, dynamic>) {
-          allUserCompleteBookingDetails.value = GetUserBookingModel.fromJson(
-            response.responseData,
-          );
-        } else {
-          throw Exception('Unexpected response data format');
-        }
+      if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+        final parsed = BookingListResponse.fromJson(resp.responseData);
+        _nextActiveUrl = parsed.next;
+
+        final chunk = parsed.results.where((b) => b.status == 'active');
+        if (reset) active.clear();
+        active.addAll(chunk);
       }
-    } catch (e) {
-      // Handle exceptions
-      Get.snackbar('Error', 'An error occurred: $e');
     } finally {
-      inProgress.value = false;
+      pagingActive.value = false;
     }
+  }
+
+  Future<void> _fetchHistory({bool reset = false}) async {
+    pagingHistory.value = true;
+    try {
+      final url = _nextHistoryUrl ?? AppUrls.userBookings(_email!);
+
+      final resp = await NetworkCaller().getRequest(
+        url,
+        token: AuthService.accessToken,
+      );
+
+      if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+        final parsed = BookingListResponse.fromJson(resp.responseData);
+        _nextHistoryUrl = parsed.next;
+
+        final chunk = parsed.results.where((b) => b.status != 'active');
+        if (reset) history.clear();
+        history.addAll(chunk);
+      }
+    } finally {
+      pagingHistory.value = false;
+    }
+  }
+
+  // --- Helpers ---------------------------------------------------------------
+
+  Future<void> _ensureEmail() async {
+    if ((_email ?? '').isNotEmpty) return;
+
+    final resp = await NetworkCaller().getRequest(
+      AppUrls.getMyProfile,
+      token: AuthService.accessToken,
+    );
+
+    if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+      final m = resp.responseData as Map<String, dynamic>;
+      // Try common shapes safely
+      _email = (m['email'] ??
+               (m['data'] is Map ? (m['data']['email']) : null) ??
+               (m['user'] is Map ? (m['user']['email']) : null))
+              ?.toString();
+
+      // Fallback if API doesn’t send email for some reason
+      _email ??= "protim@example.com";
+    } else {
+      _email = "protim@example.com";
+    }
+  }
+
+  // Wire up when your backend exposes cancel:
+  Future<void> cancel(BookingItem b) async {
+    // TODO: call your real cancel endpoint and then:
+    // active.removeWhere((x) => x.id == b.id);
+    // history.insert(0, b.copyWith(status: 'cancelled'));
+    Get.snackbar('Cancel', 'Hook the real cancel API here.');
   }
 }

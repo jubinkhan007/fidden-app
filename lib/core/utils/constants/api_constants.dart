@@ -67,7 +67,7 @@ class AppUrls {
   static const String businessProfile = '$_baseUrl/api/shop/';
   static editBusinessProfile(String id) => '$_baseUrl/api/shop/$id/';
   static deleteShop(String id) => '$_baseUrl/api/shop/$id/';
-  static getSingleService(String id) => '$_baseUrl/api/services/$id/';
+  static getSingleService(String id) => '$_baseUrl/api/services/$id/';  
   static updateService(String id) => '$_baseUrl/api/services/$id/';
 
   // Service

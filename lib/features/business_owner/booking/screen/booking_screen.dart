@@ -22,7 +22,7 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
-        title: Text('All Booking'),
+        title: Text('All Bookings'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(

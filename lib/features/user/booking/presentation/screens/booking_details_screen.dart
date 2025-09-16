@@ -1,236 +1,313 @@
-import 'package:fidden/core/commom/widgets/custom_button.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
+import 'package:fidden/core/commom/widgets/fallBack_image.dart'; // <-- fallback image
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/utils/constants/app_sizes.dart';
 import '../../../../../core/utils/constants/icon_path.dart';
-
 import '../../data/user_booking_model.dart';
 
 class BookingDetailsScreen extends StatelessWidget {
-  const BookingDetailsScreen({super.key, this.shop1});
+  const BookingDetailsScreen({super.key, required this.booking});
 
-  final UserBookingDatum? shop1;
+  final BookingItem booking;
 
   @override
   Widget build(BuildContext context) {
+    final dateText = DateFormat('EEE, d MMM').format(booking.slotTime);
+    final timeText = DateFormat('hh:mm a').format(booking.slotTime);
+
     return Scaffold(
-      backgroundColor: Color(0xffF4F4F4),
+      backgroundColor: const Color(0xffF4F4F4),
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () {
-            Get.back();
-          },
-          icon: Icon(Icons.arrow_back_ios_new_outlined),
+          onPressed: Get.back,
+          icon: const Icon(Icons.arrow_back_ios_new_outlined),
         ),
         title: CustomText(
-          text: "Booking Screen",
+          text: "Booking",
           fontWeight: FontWeight.w700,
           fontSize: getWidth(20),
         ),
         centerTitle: true,
-        backgroundColor: Color(0xffF4F4F4),
+        backgroundColor: const Color(0xffF4F4F4),
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: EdgeInsets.only(
-                  left: getWidth(10),
-                  right: getWidth(8),
-                  top: getHeight(8),
-                  bottom: getHeight(8),
-                ),
-                decoration: BoxDecoration(
-                  color: Color(0xffFFFFFF),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: shop1?.serviceImage != null
-                          ? Image.network(
-                              shop1?.serviceImage ?? '',
-                              width: getWidth(100),
-                              height: getHeight(80),
-                              fit: BoxFit.cover,
-                            )
-                          : Image.asset(
-                              "assets/images/barber_image.png",
-                              width: getWidth(100),
-                              height: getHeight(100),
-                              fit: BoxFit.cover,
-                            ),
-                    ),
-                    SizedBox(width: 12),
-                    Column(
+        padding: EdgeInsets.all(getWidth(16)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // === Card: Shop summary =========================================================
+            Container(
+              padding: EdgeInsets.all(getWidth(10)),
+              decoration: BoxDecoration(
+                color: const Color(0xffFFFFFF),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 16,
+                    color: Colors.black.withOpacity(0.06),
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  NetThumb( // <-- safe network image with fallback
+                    url: booking.shopImg,
+                    w: getWidth(100),
+                    h: getHeight(80),
+                    borderRadius: 10,
+                  ),
+                  SizedBox(width: getWidth(12)),
+                  Expanded( // <-- prevents overflow
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: getWidth(250),
-                          child: Text(
-                            shop1?.serviceName ?? "",
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xff111827),
+                        // top row: title + status badge
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                booking.shopName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xff111827),
+                                  height: 1.2,
+                                ),
+                              ),
                             ),
-                          ),
+                            SizedBox(width: getWidth(8)),
+                            _StatusBadge(text: booking.status),
+                          ],
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: getHeight(8)),
                         Row(
                           children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 16,
-                              color: Color(0xff7A49A5).withOpacity(0.7),
-                            ),
-                            SizedBox(width: 8),
-                            SizedBox(
-                              width: 230,
+                            Icon(Icons.location_on,
+                                size: 16,
+                                color: const Color(0xff7A49A5).withOpacity(.7)),
+                            SizedBox(width: getWidth(6)),
+                            Expanded(
                               child: Text(
-                                shop1?.businessAddress ?? "",
+                                booking.shopAddress,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Color(0xff7A49A5).withOpacity(0.7),
-                                  overflow: TextOverflow.ellipsis,
+                                  color: const Color(0xff7A49A5).withOpacity(.7),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: getHeight(8)),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Color(0xff7A49A5).withOpacity(0.7),
-                            ),
-                            SizedBox(width: 8),
+                            Icon(Icons.star,
+                                size: 16,
+                                color: const Color(0xff7A49A5).withOpacity(.7)),
+                            SizedBox(width: getWidth(6)),
                             Text(
-                              shop1?.review?.toStringAsFixed(2) ?? '',
+                              "${booking.avgRating.toStringAsFixed(1)}  (${booking.totalReviews})",
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Color(0xff7A49A5).withOpacity(0.7),
+                                color: const Color(0xff7A49A5).withOpacity(.7),
                               ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              SizedBox(height: getHeight(24)),
-              Image.asset(
-                "assets/images/date_time.png",
-                height: getHeight(35),
-                width: getWidth(115),
-                color: Colors.blue,
-              ),
-              CustomText(
-                text:
-                    "${_formatDate(shop1?.bookingDate.toString() ?? '')} - ${shop1?.bookingTime ?? ""}",
-                color: const Color(0xff6B7280),
-                fontSize: getWidth(14),
-              ),
-              SizedBox(height: getHeight(24)),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Image.asset(
-                    IconPath.serviceIcon,
-                    height: getHeight(18),
-                    width: getWidth(18),
-                  ),
-                  SizedBox(width: getWidth(8)),
-                  CustomText(
-                    text: "Service selected",
-                    fontSize: getWidth(16),
-                    fontWeight: FontWeight.w600,
                   ),
                 ],
               ),
-              SizedBox(height: 8),
-              ListTile(
+            ),
+
+            SizedBox(height: getHeight(20)),
+            const Divider(height: 1),
+
+            // === Date & time ================================================================
+            SizedBox(height: getHeight(18)),
+            Row(
+              children: [
+                Image.asset(
+                  "assets/images/date_time.png",
+                  height: getHeight(22),
+                  width: getWidth(22),
+                  color: Colors.black87,
+                ),
+                SizedBox(width: getWidth(10)),
+                CustomText(
+                  text: "Date & time",
+                  fontSize: getWidth(18),
+                  fontWeight: FontWeight.w700,
+                ),
+              ],
+            ),
+            SizedBox(height: getHeight(10)),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InfoChip(icon: Icons.event, label: dateText),
+                _InfoChip(icon: Icons.schedule, label: timeText),
+              ],
+            ),
+
+            // === Service selected ===========================================================
+            SizedBox(height: getHeight(24)),
+            Row(
+              children: [
+                Image.asset(
+                  IconPath.serviceIcon,
+                  height: getHeight(18),
+                  width: getWidth(18),
+                ),
+                SizedBox(width: getWidth(8)),
+                CustomText(
+                  text: "Service selected",
+                  fontSize: getWidth(16),
+                  fontWeight: FontWeight.w600,
+                ),
+              ],
+            ),
+            SizedBox(height: getHeight(10)),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: getWidth(8),
+                vertical: getHeight(8),
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xffFFFFFF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: SizedBox(
-                  height: getHeight(50),
-                  width: getWidth(50),
-                  child: CircleAvatar(
-                    backgroundImage: AssetImage(
-                      "assets/images/barber_image.png",
-                    ),
-                  ),
+                leading: CircleAvatar(
+                  radius: getWidth(26),
+                  backgroundImage:
+                      const AssetImage("assets/images/barber_image.png"),
                 ),
                 title: Text(
-                  shop1?.serviceName ?? '',
+                  booking.serviceTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: getWidth(16),
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xff111827),
                   ),
                 ),
-                trailing: Text(
-                  "\$ ${shop1?.servicePrice.toString() ?? ''}",
-                  style: TextStyle(fontSize: getWidth(14)),
+                subtitle: Text(
+                  "Duration: ${booking.serviceDuration} min",
+                  style: TextStyle(
+                    fontSize: getWidth(14),
+                    color: const Color(0xff6B7280),
+                  ),
                 ),
               ),
-              SizedBox(height: MediaQuery.sizeOf(context).height / 2.25),
-              CustomButton(
-                onPressed: () {
-                  // Get.to(
-                  //   () => PaymentMethodScreen(
-                  //     shop1: shop1,
-                  //   ),
-                  //   transition: Transition.rightToLeftWithFade,
-                  //   duration: Duration(milliseconds: 400),
-                  //   curve: Curves.easeOut,
-                  // );
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Pay now",
-                      style: TextStyle(
-                        color: Color(0xffFFFFFF),
-                        fontSize: getWidth(18),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(width: getWidth(10)),
-                    Image.asset(
-                      IconPath.waletIcon,
-                      height: getHeight(22),
-                      width: getWidth(22),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+
+            SizedBox(height: getHeight(12)),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InfoChip(icon: Icons.confirmation_number_outlined, label: "Booking #${booking.id}"),
+                // _InfoChip(icon: Icons.store_mall_directory_outlined, label: "Shop ID: ${booking.shop}"),
+                _InfoChip(icon: Icons.person_outline, label: booking.userEmail),
+              ],
+            ),
+
+            // NOTE: No "Pay now" button (by request)
+            SizedBox(height: getHeight(24)),
+          ],
         ),
       ),
     );
   }
+}
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return "";
-    try {
-      DateTime date = DateTime.parse(dateStr);
-      return DateFormat('EEE, d MMM').format(date); // Ex: Sun, 15 Jan
-    } catch (e) {
-      return "";
-    }
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _InfoChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: getWidth(10),
+        vertical: getHeight(6),
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6FA),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFF6B7280)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: Color(0xFF374151),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String text;
+  const _StatusBadge({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final lower = text.toLowerCase();
+    final isActive = lower == 'active';
+    final isCancelled = lower.contains('cancel');
+
+    final bg = isActive
+        ? const Color(0xFFE6F4EA)
+        : (isCancelled ? const Color(0xFFFFEBEE) : const Color(0xFFEFF6FF));
+    final fg = isActive
+        ? const Color(0xFF137333)
+        : (isCancelled ? const Color(0xFFB00020) : const Color(0xFF1E3A8A));
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: getWidth(10),
+        vertical: getHeight(5),
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        lower[0].toUpperCase() + lower.substring(1),
+        style: TextStyle(
+          color: fg,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/utils/constants/image_path.dart';
+import 'package:fidden/features/business_owner/booking/screen/booking_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/add_service_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/edit_service_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/reminder_screen.dart';
@@ -206,7 +207,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _buildSectionTitle(
                       "Recent Bookings",
-                      seeAll: () => Get.to(() => const AllBookingListScreen()),
+                      seeAll: () => Get.to(() => const BusinessOwnerBookingScreen()),
                     ),
                     const SizedBox(height: 16),
                     _buildRecentBookings(controller),
