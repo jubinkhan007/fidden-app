@@ -253,42 +253,51 @@ class ShopDetailsScreen extends StatelessWidget {
           ),
         );
       }),
-      bottomNavigationBar:
-          // ... (Bottom navigation bar remains the same) ...
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              getWidth(24),
-              0,
-              getWidth(24),
-              getHeight(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
-              child: SizedBox(
-                width: double.infinity,
-                height: getHeight(54),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    backgroundColor: _cta,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 0,
+      bottomNavigationBar: Obx(() {
+        bool isServiceSelected = controller.selectedServiceId.value != null;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            getWidth(24),
+            0,
+            getWidth(24),
+            getHeight(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
+            child: SizedBox(
+              width: double.infinity,
+              height: getHeight(54),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: isServiceSelected ? _cta : Colors.grey,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  onPressed: () {},
-                  child: Text(
-                    "Booking Now",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: getWidth(16),
-                      fontWeight: FontWeight.w700,
-                    ),
+                  elevation: 0,
+                ),
+                onPressed: isServiceSelected
+                    ? () {
+                        Get.to(() => ServiceDetailsScreen(
+                            serviceId: controller.selectedServiceId.value!));
+                      }
+                    : () {
+                        Get.snackbar('No Service Selected',
+                            'Please select a service to continue.');
+                      },
+                child: Text(
+                  "Book Now",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: getWidth(16),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ),
           ),
+        );
+      }),
     );
   }
 
@@ -610,62 +619,91 @@ class _ServiceSection extends StatelessWidget {
 
               final ImageProvider avatarImage =
                   (s.serviceImg != null && s.serviceImg!.isNotEmpty)
-                  ? NetworkImage(s.serviceImg!)
-                  : const AssetImage(ImagePath.profileImage);
+                      ? NetworkImage(s.serviceImg!)
+                      : const AssetImage(ImagePath.profileImage);
 
               return Material(
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(8),
-                  onTap: () => _openServiceDetails(s),
+                  onTap: () {
+                    // Toggle selection on tap
+                    if (controller.selectedServiceId.value == s.id) {
+                      controller.selectedServiceId.value = null;
+                    } else {
+                      controller.selectedServiceId.value = s.id;
+                    }
+                  },
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: getHeight(6)),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: getWidth(28),
-                              backgroundImage: avatarImage,
-                              backgroundColor: const Color(0xffE5E7EB),
-                            ),
-                            SizedBox(width: getWidth(12)),
-                            SizedBox(
-                              width: getWidth(200),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        Obx(
+                          () => Checkbox(
+                            value: controller.selectedServiceId.value == s.id,
+                            onChanged: (bool? value) {
+                              if (value == true) {
+                                controller.selectedServiceId.value = s.id;
+                              } else {
+                                if (controller.selectedServiceId.value ==
+                                    s.id) {
+                                  controller.selectedServiceId.value = null;
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(
-                                    s.title ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: getWidth(16),
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  CircleAvatar(
+                                    radius: getWidth(28),
+                                    backgroundImage: avatarImage,
+                                    backgroundColor: const Color(0xffE5E7EB),
                                   ),
-                                  SizedBox(height: getHeight(2)),
-                                  Text(
-                                    s.description ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: getWidth(13),
-                                      color: subtitleColor,
+                                  SizedBox(width: getWidth(12)),
+                                  SizedBox(
+                                    width: getWidth(150),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          s.title ?? '',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: getWidth(16),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        SizedBox(height: getHeight(2)),
+                                        Text(
+                                          s.description ?? '',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: getWidth(13),
+                                            color: subtitleColor,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          "\$${price?.toStringAsFixed(0) ?? '0'}",
-                          style: TextStyle(
-                            fontSize: getWidth(16),
-                            fontWeight: FontWeight.w600,
-                            color: priceColor,
+                              Text(
+                                "\$${price?.toStringAsFixed(0) ?? '0'}",
+                                style: TextStyle(
+                                  fontSize: getWidth(16),
+                                  fontWeight: FontWeight.w600,
+                                  color: priceColor,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

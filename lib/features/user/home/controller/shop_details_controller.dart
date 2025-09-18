@@ -12,6 +12,7 @@ class ShopDetailsController extends GetxController {
   var isLoading = false.obs;
   var shopDetails = ShopDetailsModel().obs;
   var selectedTab = 0.obs;
+  var selectedServiceId = Rxn<int>(); // To track the selected service
 
   // New state for service category selection
   var selectedServiceCategoryTabIndex = 0.obs;
