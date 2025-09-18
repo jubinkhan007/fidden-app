@@ -26,11 +26,36 @@ class BookingListResponse {
   }
 }
 
+class UserBookingsModel {
+  final int count;
+  final String? next;
+  final String? previous;
+  final List<BookingItem> results;
+
+  UserBookingsModel({
+    required this.count,
+    this.next,
+    this.previous,
+    required this.results,
+  });
+
+  factory UserBookingsModel.fromJson(Map<String, dynamic> json) =>
+      UserBookingsModel(
+        count: json["count"],
+        next: json["next"],
+        previous: json["previous"],
+        results: List<BookingItem>.from(
+            json["results"].map((x) => BookingItem.fromJson(x))),
+      );
+}
+
+
 class BookingItem {
   final int id;
   final int user;
   final String userEmail;
   final int shop;
+  final int serviceId;
   final String shopName;
   final String shopAddress;
   final String shopImg;
@@ -43,12 +68,14 @@ class BookingItem {
   final DateTime updatedAt;
   final double avgRating;
   final int totalReviews;
+  bool isReviewed;
 
   BookingItem({
     required this.id,
     required this.user,
     required this.userEmail,
     required this.shop,
+    required this.serviceId,
     required this.shopName,
     required this.shopAddress,
     required this.shopImg,
@@ -61,6 +88,7 @@ class BookingItem {
     required this.updatedAt,
     required this.avgRating,
     required this.totalReviews,
+    this.isReviewed = false,
   });
 
   factory BookingItem.fromJson(Map<String, dynamic> json) {
@@ -73,6 +101,7 @@ class BookingItem {
       user: _toInt(json['user']),
       userEmail: json['user_email'] ?? '',
       shop: _toInt(json['shop']),
+      serviceId: _toInt(json['service_id']),
       shopName: json['shop_name'] ?? '',
       shopAddress: json['shop_address'] ?? '',
       shopImg: json['shop_img'] ?? '',
@@ -85,6 +114,8 @@ class BookingItem {
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
       avgRating: _toDouble(json['avg_rating']),
       totalReviews: _toInt(json['total_reviews']),
+      isReviewed: json["is_reviewed"] ?? false,
     );
   }
 }
+

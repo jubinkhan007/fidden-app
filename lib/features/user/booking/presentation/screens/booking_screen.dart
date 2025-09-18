@@ -1,8 +1,13 @@
 // lib/features/user/booking/presentation/screens/booking_screen.dart
+// lib/features/user/booking/presentation/screens/booking_screen.dart
+import 'dart:ui';
+
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/show_progress_indicator.dart';
 import 'package:fidden/core/commom/widgets/fallBack_image.dart';
+import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -40,7 +45,7 @@ class BookingScreen extends StatelessWidget {
       appBar: AppBar(
         elevation: 0,
         title: CustomText(
-          text: "Booking",
+          text: "Bookings",
           fontWeight: FontWeight.w700,
           fontSize: getWidth(20),
         ),
@@ -65,19 +70,20 @@ class BookingScreen extends StatelessWidget {
                 }
 
                 final isActive = c.isActiveBooking.value;
-                final items =
-                    isActive ? c.active.toList() : c.history.toList();
+                final items = isActive
+                    ? c.active.toList()
+                    : [...c.history.toList(), ...c.cancelled.toList()];
                 final isPaging =
                     isActive ? c.pagingActive.value : c.pagingHistory.value;
-                final scroll =
-                    isActive ? activeScroll : historyScroll;
+                final scroll = isActive ? activeScroll : historyScroll;
 
                 if (items.isEmpty) {
                   return _EmptyState(
-                    title: isActive ? "No Active Booking" : "No booking history",
+                    title:
+                        isActive ? "No Active Booking" : "No booking history",
                     subtitle: isActive
-                        ? "You don’t have any upcoming bookings yet."
-                        : "When you complete or cancel bookings, they’ll appear here.",
+                        ? "You don't have any upcoming bookings yet."
+                        : "When you complete or cancel bookings, they'll appear here.",
                   );
                 }
 
@@ -104,6 +110,12 @@ class BookingScreen extends StatelessWidget {
                           duration: const Duration(milliseconds: 220),
                         ),
                         onCancel: isActive ? () => c.cancel(b) : null,
+                        onRebook: !isActive && b.status == 'cancelled'
+                            ? () {
+                                Get.to(() =>
+                                    ServiceDetailsScreen(serviceId: b.serviceId));
+                              }
+                            : null,
                       );
                     },
                   ),
@@ -190,12 +202,14 @@ class _BookingCard extends StatelessWidget {
   final bool isActive;
   final VoidCallback? onTap;
   final VoidCallback? onCancel;
+  final VoidCallback? onRebook;
 
   const _BookingCard({
     required this.booking,
     required this.isActive,
     this.onTap,
     this.onCancel,
+    this.onRebook,
   });
 
   @override
@@ -327,13 +341,176 @@ class _BookingCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (isActive)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton(
+                    onPressed: onCancel,
+                    style: OutlinedButton.styleFrom(
+                      side:
+                          BorderSide(color: AppColors.primaryColor, width: 1.2),
+                      foregroundColor: AppColors.primaryColor,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: getWidth(14),
+                        vertical: getHeight(10),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      "Cancel",
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              )
+            else if (booking.status == 'completed')
+              // Review button for history tab
+              Obx(() {
+                final controller = Get.find<BookingController>();
+                final isReviewed =
+                    controller.reviewedBookingIds.contains(booking.id);
+                if (isReviewed) {
+                  return const Align(
+                    alignment: Alignment.centerRight,
+                    child: Chip(
+                      label: Text('Reviewed'),
+                      backgroundColor: AppColors.primaryColor,
+                      labelStyle: TextStyle(color: Colors.white),
+                    ),
+                  );
+                } else {
+                  return Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton(
+                    onPressed: () => _showReviewSheet(context, booking),
+                    style: OutlinedButton.styleFrom(
+                      side:
+                          BorderSide(color: AppColors.primaryColor, width: 1.2),
+                      foregroundColor: AppColors.primaryColor,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: getWidth(14),
+                        vertical: getHeight(10),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      'Review',
+                      style: TextStyle(fontWeight: FontWeight.w700,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  )
+                  );
+                }
+              })
+            else if (booking.status == 'cancelled')
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                    onPressed: onRebook,
+                    style: OutlinedButton.styleFrom(
+                      side:
+                          BorderSide(color: AppColors.primaryColor, width: 1.2),
+                      foregroundColor: AppColors.primaryColor,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: getWidth(14),
+                        vertical: getHeight(10),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      'Book Again',
+                      style: TextStyle(fontWeight: FontWeight.w700,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  )
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-            // Bottom: Cancel (only for active)
-            if (isActive) Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton(
-                  onPressed: onCancel,
+void _showReviewSheet(BuildContext context, BookingItem booking) {
+  final controller = Get.find<BookingController>();
+
+  // reset for a fresh review each time the sheet opens
+  controller.rating.value = 0;
+  controller.reviewText.value = '';
+
+  Get.bottomSheet(
+    BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Leave a Review',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+
+              // ⭐ Whole-number only
+              RatingBar.builder(
+                initialRating: 0,
+                minRating: 1,
+                allowHalfRating: false, // <- changed
+                direction: Axis.horizontal,
+                itemCount: 5,
+                itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                itemBuilder: (context, _) => const Icon(
+                  Icons.star,
+                  color: Colors.amber,
+                ),
+                onRatingUpdate: (rating) {
+                  controller.rating.value = rating;
+                },
+              ),
+
+              const SizedBox(height: 16),
+              TextField(
+                onChanged: (value) {
+                  controller.reviewText.value = value;
+                },
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Write your review here...',
+                ),
+                maxLines: 5,
+              ),
+              const SizedBox(height: 16),
+
+              // ✅ Enable only when both rating & review are present
+              Obx(() {
+                final canSubmit = controller.rating.value >= 1 &&
+                    controller.reviewText.value.trim().isNotEmpty;
+
+                return OutlinedButton(
+                  onPressed: canSubmit
+                      ? () {
+                          controller.submitReview(booking);
+                          Get.back();
+                        }
+                      : null, // disabled when invalid
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: AppColors.primaryColor, width: 1.2),
                     foregroundColor: AppColors.primaryColor,
@@ -345,18 +522,22 @@ class _BookingCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  child: Text(
+                    'Submit',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey[800],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                );
+              }),
+            ],
+          ),
         ),
       ),
-    );
-  }
+    ),
+    isScrollControlled: true,
+  );
 }
 
 class _Chip extends StatelessWidget {
@@ -463,3 +644,5 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+// Need to modify this screen so that users can review only the completed bookings (not the cancelled ones).
+// For cancelled one show a Rebook/ Book Again button and Upon clicking users will be redirected to the shop's that services details screen.

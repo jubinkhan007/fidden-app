@@ -1,3 +1,5 @@
+// lib/features/user/booking/controller/booking_controller.dart
+import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:get/get.dart';
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
@@ -12,6 +14,7 @@ class BookingController extends GetxController {
   // Data
   final active = <BookingItem>[].obs;
   final history = <BookingItem>[].obs;
+  final cancelled = <BookingItem>[].obs; // New list for cancelled bookings
 
   // Pagination cursors
   String? _nextActiveUrl;
@@ -25,6 +28,11 @@ class BookingController extends GetxController {
   // Email cache (fetched from /accounts/profile/)
   String? _email;
 
+  //review
+  var rating = 0.0.obs;
+  var reviewText = ''.obs;
+  final reviewedBookingIds = <int>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -34,6 +42,7 @@ class BookingController extends GetxController {
   Future<void> refreshAll() async {
     active.clear();
     history.clear();
+    cancelled.clear(); // Clear cancelled list on refresh
     _nextActiveUrl = null;
     _nextHistoryUrl = null;
 
@@ -97,11 +106,39 @@ class BookingController extends GetxController {
         _nextHistoryUrl = parsed.next;
 
         final chunk = parsed.results.where((b) => b.status != 'active');
-        if (reset) history.clear();
-        history.addAll(chunk);
+        if (reset) {
+          history.clear();
+          cancelled.clear();
+        }
+        history.addAll(chunk.where((b) => b.status == 'completed'));
+        cancelled.addAll(chunk.where((b) => b.status == 'cancelled'));
       }
     } finally {
       pagingHistory.value = false;
+    }
+  }
+
+  Future<void> submitReview(BookingItem booking) async {
+    final body = {
+      "shop": booking.shop,
+      "service":
+          booking.serviceId, // Assuming booking.id is the service id as per the API doc
+      "rating": rating.value.toInt(),
+      "review": reviewText.value,
+      "review_img": null,
+    };
+
+    final response = await NetworkCaller().postRequest(
+      AppUrls.createReview,
+      body: body,
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess) {
+      AppSnackBar.showSuccess('Review submitted successfully!');
+      reviewedBookingIds.add(booking.id);
+    } else {
+      AppSnackBar.showError('Failed to submit review.');
     }
   }
 
@@ -119,9 +156,9 @@ class BookingController extends GetxController {
       final m = resp.responseData as Map<String, dynamic>;
       // Try common shapes safely
       _email = (m['email'] ??
-               (m['data'] is Map ? (m['data']['email']) : null) ??
-               (m['user'] is Map ? (m['user']['email']) : null))
-              ?.toString();
+              (m['data'] is Map ? (m['data']['email']) : null) ??
+              (m['user'] is Map ? (m['user']['email']) : null))
+          ?.toString();
 
       // Fallback if API doesn’t send email for some reason
       _email ??= "protim@example.com";

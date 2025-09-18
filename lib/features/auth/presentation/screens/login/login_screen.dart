@@ -163,7 +163,7 @@ class LoginScreen extends StatelessWidget {
                         VerticalSpace(height: getHeight(18)),
                         // Primary button – pill radius
                         SizedBox(
-                          height: getHeight(62),
+                          height: getHeight(66),
                           width: double.infinity,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
