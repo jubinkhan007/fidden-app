@@ -24,7 +24,7 @@ class AppUrls {
   static const String socialLogin = '$_baseUrl/accounts/login/google/';
   static const String refreshToken = '$_baseUrl/accounts/token/refresh/';
 
-  // User
+  // User-booking
   static const String getMyProfile = '$_baseUrl/accounts/profile/';
   static const String updateProfile = '$_baseUrl/accounts/profile/';
   static const String activeBooking = '$_baseUrl/booking/users?status=pending';
@@ -35,6 +35,10 @@ class AppUrls {
   static const String allShops = '$_baseUrl/api/users/shops/';
   static const String serviceDetails =
       '$_baseUrl/api/shops'; // ✅ Added this line
+
+
+// owner-booking
+  
 
   //inbox-messaging
   static const String threads = '$_baseUrl/api/threads/';
@@ -120,7 +124,7 @@ class AppUrls {
       '$_baseUrl/coupon/check?code=$couponCode';
 
   // seller booking
-  static const String ownerBooking = "$_baseUrl/booking/owners";
+  static String ownerBooking (String shop_id) => '$_baseUrl/payments/bookings/?shop_id=$shop_id';
 
   // Add reminder
   static createReminder(String userId) =>

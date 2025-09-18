@@ -1,153 +1,108 @@
 import 'dart:convert';
 
-BusinessOwnerBookingModel businessOwnerBookingModelFromJson(String str) =>
-    BusinessOwnerBookingModel.fromJson(json.decode(str));
+OwnerBookingsResponse ownerBookingsResponseFromJson(String str) =>
+    OwnerBookingsResponse.fromJson(json.decode(str));
 
-String businessOwnerBookingModelToJson(BusinessOwnerBookingModel data) =>
+String ownerBookingsResponseToJson(OwnerBookingsResponse data) =>
     json.encode(data.toJson());
 
-class BusinessOwnerBookingModel {
-  bool? success;
-  int? statusCode;
-  String? message;
-  List<Datum>? data;
+class OwnerBookingsResponse {
+  final String? next;
+  final String? previous;
+  final List<OwnerBookingItem> results;
 
-  BusinessOwnerBookingModel({
-    this.success,
-    this.statusCode,
-    this.message,
-    this.data,
+  OwnerBookingsResponse({
+    this.next,
+    this.previous,
+    required this.results,
   });
 
-  factory BusinessOwnerBookingModel.fromJson(Map<String, dynamic> json) =>
-      BusinessOwnerBookingModel(
-        success: json["success"],
-        statusCode: json["statusCode"],
-        message: json["message"],
-        data: json["data"] == null
-            ? []
-            : List<Datum>.from(json["data"]!.map((x) => Datum.fromJson(x))),
-      );
+  factory OwnerBookingsResponse.fromJson(Map<String, dynamic> json) {
+    return OwnerBookingsResponse(
+      next: json['next'],
+      previous: json['previous'],
+      results: (json['results'] as List<dynamic>? ?? [])
+          .map((e) => OwnerBookingItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
-    "success": success,
-    "statusCode": statusCode,
-    "message": message,
-    "data": data == null
-        ? []
-        : List<dynamic>.from(data!.map((x) => x.toJson())),
-  };
+        'next': next,
+        'previous': previous,
+        'results': results.map((e) => e.toJson()).toList(),
+      };
 }
 
-class Datum {
-  String? id;
-  String? bookingTime;
-  DateTime? bookingDate;
-  String? serviceName;
-  String? serviceImage;
-  List<CustomerForm>? customerForm;
+class OwnerBookingItem {
+  final int id;
+  final int user;
+  final String userEmail;
+  final String? userName;
+  final String? profileImage;
+  final int shop;
+  final String shopName;
+  final int slot;
+  final DateTime slotTime;
+  final String serviceTitle;
+  final String serviceDuration; // "30"
+  final String status; // "active"
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Datum({
-    this.id,
-    this.bookingTime,
-    this.bookingDate,
-    this.serviceName,
-    this.serviceImage,
-    this.customerForm,
+  OwnerBookingItem({
+    required this.id,
+    required this.user,
+    required this.userEmail,
+    required this.userName,
+    required this.profileImage,
+    required this.shop,
+    required this.shopName,
+    required this.slot,
+    required this.slotTime,
+    required this.serviceTitle,
+    required this.serviceDuration,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  factory Datum.fromJson(Map<String, dynamic> json) => Datum(
-    id: json["id"],
-    bookingTime: json["booking_time"],
-    bookingDate: json["booking_date"] == null
-        ? null
-        : DateTime.parse(json["booking_date"]),
-    serviceName: json["service_name"],
-    serviceImage: json["service_image"],
-    customerForm: json["customer_form"] == null
-        ? []
-        : List<CustomerForm>.from(
-            json["customer_form"]!.map((x) => CustomerForm.fromJson(x)),
-          ),
-  );
+  factory OwnerBookingItem.fromJson(Map<String, dynamic> j) {
+    int _toInt(v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
+    DateTime _dt(v) => DateTime.tryParse('$v') ?? DateTime.now();
+
+    return OwnerBookingItem(
+      id: _toInt(j['id']),
+      user: _toInt(j['user']),
+      userEmail: j['user_email'] ?? '',
+      userName: j['user_name'],
+      profileImage: j['profile_image'],
+      shop: _toInt(j['shop']),
+      shopName: j['shop_name'] ?? '',
+      slot: _toInt(j['slot']),
+      slotTime: _dt(j['slot_time']),
+      serviceTitle: j['service_title'] ?? '',
+      serviceDuration: j['service_duration'] ?? '',
+      status: (j['status'] ?? '').toString(),
+      createdAt: _dt(j['created_at']),
+      updatedAt: _dt(j['updated_at']),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
-    "id": id,
-    "booking_time": bookingTime,
-    "booking_date":
-        "${bookingDate!.year.toString().padLeft(4, '0')}-${bookingDate!.month.toString().padLeft(2, '0')}-${bookingDate!.day.toString().padLeft(2, '0')}",
-    "service_name": serviceName,
-    "service_image": serviceImage,
-    "customer_form": customerForm == null
-        ? []
-        : List<dynamic>.from(customerForm!.map((x) => x.toJson())),
-  };
-}
-
-class CustomerForm {
-  String? id;
-  String? firstName;
-  String? lastName;
-  String? email;
-  String? phone;
-  String? address;
-  String? city;
-  String? state;
-  String? postalCode;
-  String? userId;
-  String? bookingId;
-  DateTime? createdAt;
-  DateTime? updatedAt;
-
-  CustomerForm({
-    this.id,
-    this.firstName,
-    this.lastName,
-    this.email,
-    this.phone,
-    this.address,
-    this.city,
-    this.state,
-    this.postalCode,
-    this.userId,
-    this.bookingId,
-    this.createdAt,
-    this.updatedAt,
-  });
-
-  factory CustomerForm.fromJson(Map<String, dynamic> json) => CustomerForm(
-    id: json["id"],
-    firstName: json["first_name"],
-    lastName: json["last_name"],
-    email: json["email"],
-    phone: json["phone"],
-    address: json["address"],
-    city: json["city"],
-    state: json["state"],
-    postalCode: json["postal_code"],
-    userId: json["userId"],
-    bookingId: json["bookingId"],
-    createdAt: json["createdAt"] == null
-        ? null
-        : DateTime.parse(json["createdAt"]),
-    updatedAt: json["updatedAt"] == null
-        ? null
-        : DateTime.parse(json["updatedAt"]),
-  );
-
-  Map<String, dynamic> toJson() => {
-    "id": id,
-    "first_name": firstName,
-    "last_name": lastName,
-    "email": email,
-    "phone": phone,
-    "address": address,
-    "city": city,
-    "state": state,
-    "postal_code": postalCode,
-    "userId": userId,
-    "bookingId": bookingId,
-    "createdAt": createdAt?.toIso8601String(),
-    "updatedAt": updatedAt?.toIso8601String(),
-  };
+        'id': id,
+        'user': user,
+        'user_email': userEmail,
+        'user_name': userName,
+        'profile_image': profileImage,
+        'shop': shop,
+        'shop_name': shopName,
+        'slot': slot,
+        'slot_time': slotTime.toIso8601String(),
+        'service_title': serviceTitle,
+        'service_duration': serviceDuration,
+        'status': status,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
 }

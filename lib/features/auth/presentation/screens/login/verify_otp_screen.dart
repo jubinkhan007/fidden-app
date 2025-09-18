@@ -21,18 +21,18 @@ class VerifyOtpScreen extends StatefulWidget {
 
 class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   //  Use 4 to match the design; switch to 6 if your backend requires.
-  static const int _otpLength = 4;
+  static const int _otpLength = 6;
 
   final TextEditingController _otpTEController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final RxInt _remainingTime = 12.obs; // shows 00:12 in the mock
+  final RxInt _remainingTime = 60.obs; // shows 00:12 in the mock
   final RxBool _enableResendCodeButton = false.obs;
   late Timer _timer;
 
   void _startResendCodeTimer() {
     _enableResendCodeButton.value = false;
-    _remainingTime.value = 12;
+    _remainingTime.value = 60;
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       _remainingTime.value--;
       if (_remainingTime.value <= 0) {

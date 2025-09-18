@@ -5,6 +5,7 @@ import 'package:fidden/features/business_owner/home/screens/add_service_screen.d
 import 'package:fidden/features/business_owner/home/screens/edit_service_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/reminder_screen.dart';
 import 'package:fidden/features/business_owner/home/widgets/myService_row.dart';
+import 'package:fidden/features/business_owner/nav_bar/controllers/user_nav_bar_controller.dart';
 import 'package:fidden/features/business_owner/profile/screens/add_business_owner_profile_screen.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/splash/controller/splash_controller.dart';
@@ -41,7 +42,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
         elevation: 0,
         title: Obx(
           () => Text(
-            "Hello, ${profileController.profileDetails.value.data?.name ?? ''}",
+            "Hello ${profileController.profileDetails.value.data?.name ?? ''}",
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
           ),
         ),
@@ -83,7 +84,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(16.0,0,16.0,16.0),
               child: Obx(() {
                 if (controller.isLoading.value) {
                   return const FullScreenShimmerLoader();
@@ -207,7 +208,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _buildSectionTitle(
                       "Recent Bookings",
-                      seeAll: () => Get.to(() => const BusinessOwnerBookingScreen()),
+                      seeAll: () => Get.find<BusinessOwnerNavBarController>().changeIndex(1),
                     ),
                     const SizedBox(height: 16),
                     _buildRecentBookings(controller),
@@ -242,46 +243,62 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
   }
 
   Widget _buildRecentBookings(BusinessOwnerController controller) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount:
-          (controller.allBusinessOwnerBookingOne.value.data?.length ?? 0) > 3
-          ? 3
-          : (controller.allBusinessOwnerBookingOne.value.data?.length ?? 0),
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final booking =
-            controller.allBusinessOwnerBookingOne.value.data?[index];
-        return Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: Colors.grey.shade200),
-          ),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundImage: booking?.serviceImage != null
-                  ? NetworkImage(booking!.serviceImage!)
-                  : const AssetImage(ImagePath.profileImage) as ImageProvider,
-            ),
-            title: Text(
-              (booking?.customerForm != null &&
-                      booking!.customerForm!.isNotEmpty)
-                  ? "${booking.customerForm!.first.firstName ?? ''} ${booking.customerForm!.first.lastName ?? ''}"
-                  : 'N/A',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              "${booking?.serviceName ?? ""} at ${booking?.bookingTime ?? ''}",
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Get.to(() => ViewWaiverFormScreen(bookingId: booking?.id ?? ''));
-            },
-          ),
-        );
-      },
+  final results = controller.allBusinessOwnerBookingOne.value.results; // NEW
+
+  final count = results.length > 3 ? 3 : results.length; // show max 3
+
+  if (count == 0) {
+    return const Text(
+      "No recent bookings",
+      style: TextStyle(color: Color(0xFF6B7280)),
     );
   }
+
+  return ListView.separated(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: count,
+    separatorBuilder: (context, index) => const SizedBox(height: 12),
+    itemBuilder: (context, index) {
+      final booking = results[index]; // OwnerBookingItem
+
+      final displayName =
+          (booking.userName?.trim().isNotEmpty == true)
+              ? booking.userName!.trim()
+              : booking.userEmail;
+
+      final when =
+          "${DateFormat('hh:mm a').format(booking.slotTime)} at ${DateFormat('d MMM yyyy').format(booking.slotTime)}";
+
+      final ImageProvider avatar = (booking.profileImage != null &&
+              booking.profileImage!.trim().isNotEmpty)
+          ? NetworkImage(booking.profileImage!)
+          : const AssetImage(ImagePath.profileImage);
+
+      return Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: Colors.grey.shade200),
+        ),
+        child: ListTile(
+          leading: CircleAvatar(backgroundImage: avatar),
+          title: Text(
+            displayName,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            "${booking.serviceTitle} • $when",
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+            // No waiver form in the new API payload; keep simple or navigate to an owner booking details page if you add one.
+          },
+        ),
+      );
+    },
+  );
+}
 }

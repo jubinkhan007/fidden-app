@@ -11,7 +11,8 @@ class NetworkCaller {
   static bool _isRefreshing = false;
   static final List<Completer<ResponseData>> _pendingRequests = [];
 
-  Future<ResponseData> getRequest(String endpoint, {String? token}) async {
+  Future<ResponseData> getRequest(String endpoint, {String? token,bool treat404AsEmpty = false,
+  dynamic emptyPayload, }) async {
     log('GET Request: $endpoint');
     try {
       final http.Response response = await http
@@ -25,7 +26,8 @@ class NetworkCaller {
             },
           )
           .timeout(Duration(seconds: timeoutDuration));
-      return _handleResponse(response);
+      return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
+  emptyPayload: emptyPayload,);
     } catch (e) {
       return _handleError(e);
     }
@@ -36,6 +38,8 @@ class NetworkCaller {
     String endpoint, {
     Map<String, dynamic>? body,
     String? token,
+    bool treat404AsEmpty = false,
+  dynamic emptyPayload,
   }) async {
     log('GET Request with body: $endpoint');
     log('Request Body: ${jsonEncode(body)}');
@@ -54,7 +58,8 @@ class NetworkCaller {
       // Use the Response class from the http package
       final response = await http.Response.fromStream(streamedResponse);
 
-      return _handleResponse(response);
+      return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
+  emptyPayload: emptyPayload,);
     } catch (e) {
       return _handleError(e);
     }
@@ -64,6 +69,8 @@ class NetworkCaller {
     String endpoint, {
     Map<String, dynamic>? body,
     String? token,
+    bool treat404AsEmpty = false,
+  dynamic emptyPayload,
   }) async {
     log('POST Request: $endpoint');
     log('Request Body: ${jsonEncode(body)}');
@@ -82,7 +89,8 @@ class NetworkCaller {
           .timeout(Duration(seconds: timeoutDuration));
 
       // ✅ One path: centralize in _handleResponse
-      return _handleResponse(response);
+      return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
+  emptyPayload: emptyPayload,);
     } catch (e) {
       return _handleError(e);
     }
@@ -92,7 +100,9 @@ class NetworkCaller {
     String endpoint, {
     Map<String, dynamic>? body,
     String? token,
-  }) async {
+    treat404AsEmpty = false,
+  dynamic emptyPayload, }
+  ) async {
     log('PUT Request: $endpoint');
     log('Request Body: ${jsonEncode(body)}');
 
@@ -109,7 +119,8 @@ class NetworkCaller {
             body: jsonEncode(body),
           )
           .timeout(Duration(seconds: timeoutDuration));
-      return _handleResponse(response);
+      return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
+  emptyPayload: emptyPayload,);
     } catch (e) {
       return _handleError(e);
     }
@@ -119,8 +130,9 @@ class NetworkCaller {
   Future<ResponseData> deleteRequest(
     String endpoint, {
     Map<String, dynamic>? body,
-    String? token,
-  }) async {
+    String? token,bool treat404AsEmpty = false,
+  dynamic emptyPayload, }
+  ) async {
     log('DELETE Request: $endpoint');
     log('Request Body: ${jsonEncode(body)}');
     try {
@@ -143,7 +155,10 @@ class NetworkCaller {
   }
 
   // Handle the response from the server
-  Future<ResponseData> _handleResponse(http.Response response) async {
+  Future<ResponseData> _handleResponse(http.Response response, {
+  bool treat404AsEmpty = false,
+  dynamic emptyPayload,
+}) async {
     log('Response Status: ${response.statusCode}');
     log('Response Body: ${response.body}');
 
@@ -208,6 +223,15 @@ class NetworkCaller {
       );
     }
 
+    if (code == 404 && treat404AsEmpty) {
+    return ResponseData(
+      isSuccess: true,
+      statusCode: 200,           // normalize so global “error banners” don’t fire
+      responseData: emptyPayload ?? [],
+      errorMessage: '',
+    );
+  }
+
     // Try to decode JSON only when present
     dynamic decoded = raw;
     try {
@@ -245,12 +269,18 @@ class NetworkCaller {
           responseData: null,
         );
       case 404:
-        return ResponseData(
-          isSuccess: false,
-          statusCode: code,
-          errorMessage: 'The resource you are looking for was not found.',
-          responseData: null,
-        );
+  {
+    final friendly = extractErrorMessage(raw);
+    final decoded = jsonDecode(raw);
+    return ResponseData(
+      isSuccess: false,
+      statusCode: code,
+      errorMessage: friendly.isNotEmpty
+          ? friendly
+          : 'The resource you are looking for was not found.',
+      responseData: decoded,
+    );
+  }
       case 409:
         return ResponseData(
           isSuccess: false,

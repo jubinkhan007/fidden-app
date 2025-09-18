@@ -247,13 +247,21 @@ class BusinessOwnerProfileController extends GetxController {
         // After fetching the profile, immediately check the Stripe status.
         await checkStripeStatusIfPossible();
       } else {
-        profileDetails.value = GetBusinesModel(data: null);
-        isCheckingStripeStatus.value =
-            false; // Stop loading if there's no profile
-        AppSnackBar.showError(
-          response.errorMessage ?? 'Failed to fetch profile.',
-        );
-      }
+  final error = response.errorMessage.toLowerCase();
+  // Check if this is the expected "no shop" error for a new user.
+  if (error.contains('shop')) {
+    // If it is, handle it gracefully without showing an error banner.
+    profileDetails.value = GetBusinesModel(data: null);
+    isCheckingStripeStatus.value = false;
+  } else {
+    // Otherwise, it's an unexpected error, so show the banner.
+    profileDetails.value = GetBusinesModel(data: null);
+    isCheckingStripeStatus.value = false;
+    AppSnackBar.showError(
+      response.errorMessage ?? 'Failed to fetch profile.',
+    );
+  }
+}
     } catch (e) {
       profileDetails.value = GetBusinesModel(
         data: null,

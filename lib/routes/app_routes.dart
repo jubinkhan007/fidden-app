@@ -4,6 +4,7 @@ import 'package:fidden/features/user/booking/presentation/screens/booking_confir
 import 'package:fidden/features/user/booking/presentation/screens/booking_summary_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/notification_screen.dart';
+import 'package:fidden/features/user/profile/presentation/screens/terms_and_condition_screen.dart';
 import 'package:fidden/features/user/wishlist/presentation/screens/wishlist_screen.dart';
 import 'package:get/get.dart';
 import '../features/auth/presentation/screens/login/forget_email_screen.dart';
@@ -70,7 +71,7 @@ class AppRoute {
 
     GetPage(name: editProfileScreen, page: () => EditProfileScreen()),
     GetPage(name: '/all-services', page: () => const AllServiceScreen()),
-    // GetPage(name: termsAndConditionScreen, page: () => TermsAndConditionScreen()),
+    GetPage(name: termsAndConditionScreen, page: () => TermsAndConditionScreen()),
     GetPage(name: notificationScreen, page: () => NotificationScreen()),
     GetPage(name: bookingSummaryScreen, page: () => BookingSummaryScreen()),
     GetPage(

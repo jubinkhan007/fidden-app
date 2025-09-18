@@ -31,6 +31,8 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false       // <- Kotlin DSL uses isMinifyEnabled
+            isShrinkResources = false     
         }
     }
 }

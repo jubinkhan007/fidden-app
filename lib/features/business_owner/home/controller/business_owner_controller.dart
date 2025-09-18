@@ -26,7 +26,7 @@ class BusinessOwnerController extends GetxController {
   var allServiceList = <GetMyServiceModel>[].obs;
   final RxList<GetMyServiceModel> discountedServices =
       <GetMyServiceModel>[].obs;
-  var allBusinessOwnerBookingOne = BusinessOwnerBookingModel().obs;
+  var allBusinessOwnerBookingOne = OwnerBookingsResponse(next: null, previous: null, results: []).obs;
   final shopMissing = false.obs;
   final shopMissingMessage = ''.obs;
 
@@ -112,23 +112,37 @@ class BusinessOwnerController extends GetxController {
   }
 
   Future<void> fetchBusinessOwnerBooking() async {
-    isLoading.value = true;
-    try {
-      final response = await NetworkCaller().getRequest(
-        AppUrls.ownerBooking,
-        token: AuthService.accessToken,
-      );
-      if (response.isSuccess) {
-        allBusinessOwnerBookingOne.value = BusinessOwnerBookingModel.fromJson(
-          response.responseData,
-        );
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'An error occurred: $e');
-    } finally {
-      isLoading.value = false;
+  isLoading.value = true;
+  try {
+    final id = myShopId.value;
+    if (id == null || id <= 0) {
+      allBusinessOwnerBookingOne.value =
+          OwnerBookingsResponse(next: null, previous: null, results: []);
+      return;
     }
+
+    final response = await NetworkCaller().getRequest(
+      AppUrls.ownerBooking(id.toString()), // <-- /payments/bookings/?shop_id={id}
+      token: AuthService.accessToken,
+      treat404AsEmpty: true,
+  emptyPayload: const {"next": null, "previous": null, "results": []},
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      allBusinessOwnerBookingOne.value =
+          OwnerBookingsResponse.fromJson(response.responseData);
+    } else {
+      allBusinessOwnerBookingOne.value =
+          OwnerBookingsResponse(next: null, previous: null, results: []);
+    }
+  } catch (e) {
+    Get.snackbar('Error', 'An error occurred: $e');
+    allBusinessOwnerBookingOne.value =
+        OwnerBookingsResponse(next: null, previous: null, results: []);
+  } finally {
+    isLoading.value = false;
   }
+}
 
   Future<void> fetchAllMyService() async {
     isLoading.value = true;
@@ -139,6 +153,8 @@ class BusinessOwnerController extends GetxController {
       final res = await NetworkCaller().getRequest(
         AppUrls.getMyService,
         token: AuthService.accessToken,
+        treat404AsEmpty: true,
+  emptyPayload: const [], 
       );
 
       if (kDebugMode) {
@@ -211,6 +227,8 @@ class BusinessOwnerController extends GetxController {
       final res = await NetworkCaller().getRequest(
         AppUrls.shopRevenues(shopId, day: day),
         token: AuthService.accessToken,
+        treat404AsEmpty: true,
+  emptyPayload: const {"total": 0.0, "points": []},
       );
 
       if (res.isSuccess && res.statusCode == 200) {

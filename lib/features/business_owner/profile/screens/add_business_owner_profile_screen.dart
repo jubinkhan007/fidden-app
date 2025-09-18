@@ -38,15 +38,33 @@ class _AddBusinessOwnerProfileScreenState
 
   @override
   void initState() {
-    super.initState();
-    final profileData = controller1.profileDetails.value.data;
-    if (profileData != null) {
-      nameTEController.text = profileData.businessName ?? '';
-      locationTEController.text = profileData.businessAddress ?? '';
-      capacityTEController.text = profileData.capacity?.toString() ?? '';
-      aboutUsTEController.text = profileData.details ?? '';
+  super.initState();
+  final profileData = controller1.profileDetails.value.data;
+
+  if (profileData != null) {
+    // This part is for editing an existing profile (no changes needed here)
+    nameTEController.text = profileData.businessName ?? '';
+    locationTEController.text = profileData.businessAddress ?? '';
+    capacityTEController.text = profileData.capacity?.toString() ?? '';
+    aboutUsTEController.text = profileData.details ?? '';
+    
+    // Also populate times and days from the existing profile
+    controller1.startTime.value = profileData.startTime ?? '';
+    controller1.endTime.value = profileData.endTime ?? '';
+    if (profileData.openDays != null) {
+      controller1.openDays.assignAll(profileData.openDays!);
     }
+
+  } else {
+    // THIS IS THE NEW PART: Initialize the controller's state for a new profile.
+    // This ensures the validation passes even if the user doesn't change the defaults.
+    controller1.startTime.value = '09:00 AM';
+    controller1.endTime.value = '08:00 PM';
+    // Also, let's provide some sensible default open days
+    controller1.openDays.assignAll(
+        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
   }
+}
 
   @override
   void dispose() {
