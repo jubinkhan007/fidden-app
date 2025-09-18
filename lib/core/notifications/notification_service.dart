@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
   NotificationService._();
@@ -60,22 +61,21 @@ class NotificationService {
 
   /// Call this once on app start (after [init]) to request runtime perms.
   Future<void> requestSystemPermissionIfNeeded() async {
-    // This single line handles both Android and iOS permission requests.
-    final status = await Permission.notification.request();
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  final bool permissionRequested = prefs.getBool('notification_permission_requested') ?? false;
 
-    // You can optionally check the status and handle different outcomes
-    if (status.isGranted) {
-      print("Notification permission granted.");
-    } else if (status.isDenied) {
-      print("Notification permission denied.");
-    } else if (status.isPermanentlyDenied) {
-      print(
-        "Notification permission permanently denied. Opening app settings.",
-      );
-      // This will open the app's settings page for the user to manually enable permissions.
-      await openAppSettings();
-    }
+  if (permissionRequested) {
+    return;
   }
+
+  final status = await Permission.notification.request();
+
+  await prefs.setBool('notification_permission_requested', true);
+
+  if (status.isPermanentlyDenied) {
+    await openAppSettings();
+  }
+}
 
   /// Foreground/Background/Terminated tap handling
   static void _handlePayloadTap(Map<String, dynamic> data) {

@@ -4,6 +4,7 @@ import 'package:fidden/app.dart';
 import 'package:fidden/core/notifications/notification_service.dart';
 import 'package:fidden/core/notifications/push.dart';
 import 'package:fidden/core/services/Auth_service.dart';
+import 'package:fidden/core/services/permission_handler.dart';
 import 'package:fidden/core/ws/ws_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -24,7 +25,11 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_bg);
 
   await NotificationService.I.init();
-  await NotificationService.I.requestSystemPermissionIfNeeded();
+  final permissionController = Get.put(PermissionController());
+
+  // Now, request the permission using the controller
+  permissionController.requestNotificationPermission();
+
   await initPush(); // FCM handlers
   // Initialize Google Sign-In
   await GoogleSignIn.instance.initialize(
