@@ -1,14 +1,16 @@
-// lib/core/services/shop_api.dart
+// lib/features/business_owner/profile/services/shop_api.dart
+
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
+import 'package:fidden/core/models/response_data.dart';
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:fidden/features/business_owner/profile/data/stripe_models.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 
 class ShopApi {
+  // ✅ Instantiate the NetworkCaller to use its methods
+  final _networkCaller = NetworkCaller();
+
   static String toApiTime(String ui) {
     final m = RegExp(
       r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$',
@@ -23,7 +25,8 @@ class ShopApi {
     return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
   }
 
-  static Future<http.StreamedResponse> createShopWithImage({
+  // ✅ REFACTORED to use NetworkCaller
+  Future<ResponseData> createShopWithImage({
     required String name,
     required String address,
     required String aboutUs,
@@ -37,67 +40,34 @@ class ShopApi {
     required List<File> documents,
     required String token,
   }) async {
-    final startAt = toApiTime(startAtUi);
-    final closeAt = toApiTime(closeAtUi);
+    final body = <String, String>{
+      'name': name,
+      'address': address,
+      'about_us': aboutUs,
+      'capacity': capacity.toString(),
+      'start_at': toApiTime(startAtUi),
+      'close_at': toApiTime(closeAtUi),
+      'close_days': jsonEncode(closeDays.map((e) => e.toLowerCase()).toList()),
+    };
 
-    String? location;
     final lat = double.tryParse(latitude ?? '');
     final lon = double.tryParse(longitude ?? '');
     if (lat != null && lon != null) {
-      location = '$lat,$lon';
+      body['location'] = '$lat,$lon';
     }
 
-    final url = Uri.parse(AppUrls.getMBusinessProfile);
-
-    final req = http.MultipartRequest('POST', url);
-    req.headers['Authorization'] = 'Bearer $token';
-
-    req.fields['name'] = name;
-    req.fields['address'] = address;
-    req.fields['about_us'] = aboutUs;
-    req.fields['capacity'] = capacity.toString();
-    req.fields['start_at'] = startAt;
-    req.fields['close_at'] = closeAt;
-    if (location != null) req.fields['location'] = location;
-    req.fields['close_days'] = jsonEncode(
-      closeDays.map((e) => e.toLowerCase()).toList(),
-    );
-
-    if (imagePath != null && imagePath.isNotEmpty) {
-      req.files.add(
-        await http.MultipartFile.fromPath(
-          'shop_img',
-          imagePath,
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
-    }
-
-    for (var file in documents) {
-      req.files.add(
-        await http.MultipartFile.fromPath(
-          'verification_files',
-          file.path,
-          contentType: MediaType('application', 'octet-stream'),
-        ),
-      );
-    }
-
-    log('Uploading multipart to $url');
-    log('Fields: ${req.fields}');
-    final streamed = await req.send();
-    final body = await streamed.stream.bytesToString();
-    log('Status: ${streamed.statusCode}');
-    log('Body: $body');
-    return http.StreamedResponse(
-      Stream.fromIterable([body.codeUnits]),
-      streamed.statusCode,
-      headers: streamed.headers,
-      reasonPhrase: streamed.reasonPhrase,
+    return await _networkCaller.multipartRequest(
+      AppUrls.getMBusinessProfile,
+      method: 'POST',
+      body: body,
+      token: token,
+      photo: imagePath != null ? File(imagePath) : null,
+      documents: documents,
     );
   }
 
-  static Future<http.StreamedResponse> updateShopWithImage({
+  // ✅ REFACTORED to use NetworkCaller
+  Future<ResponseData> updateShopWithImage({
     required String id,
     required String name,
     required String address,
@@ -112,79 +82,38 @@ class ShopApi {
     required List<File> documents,
     required String token,
   }) async {
-    final startAt = toApiTime(startAtUi);
-    final closeAt = toApiTime(closeAtUi);
+    final body = <String, String>{
+      'name': name,
+      'address': address,
+      'about_us': aboutUs,
+      'capacity': capacity.toString(),
+      'start_at': toApiTime(startAtUi),
+      'close_at': toApiTime(closeAtUi),
+      'close_days': jsonEncode(closeDays.map((e) => e.toLowerCase()).toList()),
+    };
 
-    String? location;
     final lat = double.tryParse(latitude ?? '');
     final lon = double.tryParse(longitude ?? '');
     if (lat != null && lon != null) {
-      location = '$lat,$lon';
+      body['location'] = '$lat,$lon';
     }
 
-    final url = Uri.parse(AppUrls.editBusinessProfile(id));
-    final req = http.MultipartRequest('PATCH', url);
-    req.headers['Authorization'] = 'Bearer $token';
-
-    // --- Text fields ---
-    req.fields['name'] = name;
-    req.fields['address'] = address;
-    req.fields['about_us'] = aboutUs;
-    req.fields['capacity'] = capacity.toString();
-    req.fields['start_at'] = startAt;
-    req.fields['close_at'] = closeAt;
-    if (location != null) req.fields['location'] = location;
-    req.fields['close_days'] = jsonEncode(
-      closeDays.map((e) => e.toLowerCase()).toList(),
-    );
-
-    // --- Shop image file ---
-    if (imagePath != null && imagePath.isNotEmpty) {
-      req.files.add(
-        await http.MultipartFile.fromPath(
-          'shop_img',
-          imagePath,
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
-    }
-
-    // --- 🚀 CORRECTION FOR VERIFICATION FILES ---
-    // Only add files to the request if the user has selected new ones.
-    // If `documents` is empty, the `verification_files` field will not be sent,
-    // and the backend should not clear the existing files.
-    if (documents.isNotEmpty) {
-      for (var file in documents) {
-        req.files.add(
-          await http.MultipartFile.fromPath(
-            'verification_files',
-            file.path,
-            contentType: MediaType('application', 'octet-stream'),
-          ),
-        );
-      }
-    }
-    // --- END CORRECTION (The else block has been removed) ---
-
-    log('Uploading multipart to $url');
-    log('Fields: ${req.fields}');
-    final streamed = await req.send();
-    final body = await streamed.stream.bytesToString();
-    log('Status: ${streamed.statusCode}');
-    log('Body: $body');
-    return http.StreamedResponse(
-      Stream.fromIterable([body.codeUnits]),
-      streamed.statusCode,
-      headers: streamed.headers,
-      reasonPhrase: streamed.reasonPhrase,
+    return await _networkCaller.multipartRequest(
+      AppUrls.editBusinessProfile(id),
+      method: 'PATCH', // Using PATCH as in your original code
+      body: body,
+      token: token,
+      photo: imagePath != null ? File(imagePath) : null,
+      documents: documents,
     );
   }
 
-  static Future<StripeOnboardingLink> getStripeOnboardingLink({
+  // ✅ Now an instance method
+  Future<StripeOnboardingLink> getStripeOnboardingLink({
     required int shopId,
     required String token,
   }) async {
-    final res = await NetworkCaller().getRequest(
+    final res = await _networkCaller.getRequest(
       AppUrls.stripeOnborading(shopId),
       token: token,
     );
@@ -197,11 +126,12 @@ class ShopApi {
     return StripeOnboardingLink.fromJson(data as Map<String, dynamic>);
   }
 
-  static Future<StripeVerifyResponse> verifyStripeOnboarding({
+  // ✅ Now an instance method
+  Future<StripeVerifyResponse> verifyStripeOnboarding({
     required int shopId,
     required String token,
   }) async {
-    final res = await NetworkCaller().getRequest(
+    final res = await _networkCaller.getRequest(
       AppUrls.verifyOnborading(shopId),
       token: token,
     );

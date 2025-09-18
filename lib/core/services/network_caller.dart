@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:http/http.dart' as http;
 import '../models/response_data.dart';
@@ -28,6 +29,49 @@ class NetworkCaller {
           .timeout(Duration(seconds: timeoutDuration));
       return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
   emptyPayload: emptyPayload,);
+    } catch (e) {
+      return _handleError(e);
+    }
+  }
+
+Future<ResponseData> multipartRequest(
+    String endpoint, {
+    String method = 'POST', // Can be POST or PUT
+    required Map<String, String> body,
+    String? token,
+    File? photo,
+    List<File>? documents,
+  }) async {
+    log('Multipart Request: $endpoint');
+    try {
+      final request = http.MultipartRequest(method, Uri.parse(endpoint));
+      request.fields.addAll(body);
+
+      // Add profile image if it exists
+      if (photo != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', photo.path),
+        );
+      }
+      
+      // Add verification documents if they exist
+      if (documents != null && documents.isNotEmpty) {
+        for (var doc in documents) {
+          request.files.add(
+            await http.MultipartFile.fromPath('verification_files', doc.path),
+          );
+        }
+      }
+
+      request.headers.addAll({
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      });
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      // IMPORTANT: Use the central _handleResponse to get token refresh logic
+      return _handleResponse(response);
     } catch (e) {
       return _handleError(e);
     }

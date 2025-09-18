@@ -1,5 +1,6 @@
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/utils/constants/app_sizes.dart';
+import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
 import 'package:fidden/features/business_owner/profile/screens/waiver_form_create_screen.dart';
 import 'package:fidden/features/business_owner/profile/screens/widgets/business_owner_shimmer.dart';
 import 'package:fidden/features/business_owner/reviews/ui/reviews_screen.dart';
@@ -45,7 +46,7 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
         return SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(height: getHeight(34)),
+              SizedBox(height: getHeight(10)),
               Column(
                 children: [
                   SizedBox(
@@ -69,7 +70,7 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                     fontSize: getWidth(26),
                     fontWeight: FontWeight.w600,
                   ),
-                  SizedBox(height: getHeight(8)),
+                  SizedBox(height: getHeight(0)),
                   CustomText(
                     text: controller.profileDetails.value.data?.email ?? '',
                     color: Color(0xffA3A3A3),
@@ -78,7 +79,7 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: getHeight(30)),
+              SizedBox(height: getHeight(0)),
               Obx(() {
                 final boc = Get.find<BusinessOwnerProfileController>();
                 final isLoading =
@@ -86,7 +87,7 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                 final status = boc.stripeStatus.value; // <-- reactive read
                 if (isLoading) {
                   return const Padding(
-                    padding: EdgeInsets.all(16.0),
+                    padding: EdgeInsets.fromLTRB(16.0,0,16.0,16.0),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
@@ -123,16 +124,25 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
               SizedBox(height: getHeight(16)),
               hasBusiness
                   ? CustomProfileButton(
-                      title: 'Edit Business Profile',
-                      firstImageString: IconPath.editIcon,
-                      onTap: () {
-                        Get.to(
-                          () => EditBusinessOwnerProfileScreen(
-                            id: controller1.profileDetails.value.data?.id ?? '',
-                          ),
-                        );
-                      },
-                    )
+  title: 'Edit Business Profile',
+  firstImageString: IconPath.editIcon,
+  onTap: () async {
+    final boc = Get.find<BusinessOwnerProfileController>();
+
+    final res = await Get.to(() => EditBusinessOwnerProfileScreen(
+      id: boc.profileDetails.value.data?.id ?? '',
+    ));
+
+    // if user deleted or saved successfully, refresh this screen's data
+    if (res == true) {
+      await boc.fetchProfileDetails(); // this will set data=null after delete
+      // optional: also refresh guards/banners if your home uses them
+      if (Get.isRegistered<BusinessOwnerController>()) {
+        await Get.find<BusinessOwnerController>().refreshGuardsAndServices();
+      }
+    }
+  },
+)
                   : CustomProfileButton(
                       title: 'Business Profile',
                       firstImageString: IconPath.addIcon,

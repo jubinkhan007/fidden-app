@@ -55,34 +55,31 @@ class _EditBusinessOwnerProfileScreenState
   }
 
   void _showDeleteConfirmationDialog() {
-    Get.defaultDialog(
-      title: "Delete Profile",
-      middleText:
-          "Are you sure you want to delete your business profile? This action cannot be undone.",
-      content: Obx(() {
-        if (controller1.isDeleting.value) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: CircularProgressIndicator(),
-          );
-        }
-        return const SizedBox.shrink();
-      }),
-      textConfirm: "Delete",
-      confirmTextColor: Colors.white,
-      textCancel: "Cancel",
-      // SIMPLIFY THE onConfirm LOGIC
-      onConfirm: controller1.isDeleting.value
-          ? null
-          : () {
-              // No async/await needed here
-              if (widget.id != null) {
-                // Just call the controller's method. It handles everything else.
-                controller1.deleteBusinessProfile(widget.id!);
-              }
-            },
-    );
-  }
+  Get.defaultDialog(
+    title: "Delete Profile",
+    middleText: "Are you sure you want to delete your business profile? This action cannot be undone.",
+    content: Obx(() => controller1.isDeleting.value
+        ? const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())
+        : const SizedBox.shrink()),
+    textConfirm: "Delete",
+    confirmTextColor: Colors.white,
+    textCancel: "Cancel",
+    onConfirm: controller1.isDeleting.value ? null : () async {
+      if (widget.id == null) return;
+      final ok = await controller1.deleteBusinessProfile(widget.id!);
+
+      // 1) close the confirm dialog
+      if (Get.isDialogOpen ?? false) Get.back();
+
+      if (ok) {
+        // 2) pop the EDIT screen and send result back to caller
+        if (mounted) Navigator.of(context).pop(true);
+      }
+    },
+  );
+}
+
+
 
   // ---------- UI Helpers ----------
 
@@ -476,6 +473,67 @@ class _EditBusinessOwnerProfileScreenState
     });
   }
 
+  // inside _EditBusinessOwnerProfileScreenState
+
+ButtonStyle _deleteBtnStyle() {
+  return ButtonStyle(
+    shape: MaterialStateProperty.all(const StadiumBorder()),
+    // outline color changes when disabled
+    side: MaterialStateProperty.resolveWith((states) {
+      final c = states.contains(MaterialState.disabled)
+          ? Colors.red.shade200
+          : Colors.red.shade400;
+      return BorderSide(color: c, width: 1.5);
+    }),
+    // text/icon color
+    foregroundColor: MaterialStateProperty.resolveWith((states) {
+      return states.contains(MaterialState.disabled)
+          ? Colors.red.shade300
+          : Colors.red.shade700;
+    }),
+    // subtle fill when disabled so it looks “off”
+    backgroundColor: MaterialStateProperty.resolveWith((states) {
+      return states.contains(MaterialState.disabled)
+          ? Colors.red.shade50
+          : Colors.transparent;
+    }),
+    overlayColor: MaterialStateProperty.resolveWith((states) {
+      if (states.contains(MaterialState.pressed)) {
+        return Colors.red.shade100.withOpacity(.20);
+      }
+      return null;
+    }),
+  );
+}
+
+ButtonStyle _saveBtnStyle() {
+  return ButtonStyle(
+    shape: MaterialStateProperty.all(const StadiumBorder()),
+    // label color
+    foregroundColor: MaterialStateProperty.resolveWith((states) {
+      return states.contains(MaterialState.disabled)
+          ? Colors.grey.shade600
+          : Colors.white;
+    }),
+    // background color
+    backgroundColor: MaterialStateProperty.resolveWith((states) {
+      return states.contains(MaterialState.disabled)
+          ? Colors.grey.shade300
+          : AppColors.primaryColor;
+    }),
+    elevation: MaterialStateProperty.resolveWith((states) {
+      return states.contains(MaterialState.disabled) ? 0 : 1;
+    }),
+    overlayColor: MaterialStateProperty.resolveWith((states) {
+      if (states.contains(MaterialState.pressed)) {
+        return Colors.white.withOpacity(.08);
+      }
+      return null;
+    }),
+  );
+}
+
+
   // ---------- Build ----------
 
   @override
@@ -517,83 +575,65 @@ class _EditBusinessOwnerProfileScreenState
       ),
       // Sticky bottom actions
       bottomNavigationBar: Obx(() {
-        final isPending =
-            controller1.profileDetails.value.data?.status == 'pending';
-        return SafeArea(
-          top: false,
-          child: Container(
-            // clamp the bar
-            height: 76,
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 48, // clamp the button
-                    child: OutlinedButton(
-                      onPressed: isPending
-                          ? null
-                          // CALL THE NEW DIALOG METHOD
-                          : () => _showDeleteConfirmationDialog(),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.red.shade300),
-                        shape: const StadiumBorder(),
-                      ),
-                      child: Text(
-                        "Delete",
-                        style: TextStyle(
-                          color: isPending ? Colors.grey : Colors.red.shade700,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: SizedBox(
-                    height: 48, // clamp the button
-                    child: controller1.isLoading.value
-                        ? const Center(
-                            child: SpinKitWave(
-                              color: AppColors.primaryColor,
-                              size: 26,
-                            ),
-                          )
-                        : CustomButton(
-                            onPressed: isPending
-                                ? null
-                                : () {
-                                    controller1.updateBusinessProfile(
-                                      businessName: nameTEController.text,
-                                      businessAddress:
-                                          locationTEController.text,
-                                      aboutUs: aboutUsTEController.text,
-                                      capacity: capacityTEController.text,
-                                      id: widget.id.toString(),
-                                      openDays: controller1.openDays.toList(),
-                                      closeDays: const [],
-                                      startAt: controller1.startTime.value,
-                                      closeAt: controller1.endTime.value,
-                                    );
-                                  },
-                            child: const Text(
-                              "Save & Continue",
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                  ),
-                ),
-              ],
+  final isPending = controller1.profileDetails.value.data?.status == 'pending';
+
+  return SafeArea(
+    top: false,
+    child: Container(
+      height: 76,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Row(
+        children: [
+          // DELETE
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                style: _deleteBtnStyle(),
+                onPressed: isPending ? null : _showDeleteConfirmationDialog,
+                child: const Text('Delete'),
+              ),
             ),
           ),
-        );
-      }),
+          const SizedBox(width: 12),
+
+          // SAVE & CONTINUE
+          Expanded(
+            flex: 2,
+            child: SizedBox(
+              height: 48,
+              // If you must keep CustomButton, see NOTE below
+              child: FilledButton(
+                style: _saveBtnStyle(),
+                onPressed: isPending
+                    ? null
+                    : () {
+                        controller1.updateBusinessProfile(
+                          businessName: nameTEController.text,
+                          businessAddress: locationTEController.text,
+                          aboutUs: aboutUsTEController.text,
+                          capacity: capacityTEController.text,
+                          id: widget.id.toString(),
+                          openDays: controller1.openDays.toList(),
+                          closeDays: const [],
+                          startAt: controller1.startTime.value,
+                          closeAt: controller1.endTime.value,
+                        );
+                      },
+                child: const Text('Save & Continue'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}),
+
 
       body: Obx(() {
         final profileData = controller1.profileDetails.value.data;

@@ -185,7 +185,7 @@ class BusinessOwnerProfileController extends GetxController {
 
     isCheckingStripeStatus.value = true;
     try {
-      final res = await ShopApi.verifyStripeOnboarding(
+      final res = await ShopApi().verifyStripeOnboarding(
         shopId: int.parse(shopId),
         token: AuthService.accessToken ?? '',
       );
@@ -204,7 +204,7 @@ class BusinessOwnerProfileController extends GetxController {
       barrierDismissible: false,
     );
     try {
-      final link = await ShopApi.getStripeOnboardingLink(
+      final link = await ShopApi().getStripeOnboardingLink(
         shopId: shopId,
         token: AuthService.accessToken ?? '',
       );
@@ -285,26 +285,12 @@ class BusinessOwnerProfileController extends GetxController {
     isLoading.value = true;
     clearErrors();
     try {
-      final uiStart = startTime.value.isNotEmpty
-          ? startTime.value
-          : (profileDetails.value.data?.startTime ?? '09:00 AM');
-
-      final uiClose = endTime.value.isNotEmpty
-          ? endTime.value
-          : (profileDetails.value.data?.endTime ?? '06:00 PM');
-
-      const allDays = [
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-        'Sunday',
-      ];
+      final uiStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
+      final uiClose = endTime.value.isNotEmpty ? endTime.value : '06:00 PM';
+      const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       final closed = allDays.where((d) => !openDays.contains(d)).toList();
 
-      final resp = await ShopApi.createShopWithImage(
+      final response = await ShopApi().createShopWithImage(
         name: businessName,
         address: businessAddress,
         aboutUs: aboutUs,
@@ -319,34 +305,15 @@ class BusinessOwnerProfileController extends GetxController {
         token: AuthService.accessToken ?? '',
       );
 
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        // Read and decode response body
-        final bodyStr = await resp.stream.bytesToString();
-        Map<String, dynamic> bodyJson;
-        try {
-          bodyJson = json.decode(bodyStr) as Map<String, dynamic>;
-        } catch (_) {
-          bodyJson = <String, dynamic>{};
-        }
-
-        // Update local model from server response (if it’s the object or wrapped)
-        profileDetails.value = GetBusinesModel.fromJson(bodyJson);
-
+      if (response.isSuccess) {
+        profileDetails.value = GetBusinesModel.fromJson(response.responseData);
         AppSnackBar.showSuccess("Business Profile created successfully!");
-
-        // Refresh guards in the service controller so the banner disappears
-        final svc = Get.isRegistered<BusinessOwnerController>()
-            ? Get.find<BusinessOwnerController>()
-            : null;
+        final svc = Get.isRegistered<BusinessOwnerController>() ? Get.find<BusinessOwnerController>() : null;
         await svc?.refreshGuardsAndServices();
-
-        // Navigate
         Get.offNamed('/all-services');
       } else {
-        final body = await resp.stream.bytesToString();
-
-        log('Create profile failed: ${resp.statusCode}, body: $body');
-        AppSnackBar.showError('Create failed (${resp.statusCode}).');
+        log('Create profile failed: ${response.statusCode}, error: ${response.errorMessage}');
+        AppSnackBar.showError(response.errorMessage.isNotEmpty ? response.errorMessage : 'Create failed.');
       }
     } catch (e) {
       log('Create profile error: $e');
@@ -355,7 +322,6 @@ class BusinessOwnerProfileController extends GetxController {
       isLoading.value = false;
     }
   }
-
   Future<void> _sendPutRequestWithHeadersAndImagesOnly1(
     String url,
     Map<String, dynamic> body,
@@ -470,7 +436,7 @@ class BusinessOwnerProfileController extends GetxController {
           ? closeDays
           : allDays.where((d) => !open.contains(d)).toList();
 
-      final resp = await ShopApi.updateShopWithImage(
+      final resp = await ShopApi().updateShopWithImage(
         id: id,
         name: businessName,
         address: businessAddress,
@@ -552,58 +518,49 @@ class BusinessOwnerProfileController extends GetxController {
     }
   }
 
-  Future<void> deleteBusinessProfile(String shopId) async {
-    isDeleting.value = true;
-    try {
-      final response = await NetworkCaller().deleteRequest(
-        AppUrls.deleteShop(shopId),
-        token: AuthService.accessToken,
-      );
+  // lib/features/business_owner/profile/controller/busines_owner_profile_controller.dart
 
-      // Always close the dialog, regardless of outcome
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
+// lib/features/business_owner/profile/controller/busines_owner_profile_controller.dart
 
-      if (response.isSuccess) {
-        AppSnackBar.showSuccess("Business Profile deleted successfully!");
+Future<bool> deleteBusinessProfile(String shopId) async {
+  isDeleting.value = true;
+  try {
+    final response = await NetworkCaller().deleteRequest(
+      AppUrls.deleteShop(shopId),
+      token: AuthService.accessToken,
+    );
 
-        // Close dialog if open
-        if (Get.isDialogOpen ?? false) Get.back();
+    // close only the confirmation dialog if it’s open
+    if (Get.isDialogOpen ?? false) Get.back();
 
-        // Reset local state
-        profileDetails.value = GetBusinesModel(data: null);
-        openDays.clear();
-        startTime.value = '';
-        endTime.value = '';
-
-        // Refresh guards (services banner, etc.)
-        if (Get.isRegistered<BusinessOwnerController>()) {
-          await Get.find<BusinessOwnerController>().refreshGuardsAndServices();
-        }
-
-        // Force navigation away from Edit screen
-        // Use the correct route for your “start over” screen.
-        Future.microtask(() {
-          // optional: close any active snackbars to avoid overlay glitches
-          if (Get.isSnackbarOpen) Get.closeCurrentSnackbar();
-          Get.offAllNamed('/add-business-profile'); // or '/all-services'
-        });
-      } else {
-        AppSnackBar.showError(
-          response.errorMessage ?? 'Failed to delete profile.',
-        );
-      }
-    } catch (e) {
-      log('Delete profile error: $e');
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-      AppSnackBar.showError('An error occurred while deleting the profile.');
-    } finally {
-      isDeleting.value = false;
+    if (!response.isSuccess) {
+      AppSnackBar.showError(response.errorMessage ?? 'Failed to delete profile.');
+      return false;
     }
+
+    AppSnackBar.showSuccess("Business Profile deleted successfully!");
+
+    // reset local state
+    profileDetails.value = GetBusinesModel(data: null);
+    openDays.clear();
+    startTime.value = '';
+    endTime.value = '';
+
+    // refresh anything else that depends on shop
+    if (Get.isRegistered<BusinessOwnerController>()) {
+      await Get.find<BusinessOwnerController>().refreshGuardsAndServices();
+    }
+
+    // don’t navigate here; just report success
+    return true;
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackBar.showError('An error occurred while deleting the profile.');
+    return false;
+  } finally {
+    isDeleting.value = false;
   }
+}
 
   final RxMap<String, String> fieldErrors = <String, String>{}.obs;
 
