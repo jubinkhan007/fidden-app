@@ -2,6 +2,7 @@ import 'package:fidden/features/business_owner/home/screens/all_service_screen.d
 import 'package:fidden/features/notifications/presentation/screens/notification_screen.dart';
 import 'package:fidden/features/user/booking/presentation/screens/booking_confirmation_screen.dart';
 import 'package:fidden/features/user/booking/presentation/screens/booking_summary_screen.dart';
+import 'package:fidden/features/user/profile/presentation/screens/account_settings_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/notification_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/terms_and_condition_screen.dart';
@@ -47,6 +48,7 @@ class AppRoute {
   static String bookingSuccessFullScreen = "/bookingSuccessFullScreen";
   static String bookingSummaryScreen = "/bookingSummaryScreen";
   static String bookingConfirmScreen = "/booking-confirmation";
+  static String accountSettingsScreen = "/account-settings";
 
   static List<GetPage> routes = [
     //Splash Screen: initial screen
@@ -74,6 +76,7 @@ class AppRoute {
     GetPage(name: termsAndConditionScreen, page: () => TermsAndConditionScreen()),
     GetPage(name: notificationScreen, page: () => NotificationScreen()),
     GetPage(name: bookingSummaryScreen, page: () => BookingSummaryScreen()),
+    GetPage(name: accountSettingsScreen, page: () => AccountSettingsScreen()),
     GetPage(
       name: bookingConfirmScreen,
       page: () => BookingConfirmationScreen(),

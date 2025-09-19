@@ -15,6 +15,7 @@ class IconPath {
   static const String termsAndConditionIcon =
       '$_basePath/terms_and_condition.png';
   static const String logOutIcon = '$_basePath/log_out_icon.png';
+  static const String settingsGear = '$_basePath/settings_gear-removebg-preview.png';
   static const String uploadImageIcon = '$_basePath/upload_image.png';
   static const String dotIcon = '$_basePath/dot_icon.png';
   static const String filterIcon = '$_basePath/mage_filter.png';

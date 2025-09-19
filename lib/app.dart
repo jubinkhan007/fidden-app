@@ -29,14 +29,14 @@ class MyApp extends StatelessWidget {
       initialRoute: AppRoute.init,
       getPages: AppRoute.routes,
       initialBinding: ControllerBinder(),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
       theme: _getLightTheme(),
       darkTheme: _getDarkTheme(),
       defaultTransition:
       PlatformUtils.isIOS ? Transition.cupertino : Transition.fade,
       locale: Get.deviceLocale,
       builder: (context, child) => PlatformUtils.isIOS
-          ? CupertinoTheme(data: const CupertinoThemeData(), child: child!): child!,
+          ? CupertinoTheme(data: const CupertinoThemeData(brightness: Brightness.light), child: child!): child!,
     );
   }
 

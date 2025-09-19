@@ -93,6 +93,14 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   SizedBox(height: getHeight(16)),
                   CustomProfileButton(
+                    title: 'Account Settings',
+                    firstImageString: IconPath.settingsGear,
+                    onTap: () {
+                      Get.toNamed(AppRoute.accountSettingsScreen);
+                    },
+                  ),
+                  SizedBox(height: getHeight(16)),
+                  CustomProfileButton(
                     title: 'Wishlist',
                     firstImageString: 'assets/icons/wishlist.png',
                     onTap: () {

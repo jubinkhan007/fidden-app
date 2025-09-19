@@ -644,5 +644,4 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-// Need to modify this screen so that users can review only the completed bookings (not the cancelled ones).
-// For cancelled one show a Rebook/ Book Again button and Upon clicking users will be redirected to the shop's that services details screen.
+// 
