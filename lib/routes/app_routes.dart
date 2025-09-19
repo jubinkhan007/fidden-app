@@ -49,6 +49,7 @@ class AppRoute {
   static String bookingSummaryScreen = "/bookingSummaryScreen";
   static String bookingConfirmScreen = "/booking-confirmation";
   static String accountSettingsScreen = "/account-settings";
+  static String termsAndCondition = "/terms-and-conditions";
 
   static List<GetPage> routes = [
     //Splash Screen: initial screen
@@ -71,12 +72,14 @@ class AppRoute {
       page: () => VerificationSuccessFullScreen(),
     ),
 
+
     GetPage(name: editProfileScreen, page: () => EditProfileScreen()),
     GetPage(name: '/all-services', page: () => const AllServiceScreen()),
     GetPage(name: termsAndConditionScreen, page: () => TermsAndConditionScreen()),
     GetPage(name: notificationScreen, page: () => NotificationScreen()),
     GetPage(name: bookingSummaryScreen, page: () => BookingSummaryScreen()),
     GetPage(name: accountSettingsScreen, page: () => AccountSettingsScreen()),
+    GetPage(name: termsAndCondition, page: () => TermsAndConditionScreen()),
     GetPage(
       name: bookingConfirmScreen,
       page: () => BookingConfirmationScreen(),

@@ -1,4 +1,6 @@
 import 'package:fidden/features/user/booking/controller/booking_summary_controller.dart';
+import 'package:fidden/routes/app_routes.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:developer';
@@ -24,6 +26,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   late final int bookingId; // <-- Will hold the booking ID
 
   final controller = Get.put(BookingSummaryController());
+  late final TapGestureRecognizer _termsTap;
 
   @override
   void initState() {
@@ -51,7 +54,16 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
     if (bookingId == 0) {
       log('Error: Booking ID is missing on the summary screen.');
     }
+    _termsTap = TapGestureRecognizer()..onTap = () {
+    Get.toNamed(AppRoute.termsAndCondition); // your GetPage route name
+  };
   }
+
+  @override
+void dispose() {
+  _termsTap.dispose();
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -134,19 +146,20 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                     ),
                     Expanded(
                       child: RichText(
-                        text: const TextSpan(
-                          style: TextStyle(
+                        text: TextSpan(
+                          style: const TextStyle(
                             color: secondaryTextColor,
                             fontSize: 14,
                           ),
                           children: [
-                            TextSpan(text: 'I also agree to the '),
+                            const TextSpan(text: 'I also agree to the '),
                             TextSpan(
                               text: 'Terms & Conditions',
-                              style: TextStyle(color: Colors.blue),
+                              style: const TextStyle(color: Colors.blue),
+                              recognizer: _termsTap,
                             ),
-                            TextSpan(text: ' and '),
-                            TextSpan(
+                            const TextSpan(text: ' and '),
+                            const TextSpan(
                               text: 'Cancellation Policy.',
                               style: TextStyle(color: Colors.blue),
                             ),
@@ -171,15 +184,15 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                     ? () => controller.payForBooking(
                         bookingId: bookingId,
                         successArgs: {
-                          'serviceName': serviceName,
-                          'selectedSlotLabel': selectedSlot,
-                          'shopName': shopName,
-                          'shopAddress': shopAddress,
-                          'bookingId': bookingId,
-                          'service_img': serviceImg,
-                          'price': servicePrice,
-                          'discountPrice': discountPrice,
-                        },
+    'serviceName': serviceName,
+    'dateTimeText': selectedSlot, // Use 'dateTimeText' key
+    'shopName': shopName,
+    'location': shopAddress, // Use 'location' key
+    'bookingId': bookingId,
+    'service_img': serviceImg,
+    'price': servicePrice,
+    'discountPrice': discountPrice,
+},
                       )
                     : null,
 

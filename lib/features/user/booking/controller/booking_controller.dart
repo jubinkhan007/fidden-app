@@ -1,5 +1,7 @@
 // lib/features/user/booking/controller/booking_controller.dart
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
+import 'package:fidden/core/models/response_data.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
@@ -122,7 +124,8 @@ class BookingController extends GetxController {
     final body = {
       "shop": booking.shop,
       "service":
-          booking.serviceId, // Assuming booking.id is the service id as per the API doc
+          booking.serviceId,
+          "booking_id":booking.id, // Assuming booking.id is the service id as per the API doc
       "rating": rating.value.toInt(),
       "review": reviewText.value,
       "review_img": null,
@@ -138,7 +141,7 @@ class BookingController extends GetxController {
       AppSnackBar.showSuccess('Review submitted successfully!');
       reviewedBookingIds.add(booking.id);
     } else {
-      AppSnackBar.showError('Failed to submit review.');
+      AppSnackBar.showError(response.errorMessage ?? 'Failed to submit review.1');
     }
   }
 
@@ -167,11 +170,56 @@ class BookingController extends GetxController {
     }
   }
 
-  // Wire up when your backend exposes cancel:
-  Future<void> cancel(BookingItem b) async {
-    // TODO: call your real cancel endpoint and then:
-    // active.removeWhere((x) => x.id == b.id);
-    // history.insert(0, b.copyWith(status: 'cancelled'));
-    Get.snackbar('Cancel', 'Hook the real cancel API here.');
-  }
+  Future<void> cancelBooking(BookingItem booking) async {
+  // Show a confirmation dialog
+  Get.defaultDialog(
+    title: "Cancel Booking",
+    middleText: "Are you sure you want to cancel this booking?",
+    textConfirm: "Yes, Cancel",
+    textCancel: "No",
+    confirmTextColor: Colors.white,
+    onConfirm: () async {
+      Get.back(); // Close the confirmation dialog
+
+      // Show loading indicator
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
+
+      ResponseData? response;
+      try {
+        // Await the network call and store the response
+        response = await NetworkCaller().postRequest(
+          AppUrls.cancelBooking(booking.id),
+          token: AuthService.accessToken,
+        );
+      } catch (e) {
+        // In case of an exception, ensure the response is null
+        response = null;
+      } finally {
+        // This is the crucial part:
+        // ALWAYS close the loading dialog before proceeding.
+        if (Get.isDialogOpen ?? false) {
+          Get.back();
+        }
+      }
+
+      // Now, handle the result AFTER the dialog is closed
+      if (response != null && response.isSuccess) {
+        AppSnackBar.showSuccess(
+            "Booking canceled successfully and refund initiated.");
+        // Move the booking from the active list to the cancelled list
+        active.removeWhere((b) => b.id == booking.id);
+        cancelled.insert(0, booking.copyWith(status: 'cancelled'));
+      } else {
+        AppSnackBar.showError(
+            response?.errorMessage ?? "Failed to cancel booking.");
+      }
+    },
+  );
 }
+  
+}
+
+// 

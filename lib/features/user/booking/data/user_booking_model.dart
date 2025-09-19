@@ -117,5 +117,30 @@ class BookingItem {
       isReviewed: json["is_reviewed"] ?? false,
     );
   }
+
+BookingItem copyWith({
+    String? status,
+  }) {
+    return BookingItem(
+      id: id,
+      user: user,
+      userEmail: userEmail,
+      shop: shop,
+      serviceId: serviceId,
+      shopName: shopName,
+      shopAddress: shopAddress,
+      shopImg: shopImg,
+      slot: slot,
+      slotTime: slotTime,
+      serviceTitle: serviceTitle,
+      serviceDuration: serviceDuration,
+      status: status ?? this.status, // Use new status if provided
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      avgRating: avgRating,
+      totalReviews: totalReviews,
+      isReviewed: isReviewed,
+    );
+  }
 }
 

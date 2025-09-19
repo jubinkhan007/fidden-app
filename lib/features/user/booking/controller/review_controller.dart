@@ -9,6 +9,7 @@ class ReviewController extends GetxController {
 
   Future<bool> submitReview({
     required int shopId,
+    required int bookingId,
     required int serviceId,
     required double rating,
     required String review,
@@ -20,6 +21,7 @@ class ReviewController extends GetxController {
         token: AuthService.accessToken,
         body: {
           "shop": shopId,
+          "booking_id": bookingId,
           "service": serviceId,
           "rating": rating,
           "review": review,
@@ -31,7 +33,7 @@ class ReviewController extends GetxController {
         return true;
       } else {
         AppSnackBar.showError(
-          response.errorMessage ?? "Failed to submit review.",
+          response.errorMessage ?? "Failed to submit review.2",
         );
         return false;
       }

@@ -109,7 +109,7 @@ class BookingScreen extends StatelessWidget {
                           transition: Transition.rightToLeftWithFade,
                           duration: const Duration(milliseconds: 220),
                         ),
-                        onCancel: isActive ? () => c.cancel(b) : null,
+                        onCancel: isActive ? () => c.cancelBooking(b) : null,
                         onRebook: !isActive && b.status == 'cancelled'
                             ? () {
                                 Get.to(() =>

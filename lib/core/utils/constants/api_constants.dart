@@ -30,6 +30,8 @@ class AppUrls {
   static const String activeBooking = '$_baseUrl/booking/users?status=pending';
   static const String completeBooking =
       '$_baseUrl/booking/users?status=completed';
+  static String cancelBooking(int bookingId) => '$_baseUrl/payments/bookings/cancel/$bookingId/';
+
       static String userBookings(String email) => '$_baseUrl/payments/bookings/?user_email=$email';
   static const String createReview = '$_baseUrl/api/reviews/';
   static const String allShops = '$_baseUrl/api/users/shops/';
