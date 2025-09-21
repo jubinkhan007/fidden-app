@@ -93,32 +93,36 @@ class BookingController extends GetxController {
     }
   }
 
-  Future<void> _fetchHistory({bool reset = false}) async {
-    pagingHistory.value = true;
-    try {
-      final url = _nextHistoryUrl ?? AppUrls.userBookings(_email!);
+  final historyAll = <BookingItem>[].obs; // non-active, API order
 
-      final resp = await NetworkCaller().getRequest(
-        url,
-        token: AuthService.accessToken,
-      );
+Future<void> _fetchHistory({bool reset = false}) async {
+  pagingHistory.value = true;
+  try {
+    final url = _nextHistoryUrl ?? AppUrls.userBookings(_email!);
+    final resp = await NetworkCaller().getRequest(url, token: AuthService.accessToken);
 
-      if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
-        final parsed = BookingListResponse.fromJson(resp.responseData);
-        _nextHistoryUrl = parsed.next;
+    if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+      final parsed = BookingListResponse.fromJson(resp.responseData);
+      _nextHistoryUrl = parsed.next;
 
-        final chunk = parsed.results.where((b) => b.status != 'active');
-        if (reset) {
-          history.clear();
-          cancelled.clear();
-        }
-        history.addAll(chunk.where((b) => b.status == 'completed'));
-        cancelled.addAll(chunk.where((b) => b.status == 'cancelled'));
+      if (reset) {
+        historyAll.clear();
+        history.clear();
+        cancelled.clear();
       }
-    } finally {
-      pagingHistory.value = false;
+
+      // Preserve API order:
+      for (final b in parsed.results) {
+        if (b.status == 'active') continue;
+        historyAll.add(b);                  // <- ordered list for UI
+        if (b.status == 'completed') history.add(b);
+        if (b.status == 'cancelled') cancelled.add(b);
+      }
     }
+  } finally {
+    pagingHistory.value = false;
   }
+}
 
   Future<void> submitReview(BookingItem booking) async {
     final body = {

@@ -309,14 +309,16 @@ class ServiceDetailsScreen extends StatelessWidget {
                                   d.day == selected.day,
 
                               onDaySelected: (sel, foc) {
-                                if (!inWindow(sel))
-                                  return; // only allow today..+6
-                                c.selectedDate.value = sel;
-                                c.fetchSlotsForDate(sel);
-                              },
+  if (!inWindow(sel) || c.isClosedDay(sel)) return; // block
+  c.selectedDate.value = sel;
+  c.fetchSlotsForDate(sel);
+},
 
-                              enabledDayPredicate:
-                                  inWindow, // disable past/future outside window
+                              enabledDayPredicate: (day) {
+  if (!inWindow(day)) return false;
+  return !c.isClosedDay(day); // disable closed weekdays
+},
+ // disable past/future outside window
 
                               calendarStyle: CalendarStyle(
                                 outsideDaysVisible: false,
@@ -348,17 +350,18 @@ class ServiceDetailsScreen extends StatelessWidget {
 
                               // Force the day text style to bold + #120D1C
                               calendarBuilders: CalendarBuilders(
-                                defaultBuilder: (ctx, day, foc) => Center(
-                                  child: Text(
-                                    '${day.day}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: inWindow(day)
-                                          ? const Color(0xFF120D1C)
-                                          : Colors.grey.shade400,
-                                    ),
-                                  ),
-                                ),
+  defaultBuilder: (ctx, day, foc) {
+    final disabled = !inWindow(day) || c.isClosedDay(day);
+    return Center(
+      child: Text(
+        '${day.day}',
+        style: TextStyle(
+          fontWeight: FontWeight.w800,
+          color: disabled ? Colors.grey.shade400 : const Color(0xFF120D1C),
+        ),
+      ),
+    );
+  },
                                 todayBuilder: (ctx, day, foc) => Center(
                                   child: Text(
                                     '${day.day}',

@@ -68,26 +68,35 @@ class OwnerBookingItem {
   });
 
   factory OwnerBookingItem.fromJson(Map<String, dynamic> j) {
-    int _toInt(v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
-    DateTime _dt(v) => DateTime.tryParse('$v') ?? DateTime.now();
+  int _toInt(v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
 
-    return OwnerBookingItem(
-      id: _toInt(j['id']),
-      user: _toInt(j['user']),
-      userEmail: j['user_email'] ?? '',
-      userName: j['user_name'],
-      profileImage: j['profile_image'],
-      shop: _toInt(j['shop']),
-      shopName: j['shop_name'] ?? '',
-      slot: _toInt(j['slot']),
-      slotTime: _dt(j['slot_time']),
-      serviceTitle: j['service_title'] ?? '',
-      serviceDuration: j['service_duration'] ?? '',
-      status: (j['status'] ?? '').toString(),
-      createdAt: _dt(j['created_at']),
-      updatedAt: _dt(j['updated_at']),
-    );
+  // Parse the datetime but keep the clock fields as-is (ignore Z / +HH:MM)
+  DateTime _dtKeepWall(v) {
+    final s = '$v';
+    // remove trailing 'Z' or '+HH:MM' or '-HH:MM'
+    final core = s.replaceFirst(RegExp(r'(Z|[+-]\d{2}:\d{2})$'), '');
+    // also tolerate space instead of 'T'
+    final normalized = core.replaceFirst(' ', 'T');
+    return DateTime.parse(normalized); // same HH:mm as the original string
   }
+
+  return OwnerBookingItem(
+    id: _toInt(j['id']),
+    user: _toInt(j['user']),
+    userEmail: j['user_email'] ?? '',
+    userName: j['user_name'],
+    profileImage: j['profile_image'],
+    shop: _toInt(j['shop']),
+    shopName: j['shop_name'] ?? '',
+    slot: _toInt(j['slot']),
+    slotTime: _dtKeepWall(j['slot_time']),  // ← keeps 09:00 if payload had 09:00+06:00
+    serviceTitle: j['service_title'] ?? '',
+    serviceDuration: j['service_duration'] ?? '',
+    status: (j['status'] ?? '').toString(),
+    createdAt: _dtKeepWall(j['created_at']),
+    updatedAt: _dtKeepWall(j['updated_at']),
+  );
+}
 
   Map<String, dynamic> toJson() => {
         'id': id,

@@ -3,6 +3,7 @@ import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
+import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:fidden/features/user/shops/services/data/service_details_model.dart';
 import 'package:fidden/features/user/shops/services/data/time_slots_model.dart';
 import 'package:get/get.dart';
@@ -61,10 +62,22 @@ class ServiceDetailsController extends GetxController {
       );
 
       if (res.isSuccess && res.responseData is Map<String, dynamic>) {
-        details.value = ServiceDetailsModel.fromJson(res.responseData);
-        // load slots for today by default
-        await fetchSlotsForDate(selectedDate.value);
-      } else {
+  final svc = ServiceDetailsModel.fromJson(res.responseData);
+  details.value = svc;
+
+  // fetch shop details to get close_days
+  final shopResp = await NetworkCaller().getRequest(
+    AppUrls.shopDetails((svc.shopId.toString())),
+    token: AuthService.accessToken,
+  );
+  if (shopResp.isSuccess && shopResp.responseData is Map<String, dynamic>) {
+    final shop = ShopDetailsModel.fromJson(shopResp.responseData);
+    applyClosedDays(shop.closeDays);
+  }
+
+  _snapSelectedToNextOpenInWindow();
+  await fetchSlotsForDate(selectedDate.value);
+}else {
         AppSnackBar.showError(res.errorMessage ?? 'Failed to load service.');
       }
     } catch (e) {
@@ -145,4 +158,55 @@ class ServiceDetailsController extends GetxController {
     final p = d.discountPrice ?? d.price ?? '0';
     return double.tryParse(p) ?? 0;
   }
+  final closedWeekdays = <int>{}.obs; // 1=Mon … 7=Sun
+
+int? _weekdayFromString(String s) {
+  final v = s.trim().toLowerCase();
+  switch (v) {
+    case 'mon':
+    case 'monday':
+      return DateTime.monday;    // 1
+    case 'tue':
+    case 'tuesday':
+      return DateTime.tuesday;   // 2
+    case 'wed':
+    case 'wednesday':
+      return DateTime.wednesday; // 3
+    case 'thu':
+    case 'thursday':
+      return DateTime.thursday;  // 4
+    case 'fri':
+    case 'friday':
+      return DateTime.friday;    // 5
+    case 'sat':
+    case 'saturday':
+      return DateTime.saturday;  // 6
+    case 'sun':
+    case 'sunday':
+      return DateTime.sunday;    // 7
+  }
+  return null;
+}
+
+bool isClosedDay(DateTime d) => closedWeekdays.contains(d.weekday);
+
+// call this right after you fetch /shops/details/{shop_id}
+void applyClosedDays(List<dynamic>? closeDays) {
+  closedWeekdays
+    ..clear()
+    ..addAll((closeDays ?? const [])
+        .map((e) => _weekdayFromString('$e'))
+        .whereType<int>());
+}
+void _snapSelectedToNextOpenInWindow() {
+  // today..+6 like your UI
+  final start = DateTime.now();
+  for (int i = 0; i < 7; i++) {
+    final d = DateTime(start.year, start.month, start.day).add(Duration(days: i));
+    if (!isClosedDay(d)) {
+      selectedDate.value = d;
+      return;
+    }
+  }
+}
 }

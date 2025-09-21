@@ -60,7 +60,7 @@ class BookingItem {
   final String shopAddress;
   final String shopImg;
   final int slot;
-  final DateTime slotTime;
+  final String slotTimeIso;
   final String serviceTitle;
   final String serviceDuration; // minutes as string from API
   final String status;          // "active" / "completed" / "cancelled" etc.
@@ -80,7 +80,7 @@ class BookingItem {
     required this.shopAddress,
     required this.shopImg,
     required this.slot,
-    required this.slotTime,
+    required this.slotTimeIso,
     required this.serviceTitle,
     required this.serviceDuration,
     required this.status,
@@ -95,6 +95,10 @@ class BookingItem {
     // defensive parsing
     double _toDouble(v) => v is num ? v.toDouble() : double.tryParse("$v") ?? 0.0;
     int _toInt(v) => v is num ? v.toInt() : int.tryParse("$v") ?? 0;
+    final String slotTimeString = json['slot_time']; // e.g., "2025-09-20T10:30:00+06:00"
+
+  // Remove the timezone part (+06:00) to prevent conversion
+  // final String localTimeString = slotTimeString.substring(0, 19);
 
     return BookingItem(
       id: _toInt(json['id']),
@@ -106,7 +110,8 @@ class BookingItem {
       shopAddress: json['shop_address'] ?? '',
       shopImg: json['shop_img'] ?? '',
       slot: _toInt(json['slot']),
-      slotTime: DateTime.tryParse(json['slot_time'] ?? '') ?? DateTime.now(),
+      slotTimeIso: (json['slot_time'] ?? '').toString(),
+
       serviceTitle: json['service_title'] ?? '',
       serviceDuration: json['service_duration'] ?? '',
       status: (json['status'] ?? '').toString().toLowerCase(),
@@ -131,7 +136,7 @@ BookingItem copyWith({
       shopAddress: shopAddress,
       shopImg: shopImg,
       slot: slot,
-      slotTime: slotTime,
+      slotTimeIso: slotTimeIso,
       serviceTitle: serviceTitle,
       serviceDuration: serviceDuration,
       status: status ?? this.status, // Use new status if provided

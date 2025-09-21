@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../../../core/utils/constants/app_sizes.dart';
 import '../../../../../core/utils/constants/icon_path.dart';
 import '../../data/user_booking_model.dart';
+import '../api_time_format.dart';
 
 class BookingDetailsScreen extends StatelessWidget {
   const BookingDetailsScreen({super.key, required this.booking});
@@ -15,8 +16,9 @@ class BookingDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = DateFormat('EEE, d MMM').format(booking.slotTime);
-    final timeText = DateFormat('hh:mm a').format(booking.slotTime);
+    final dateText = formatApiDate(booking.slotTimeIso); // e.g. "Sun, 21 Sep 2025"
+    final timeText = formatApiTime(booking.slotTimeIso); // e.g. "01:30 PM"
+
 
     return Scaffold(
       backgroundColor: const Color(0xffF4F4F4),

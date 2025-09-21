@@ -6,13 +6,16 @@ import '../../utils/constants/app_sizes.dart';
 import '../../utils/constants/icon_path.dart';
 import 'custom_text.dart';
 
-class CustomAppBar extends StatelessWidget {
+class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomAppBar({
     super.key, required this.firstText, required this.secondText, this.width,
   });
 
   final String firstText,secondText;
   final double? width;
+
+  @override
+  Size get preferredSize => Size.fromHeight(getHeight(56));
 
   @override
   Widget build(BuildContext context) {

@@ -302,35 +302,38 @@ class _Header extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Obx(
-                      () => Stack(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              Get.toNamed(AppRoute.notificationScreen);
-                            },
-
-                            icon: const Icon(
-                              color: Colors.white,
-                              Icons.notifications_none_outlined,
-                              size: 28,
-                            ),
-                          ),
-                          if (Get.find<NotificationController>()
-                              .hasUnread
-                              .value)
-                            Positioned(
-                              top: 10,
-                              right: 10,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
+                      () => Padding(
+                        padding: EdgeInsets.only(left: r.w(3), top: r.h(3)),
+                        child: Stack(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                Get.toNamed(AppRoute.notificationScreen);
+                              },
+                        
+                              icon: const Icon(
+                                color: Colors.white,
+                                Icons.notifications_none_outlined,
+                                size: 28,
                               ),
                             ),
-                        ],
+                            if (Get.find<NotificationController>()
+                                .hasUnread
+                                .value)
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -728,7 +731,7 @@ class _TrendingServices extends GetView<HomeController> {
           SizedBox(
             height: r.h(280),
             child: ListView.separated(
-              padding: EdgeInsets.symmetric(horizontal: r.w(20)),
+              padding: EdgeInsets.symmetric(horizontal: r.w(20), vertical: r.h(5)),
               scrollDirection: Axis.horizontal,
               itemBuilder: (_, i) => _TrendingCard(r: r, service: services[i]),
               separatorBuilder: (_, __) => SizedBox(width: r.w(14)),

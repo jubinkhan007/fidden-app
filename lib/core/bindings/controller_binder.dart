@@ -2,6 +2,7 @@
 
 import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
 import 'package:fidden/features/business_owner/profile/controller/busines_owner_profile_controller.dart';
+import 'package:fidden/features/business_owner/transactions/controller/transaction_controller.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/user/shops/controller/all_shops_controller.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
@@ -61,5 +62,6 @@ class ControllerBinder extends Bindings {
     Get.lazyPut(() => AllShopsController(), fenix: true);
     Get.lazyPut(() => WishlistController(), fenix: true);
     Get.lazyPut(() => NotificationController(), fenix: true);
+    Get.lazyPut(() => TransactionController());
   }
 }

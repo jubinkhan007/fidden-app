@@ -39,12 +39,12 @@ Future<void> _postBootInit() async {
     await NotificationService.I.init().timeout(const Duration(seconds: 10));
   } catch (e, st) { debugPrint('[boot] NotificationService failed: $e\n$st'); }
 
-  try {
-    debugPrint('[boot] Request notification permission');
-    final permissionController = Get.put(PermissionController());
-    // don't await if it may show a dialog
-    permissionController.requestNotificationPermission();
-  } catch (e, st) { debugPrint('[boot] permission failed: $e\n$st'); }
+  // try {
+  //   debugPrint('[boot] Request notification permission');
+  //   final permissionController = Get.put(PermissionController());
+  //   // don't await if it may show a dialog
+  //   permissionController.requestNotificationPermission();
+  // } catch (e, st) { debugPrint('[boot] permission failed: $e\n$st'); }
 
   try {
     debugPrint('[boot] initPush');

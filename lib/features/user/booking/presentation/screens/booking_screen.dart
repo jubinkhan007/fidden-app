@@ -15,6 +15,7 @@ import '../../data/user_booking_model.dart';
 import '../../../../../core/utils/constants/app_colors.dart';
 import '../../../../../core/utils/constants/app_sizes.dart';
 import '../../controller/booking_controller.dart';
+import '../api_time_format.dart';
 import 'booking_details_screen.dart';
 
 class BookingScreen extends StatelessWidget {
@@ -70,9 +71,7 @@ class BookingScreen extends StatelessWidget {
                 }
 
                 final isActive = c.isActiveBooking.value;
-                final items = isActive
-                    ? c.active.toList()
-                    : [...c.history.toList(), ...c.cancelled.toList()];
+final items = isActive ? c.active.toList() : c.historyAll.toList();
                 final isPaging =
                     isActive ? c.pagingActive.value : c.pagingHistory.value;
                 final scroll = isActive ? activeScroll : historyScroll;
@@ -214,8 +213,9 @@ class _BookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = DateFormat('EEE, d MMM').format(booking.slotTime);
-    final timeText = DateFormat('hh:mm a').format(booking.slotTime);
+    final dateText = formatApiDate(booking.slotTimeIso); // e.g. "Sun, 21 Sep 2025"
+    final timeText = formatApiTime(booking.slotTimeIso); // e.g. "01:30 PM"
+
     final status = booking.status; // "active" or others
 
     return InkWell(

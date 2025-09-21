@@ -87,21 +87,38 @@ class HomeController extends GetxController {
   }
 
   Future<void> fetchCategories() async {
-    try {
-      final response = await NetworkCaller().getRequest(
-        AppUrls.categories,
-        token: AuthService.accessToken,
-      );
-      if (response.isSuccess) {
-        // API returns a list directly
-        categories.value = List<CategoryModel>.from(
-          response.responseData.map((item) => CategoryModel.fromJson(item)),
-        );
-      }
-    } catch (e) {
-      AppSnackBar.showError('Could not fetch categories: $e');
+  try {
+    final response = await NetworkCaller().getRequest(
+      AppUrls.categories,
+      token: AuthService.accessToken,
+    );
+
+    if (!response.isSuccess) return;
+
+    final raw = response.responseData;
+
+    // Support either:
+    // 1) [ {...}, {...} ]                 // root array
+    // 2) { "data": [ {...}, {...} ] }     // wrapped in a map
+    final List<dynamic> list;
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map && raw['data'] is List) {
+      list = raw['data'] as List;
+    } else {
+      throw Exception('Unexpected categories format: ${raw.runtimeType}');
     }
+
+    categories.value = list
+        .map((e) => CategoryModel.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ))
+        .toList();
+  } catch (e) {
+    AppSnackBar.showError('Could not fetch categories: $e');
   }
+}
+
 
   Future<void> fetchTrendingServices() async {
     try {
@@ -120,18 +137,45 @@ class HomeController extends GetxController {
   }
 
   Future<void> fetchPopularShops() async {
-    try {
-      final response = await NetworkCaller().getRequest(
-        AppUrls.popularShops,
-        token: AuthService.accessToken,
-      );
-      if (response.isSuccess) {
-        popularShops.value = AllShopsModel.fromJson(response.responseData);
-      }
-    } catch (e) {
-      AppSnackBar.showError('Could not fetch popular shops: $e');
+  try {
+    final resp = await NetworkCaller().getRequest(
+      AppUrls.popularShops,
+      token: AuthService.accessToken,
+    );
+    if (!resp.isSuccess) return;
+
+    final raw = resp.responseData;
+
+    // normalize to a list of shops
+    late final List<dynamic> list;
+    String? next;
+    String? previous;
+
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map && raw['results'] is List) {
+      list = raw['results'] as List;
+      next = raw['next'] as String?;
+      previous = raw['previous'] as String?;
+    } else {
+      throw Exception('Unexpected popular shops format: ${raw.runtimeType}');
     }
+
+    final shops = list
+        .map((e) => Shop.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+
+    // build the model your UI expects
+    popularShops.value = AllShopsModel(
+      next: next,
+      previous: previous,
+      shops: shops,
+    );
+  } catch (e) {
+    AppSnackBar.showError('Could not fetch popular shops: $e');
   }
+}
+
 
   // --- Existing Methods (Unchanged) ---
   void updateSearch(String value) {

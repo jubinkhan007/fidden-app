@@ -170,10 +170,10 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
 
               SizedBox(height: getHeight(16)),
               CustomProfileButton(
-                title: 'Waiver Form',
-                firstImageString: IconPath.waiverFormIcon,
+                title: 'Transactions',
+                firstImageString: IconPath.transactionIcon,
                 onTap: () {
-                  Get.to(() => WaiverFormCreateScreen());
+                  Get.toNamed(AppRoute.transactionsScreen);
                 },
               ),
               SizedBox(height: getHeight(16)),

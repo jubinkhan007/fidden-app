@@ -19,11 +19,15 @@ class RevenueChart extends StatelessWidget {
   ];
 
   String _yLabel(double v) {
-    final actual = v * 1000.0;
-    if (actual >= 1e6) return '${(actual / 1e6).toStringAsFixed(1)}M';
-    if (actual >= 1e3) return '${(actual / 1e3).toStringAsFixed(0)}k';
-    return actual.toStringAsFixed(0);
-  }
+  final actual = v * 1000.0;
+  final abs = actual.abs();
+  String s;
+  if (abs >= 1e6)      s = '${(abs / 1e6).toStringAsFixed(1)}M';
+  else if (abs >= 1e3) s = '${(abs / 1e3).toStringAsFixed(0)}k';
+  else                 s = abs.toStringAsFixed(0);
+  return actual < 0 ? '-$s' : s;
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -46,30 +50,22 @@ class RevenueChart extends StatelessWidget {
     );
 
     // ✅ SAFE Y-AXIS BOUNDS
-    late double minY, maxY, interval;
-    if (spots.isEmpty) {
-      // sensible defaults for an empty chart
-      minY = 0.0;
-      maxY = 1.0;
-      interval = 1.0;
-    } else {
-      final ys = spots.map((s) => s.y);
-      final yMin = ys.reduce(math.min);
-      final yMax = ys.reduce(math.max);
+    // ✅ SAFE Y-AXIS BOUNDS (supports negatives)
+late double minY, maxY, interval;
+if (spots.isEmpty) {
+  minY = 0; maxY = 1; interval = 1;
+} else {
+  final ys = spots.map((s) => s.y);
+  final yMin = ys.reduce(math.min);
+  final yMax = ys.reduce(math.max);
+  // small headroom before "nice" rounding
+  final pad = (yMax - yMin).abs() * 0.1 + 0.01;
+  final nice = _niceAxis(yMin - pad, yMax + pad, maxTicks: 5);
+  minY = nice.min;
+  maxY = nice.max;
+  interval = nice.tick; // clean steps like 1, 2, 5, 10, …
+}
 
-      final lower = (yMin - 0.1).clamp(0.0, double.infinity).toDouble();
-      var upper = (yMax + 0.1);
-
-      // handle flat lines (all points equal) so maxY > minY
-      if (upper <= lower) upper = lower + 1.0;
-
-      minY = lower;
-      maxY = upper;
-
-      interval = maxY <= 5
-          ? 1.0
-          : (maxY <= 10 ? 2.0 : (maxY <= 25 ? 5.0 : 10.0));
-    }
 
     return Container(
       decoration: BoxDecoration(
@@ -131,6 +127,13 @@ class RevenueChart extends StatelessWidget {
             aspectRatio: 1.75,
             child: LineChart(
               LineChartData(
+                extraLinesData: ExtraLinesData(horizontalLines: [
+  HorizontalLine(
+    y: 0,
+    color: const Color(0xFFCBD5E1), // subtle grey
+    strokeWidth: 1.2,
+  ),
+]),
                 minX: 0,
                 maxX: (spots.isEmpty ? 6 : (spots.length - 1)).toDouble().clamp(
                   0,
@@ -155,46 +158,55 @@ class RevenueChart extends StatelessWidget {
                 ),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 24,
-                      interval: interval,
-                      getTitlesWidget: (v, _) => Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: Text(
-                          _yLabel(v),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF98A2B3),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      interval: 1,
-                      getTitlesWidget: (v, meta) {
-                        final i = v.round();
-                        if (i < 0 || i >= labels.length)
-                          return const SizedBox();
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            labels[i],
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF98A2B3),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+  sideTitles: SideTitles(
+    showTitles: true,
+    reservedSize: 40, // <- more room for “-100k”
+    interval: interval,
+    getTitlesWidget: (v, _) {
+      // render only values on our tick grid
+      final onTick = ((v - minY) / interval).abs() < 1e-6 ||
+                     (((v - minY) / interval) - ((v - minY) / interval).round()).abs() < 1e-6;
+      if (!onTick) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Text(
+          _yLabel(v),
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF98A2B3),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    },
+  ),
+),
+
+
+
+// 3) Bottom titles: read the label for the matching index
+bottomTitles: AxisTitles(
+  sideTitles: SideTitles(
+    showTitles: true,
+    reservedSize: 30,
+    interval: 1,
+    getTitlesWidget: (v, _) {
+      final i = v.round();
+      if (i < 0 || i >= labels.length) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(
+          labels[i], // <- from points, not a static week
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF98A2B3),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    },
+  ),
+),
                   rightTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
@@ -275,4 +287,32 @@ class RevenueChart extends StatelessWidget {
       ),
     );
   }
+}
+class _NiceAxis {
+  final double min, max, tick;
+  const _NiceAxis(this.min, this.max, this.tick);
+}
+
+_NiceAxis _niceAxis(double min, double max, {int maxTicks = 5}) {
+  // protect against degenerate ranges
+  if (min == max) {
+    final d = min == 0 ? 1.0 : (min.abs() * 0.25);
+    min -= d; max += d;
+  }
+  final range = max - min;
+  final rough = range / (maxTicks.clamp(2, 10));
+  final exponent = (rough == 0 ? 0 : (math.log(rough) / math.ln10).floor());
+  final fraction = rough / math.pow(10, exponent);
+
+  double niceFraction;
+  if (fraction <= 1)      niceFraction = 1;
+  else if (fraction <= 2) niceFraction = 2;
+  else if (fraction <= 5) niceFraction = 5;
+  else                    niceFraction = 10;
+
+  final step = niceFraction * math.pow(10, exponent);
+  final niceMin = (min / step).floor() * step;
+  final niceMax = (max / step).ceil() * step;
+
+  return _NiceAxis(niceMin.toDouble(), niceMax.toDouble(), step.toDouble());
 }

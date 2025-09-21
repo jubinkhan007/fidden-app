@@ -39,6 +39,9 @@ class AppUrls {
       '$_baseUrl/api/shops'; // ✅ Added this line
 
 
+// transactions
+  static String transactions (int shopId) => '$_baseUrl/payments/transactions/?shop=$shopId';
+
 // owner-booking
   
 
