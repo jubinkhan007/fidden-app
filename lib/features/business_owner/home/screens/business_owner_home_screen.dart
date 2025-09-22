@@ -161,18 +161,18 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _buildSectionTitle("Dashboard"),
                     const SizedBox(height: 16),
-                    const Row(
+                    Row(
                       children: [
                         DashboardStatsCard(
                           title: "Revenue",
-                          value: "\$1,250",
+                          value: "\$${controller.totalRevenue}",
                           icon: Icons.attach_money,
                           color: Colors.green,
                         ),
                         SizedBox(width: 16),
                         DashboardStatsCard(
                           title: "New Bookings",
-                          value: "12",
+                          value: "${controller.allBusinessOwnerBookingOne.value.stats?.newBookings ?? 0}",
                           icon: Icons.calendar_today,
                           color: Colors.blue,
                         ),
@@ -190,22 +190,32 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     const BookingStats(),
                     const SizedBox(height: 24),
-                    _buildSectionTitle("Growth Suggestions"),
-                    const SizedBox(height: 16),
-                    const GrowthSuggestionCard(
-                      title: "Offer a 10% discount",
-                      subtitle:
-                          "Create a special offer for your services to attract more customers.",
-                      icon: Icons.local_offer,
-                    ),
+                    Obx(() {
+                      final items = controller.growthSuggestions;
+                      if (items.isEmpty) return const SizedBox.shrink(); // hide section entirely
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle("Growth Suggestions"),
+                          const SizedBox(height: 8),
+                          ...List.generate(items.length, (i) {
+                            final s = items[i];
+                            final icon = controller.iconForSuggestionCategory(s.category);
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: i == items.length - 1 ? 0 : 4),
+                              child: GrowthSuggestionCard(
+                                title: s.suggestionTitle,
+                                subtitle: s.shortDescription,
+                                icon: icon,
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 8),
+                        ],
+                      );
+                    }),
                     const SizedBox(height: 12),
-                    const GrowthSuggestionCard(
-                      title: "Run a social media campaign",
-                      subtitle:
-                          "Promote your services on social media to reach a wider audience.",
-                      icon: Icons.campaign,
-                    ),
-                    const SizedBox(height: 24),
                     _buildSectionTitle(
                       "Recent Bookings",
                       seeAll: () => Get.find<BusinessOwnerNavBarController>().changeIndex(1),

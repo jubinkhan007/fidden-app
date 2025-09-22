@@ -2,93 +2,67 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:http/http.dart' as http;
+import 'package:retry/retry.dart';
 import '../models/response_data.dart';
 import 'Auth_service.dart';
 
 class NetworkCaller {
-  final int timeoutDuration = 30;
   static bool _isRefreshing = false;
   static final List<Completer<ResponseData>> _pendingRequests = [];
 
-  Future<ResponseData> getRequest(String endpoint, {String? token,bool treat404AsEmpty = false,
-  dynamic emptyPayload, }) async {
-    log('GET Request: $endpoint');
-    try {
-      final http.Response response = await http
-          .get(
-            // Use the 'http' alias
-            Uri.parse(endpoint),
-            headers: {
-              if (token != null && token.isNotEmpty)
-                'Authorization': 'Bearer $token',
-              'Content-type': 'application/json',
-            },
-          )
-          .timeout(Duration(seconds: timeoutDuration));
-      return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
-  emptyPayload: emptyPayload,);
-    } catch (e) {
-      return _handleError(e);
-    }
+  // --- NEW: Configuration for the retry mechanism ---
+  final _retryOptions = const RetryOptions(
+    maxAttempts: 3, // Number of retry attempts
+    delayFactor: Duration(seconds: 1), // Delay between retries
+    maxDelay: Duration(seconds: 3), // Maximum delay
+  );
+
+  // --- MODIFIED: All public methods now use the _makeRequestWithRetry wrapper ---
+
+  Future<ResponseData> getRequest(String endpoint, {String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
+    return _makeRequestWithRetry(() async {
+      log('GET Request: $endpoint');
+      final response = await http.get(
+        Uri.parse(endpoint),
+        headers: {
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          'Content-type': 'application/json',
+        },
+      );
+      return _handleResponse(response, treat404AsEmpty: treat404AsEmpty, emptyPayload: emptyPayload);
+    });
   }
 
-Future<ResponseData> multipartRequest(
-    String endpoint, {
-    String method = 'POST', // Can be POST or PUT
-    required Map<String, String> body,
-    String? token,
-    File? photo,
-    List<File>? documents,
-  }) async {
-    log('Multipart Request: $endpoint');
-    try {
+  Future<ResponseData> multipartRequest(String endpoint, {String method = 'POST', required Map<String, String> body, String? token, File? photo, List<File>? documents}) {
+    return _makeRequestWithRetry(() async {
+      log('Multipart Request: $endpoint');
       final request = http.MultipartRequest(method, Uri.parse(endpoint));
       request.fields.addAll(body);
 
-      // Add profile image if it exists
       if (photo != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('image', photo.path),
-        );
+        request.files.add(await http.MultipartFile.fromPath('image', photo.path));
       }
-      
-      // Add verification documents if they exist
       if (documents != null && documents.isNotEmpty) {
         for (var doc in documents) {
-          request.files.add(
-            await http.MultipartFile.fromPath('verification_files', doc.path),
-          );
+          request.files.add(await http.MultipartFile.fromPath('verification_files', doc.path));
         }
       }
-
       request.headers.addAll({
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       });
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
-      // IMPORTANT: Use the central _handleResponse to get token refresh logic
       return _handleResponse(response);
-    } catch (e) {
-      return _handleError(e);
-    }
+    });
   }
 
-  // ✅ New method for GET with a body
-  Future<ResponseData> getRequestWithBody(
-    String endpoint, {
-    Map<String, dynamic>? body,
-    String? token,
-    bool treat404AsEmpty = false,
-  dynamic emptyPayload,
-  }) async {
-    log('GET Request with body: $endpoint');
-    log('Request Body: ${jsonEncode(body)}');
-    try {
-      // Use the Request class from the http package
+  Future<ResponseData> getRequestWithBody(String endpoint, {Map<String, dynamic>? body, String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
+    return _makeRequestWithRetry(() async {
+      log('GET Request with body: $endpoint');
       final request = http.Request('GET', Uri.parse(endpoint));
       request.headers.addAll({
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -97,108 +71,107 @@ Future<ResponseData> multipartRequest(
       if (body != null) {
         request.body = jsonEncode(body);
       }
-
       final streamedResponse = await request.send();
-      // Use the Response class from the http package
       final response = await http.Response.fromStream(streamedResponse);
-
-      return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
-  emptyPayload: emptyPayload,);
-    } catch (e) {
-      return _handleError(e);
-    }
+      return _handleResponse(response, treat404AsEmpty: treat404AsEmpty, emptyPayload: emptyPayload);
+    });
   }
 
-  Future<ResponseData> postRequest(
-    String endpoint, {
-    Map<String, dynamic>? body,
-    String? token,
-    bool treat404AsEmpty = false,
-  dynamic emptyPayload,
-  }) async {
-    log('POST Request: $endpoint');
-    log('Request Body: ${jsonEncode(body)}');
-
-    try {
-      final http.Response response = await http
-          .post(
-            Uri.parse(endpoint),
-            headers: {
-              if (token != null && token.isNotEmpty)
-                'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json', // <- use this canonical key
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(Duration(seconds: timeoutDuration));
-
-      // ✅ One path: centralize in _handleResponse
-      return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
-  emptyPayload: emptyPayload,);
-    } catch (e) {
-      return _handleError(e);
-    }
+  Future<ResponseData> postRequest(String endpoint, {Map<String, dynamic>? body, String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
+    return _makeRequestWithRetry(() async {
+      log('POST Request: $endpoint');
+      log('Request Body: ${jsonEncode(body)}');
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response, treat404AsEmpty: treat404AsEmpty, emptyPayload: emptyPayload);
+    });
   }
 
-  Future<ResponseData> putRequest(
-    String endpoint, {
-    Map<String, dynamic>? body,
-    String? token,
-    treat404AsEmpty = false,
-  dynamic emptyPayload, }
-  ) async {
-    log('PUT Request: $endpoint');
-    log('Request Body: ${jsonEncode(body)}');
-
-    try {
-      final http.Response response = await http
-          .put(
-            // Use the 'http' alias
-            Uri.parse(endpoint),
-            headers: {
-              if (token != null && token.isNotEmpty)
-                'Authorization': 'Bearer $token',
-              'Content-type': 'application/json',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(Duration(seconds: timeoutDuration));
-      return _handleResponse(response,treat404AsEmpty: treat404AsEmpty,
-  emptyPayload: emptyPayload,);
-    } catch (e) {
-      return _handleError(e);
-    }
+  Future<ResponseData> putRequest(String endpoint, {Map<String, dynamic>? body, String? token, treat404AsEmpty = false, dynamic emptyPayload}) {
+    return _makeRequestWithRetry(() async {
+      log('PUT Request: $endpoint');
+      log('Request Body: ${jsonEncode(body)}');
+      final response = await http.put(
+        Uri.parse(endpoint),
+        headers: {
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          'Content-type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response, treat404AsEmpty: treat404AsEmpty, emptyPayload: emptyPayload);
+    });
   }
 
-  // services/network_caller.dart
-  Future<ResponseData> deleteRequest(
-    String endpoint, {
-    Map<String, dynamic>? body,
-    String? token,bool treat404AsEmpty = false,
-  dynamic emptyPayload, }
-  ) async {
-    log('DELETE Request: $endpoint');
-    log('Request Body: ${jsonEncode(body)}');
-    try {
-      // Use Request so we can send a body with DELETE
+  Future<ResponseData> deleteRequest(String endpoint, {Map<String, dynamic>? body, String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
+    return _makeRequestWithRetry(() async {
+      log('DELETE Request: $endpoint');
+      log('Request Body: ${jsonEncode(body)}');
       final req = http.Request('DELETE', Uri.parse(endpoint));
       req.headers.addAll({
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       });
       if (body != null) req.body = jsonEncode(body);
-
-      final streamed = await req.send().timeout(
-        Duration(seconds: timeoutDuration),
-      );
+      final streamed = await req.send();
       final response = await http.Response.fromStream(streamed);
       return _handleResponse(response);
+    });
+  }
+
+  // --- NEW: Central wrapper for all requests ---
+  Future<ResponseData> _makeRequestWithRetry(Future<ResponseData> Function() request) async {
+    // 1. Check for internet connectivity first
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      log('No internet connection.');
+      return ResponseData(
+        isSuccess: false,
+        statusCode: -1, // Custom status code for no network
+        errorMessage: 'No internet connection. Please check your settings.', responseData: null,
+      );
+    }
+
+    // 2. Use the retry package to attempt the request
+    try {
+      return await _retryOptions.retry(
+        request,
+        retryIf: (e) => e is SocketException || e is TimeoutException || e is http.ClientException,
+        onRetry: (e) => log('Retrying request after error: $e'),
+      );
+    } on SocketException catch (e) {
+      log('Network error after all retries: $e');
+      return ResponseData(
+        isSuccess: false,
+        statusCode: -1,
+        errorMessage: 'Failed to connect. Please check your internet connection.', responseData: null,
+      );
+    } on TimeoutException catch (e) {
+      log('Request timed out after all retries: $e');
+      return ResponseData(
+        isSuccess: false,
+        statusCode: 408,
+        errorMessage: 'The connection timed out. Please try again.', responseData: null,
+      );
     } catch (e) {
-      return _handleError(e);
+      log('An unexpected error occurred during the request: $e');
+      return ResponseData(
+        isSuccess: false,
+        statusCode: 500,
+        errorMessage: 'An unexpected error occurred: $e', responseData: null,
+      );
     }
   }
 
-  // Handle the response from the server
+  // Your existing _handleResponse, _refreshToken, _retryRequest, and other methods remain the same.
+  // ... (paste your existing private methods here)
+  
   Future<ResponseData> _handleResponse(http.Response response, {
   bool treat404AsEmpty = false,
   dynamic emptyPayload,

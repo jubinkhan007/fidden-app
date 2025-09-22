@@ -27,7 +27,7 @@ class ServiceDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final RxBool _bookingBusy = false.obs;
+    final RxBool _bookingBusy = false.obs; // ← spinner state
     final c = Get.put(ServiceDetailsController(serviceId));
 
     //  Ensure we have a WishlistController to manage the heart state
@@ -145,9 +145,9 @@ class ServiceDetailsScreen extends StatelessWidget {
 
                                 final currentStr =
                                     (d?.discountPrice != null &&
-                                        d!.discountPrice!.trim().isNotEmpty)
-                                    ? d.discountPrice
-                                    : d?.price;
+                                            d!.discountPrice!.trim().isNotEmpty)
+                                        ? d.discountPrice
+                                        : d?.price;
                                 final current = _toDouble(currentStr) ?? 0.0;
                                 final original = _toDouble(d?.price);
 
@@ -260,27 +260,14 @@ class ServiceDetailsScreen extends StatelessWidget {
                             final selected = c.selectedDate.value;
 
                             final now = DateTime.now();
-                            final today = DateTime(
-                              now.year,
-                              now.month,
-                              now.day,
-                            );
-                            final windowEnd = today.add(
-                              const Duration(days: 6),
-                            );
+                            final today =
+                                DateTime(now.year, now.month, now.day);
+                            final windowEnd = today.add(const Duration(days: 6));
 
-                            // Show the whole current month to avoid the “first day missing” bug,
-                            // but only ENABLE today..+6.
-                            final firstVisible = DateTime(
-                              today.year,
-                              today.month,
-                              1,
-                            );
-                            final lastVisible = DateTime(
-                              today.year,
-                              today.month + 1,
-                              0,
-                            );
+                            // Show the whole current month, enable only today..+6
+                            final firstVisible = DateTime(today.year, today.month, 1);
+                            final lastVisible =
+                                DateTime(today.year, today.month + 1, 0);
 
                             bool inWindow(DateTime d) =>
                                 !d.isBefore(today) && !d.isAfter(windowEnd);
@@ -288,12 +275,10 @@ class ServiceDetailsScreen extends StatelessWidget {
                             return TableCalendar(
                               firstDay: firstVisible,
                               lastDay: lastVisible,
-                              focusedDay:
-                                  selected.isBefore(firstVisible) ||
+                              focusedDay: selected.isBefore(firstVisible) ||
                                       selected.isAfter(lastVisible)
                                   ? today
                                   : selected,
-
                               headerStyle: const HeaderStyle(
                                 formatButtonVisible: false,
                                 titleCentered: true,
@@ -302,53 +287,19 @@ class ServiceDetailsScreen extends StatelessWidget {
                               ),
                               startingDayOfWeek: StartingDayOfWeek.sunday,
                               availableGestures: AvailableGestures.none,
-
                               selectedDayPredicate: (d) =>
                                   d.year == selected.year &&
                                   d.month == selected.month &&
                                   d.day == selected.day,
-
                               onDaySelected: (sel, foc) {
-  if (!inWindow(sel) || c.isClosedDay(sel)) return; // block
-  c.selectedDate.value = sel;
-  c.fetchSlotsForDate(sel);
-},
-
+                                if (!inWindow(sel) || c.isClosedDay(sel)) return;
+                                c.selectedDate.value = sel;
+                                c.fetchSlotsForDate(sel);
+                              },
                               enabledDayPredicate: (day) {
-  if (!inWindow(day)) return false;
-  return !c.isClosedDay(day); // disable closed weekdays
-},
- // disable past/future outside window
-
-                              calendarStyle: CalendarStyle(
-                                outsideDaysVisible: false,
-                                todayDecoration: const BoxDecoration(
-                                  color: Colors.transparent,
-                                ),
-                                selectedDecoration: BoxDecoration(
-                                  color: Get.theme.primaryColor,
-                                  shape: BoxShape.circle,
-                                ),
-                                selectedTextStyle: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                // We’ll still set these, but builders below will enforce them.
-                                defaultTextStyle: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF120D1C),
-                                ),
-                                weekendTextStyle: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF120D1C),
-                                ),
-                                disabledTextStyle: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-
-                              // Force the day text style to bold + #120D1C
+                                if (!inWindow(day)) return false;
+                                return !c.isClosedDay(day);
+                              },
                               calendarBuilders: CalendarBuilders(
   defaultBuilder: (ctx, day, foc) {
     final disabled = !inWindow(day) || c.isClosedDay(day);
@@ -362,46 +313,37 @@ class ServiceDetailsScreen extends StatelessWidget {
       ),
     );
   },
-                                todayBuilder: (ctx, day, foc) => Center(
-                                  child: Text(
-                                    '${day.day}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF120D1C),
-                                    ),
-                                  ),
-                                ),
-                                selectedBuilder: (ctx, day, foc) => Container(
-                                  width: 35,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    color: Get.theme.primaryColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Text(
-                                    '', // we'll draw the number below
-                                  ),
-                                ),
-                                // draw the selected number on top in white + bold
-                                // (alternative to selectedTextStyle when overriding builders)
-                                markerBuilder: (ctx, day, evts) {
-                                  if (day.year == selected.year &&
-                                      day.month == selected.month &&
-                                      day.day == selected.day) {
-                                    return Center(
-                                      child: Text(
-                                        '${day.day}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return null;
-                                },
-                              ),
+  todayBuilder: (ctx, day, foc) => Center(
+    child: Text(
+      '${day.day}',
+      style: const TextStyle(
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF120D1C),
+      ),
+    ),
+  ),
+  // ✅ draw the number inside the selected circle
+  selectedBuilder: (ctx, day, foc) => Center(
+  child: Container(
+    width: 36,
+    height: 36,
+    decoration: BoxDecoration(
+      color: Get.theme.primaryColor,
+      shape: BoxShape.circle,
+    ),
+    alignment: Alignment.center,
+    // ↓ draw the selected day number (was an empty Text)
+    child: Text(
+      '${day.day}',
+      style: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  ),
+),
+
+),
                             );
                           }),
 
@@ -420,9 +362,8 @@ class ServiceDetailsScreen extends StatelessWidget {
                             }
                             if (c.slots.isEmpty) {
                               return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                                 child: Text(
                                   'No time slots available.',
                                   style: TextStyle(color: Colors.grey.shade700),
@@ -434,9 +375,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                               runSpacing: 10,
                               children: c.slots.map((s) {
                                 final isSel = c.selectedSlotId.value == s.id;
-                                final label = c.fmtTimeLocal(
-                                  s.startTimeUtc,
-                                ); // local
+                                final label = c.fmtTimeLocal(s.startTimeUtc);
                                 return _TimeChip(
                                   text: label,
                                   selected: isSel,
@@ -497,137 +436,152 @@ class ServiceDetailsScreen extends StatelessWidget {
                         const SizedBox(width: 0),
                         Expanded(
                           flex: 2,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Get.theme.primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                          child: Obx(() {
+                            final busy = _bookingBusy.value;
+                            return ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Get.theme.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 0,
                               ),
-                              elevation: 0,
-                            ),
-                            onPressed: () async {
-                              if (_bookingBusy.value)
-                                return; // 💡 guard against double taps
-                              _bookingBusy.value = true;
-                              try {
-                                final slotId = c.selectedSlotId.value;
-                                if (slotId == null) {
-                                  Get.snackbar(
-                                    'Select a time',
-                                    'Please select a time slot to continue.',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                  );
-                                  return;
-                                }
+                              onPressed: busy
+                                  ? null
+                                  : () async {
+                                      if (_bookingBusy.value) return;
+                                      _bookingBusy.value = true;
+                                      try {
+                                        final slotId = c.selectedSlotId.value;
+                                        if (slotId == null) {
+                                          Get.snackbar(
+                                            'Select a time',
+                                            'Please select a time slot to continue.',
+                                            snackPosition:
+                                                SnackPosition.BOTTOM,
+                                          );
+                                          return;
+                                        }
 
-                                // find the selected slot to format the date/time
-                                DateTime? slotStartLocal;
-                                try {
-                                  final slot = c.slots.firstWhere(
-                                    (s) => s.id == slotId,
-                                  );
-                                  slotStartLocal = slot.startTimeUtc.toLocal();
-                                } catch (_) {}
+                                        // find the selected slot to format the date/time
+                                        DateTime? slotStartLocal;
+                                        try {
+                                          final slot = c.slots
+                                              .firstWhere((s) => s.id == slotId);
+                                          slotStartLocal =
+                                              slot.startTimeUtc.toLocal();
+                                        } catch (_) {}
 
-                                final slotLabel = (slotStartLocal != null)
-                                    ? DateFormat(
-                                        'MMMM d, yyyy, h.mm a',
-                                      ).format(slotStartLocal)
-                                    : '—';
+                                        final slotLabel = (slotStartLocal != null)
+                                            ? DateFormat('MMMM d, yyyy, h.mm a')
+                                                .format(slotStartLocal)
+                                            : '—';
 
-                                String? currentPriceStr;
-                                String? originalPriceStr;
-                                final details = c.details.value;
-                                if (details != null) {
-                                  final hasDiscount =
-                                      (details.discountPrice != null &&
-                                      details.discountPrice!.trim().isNotEmpty);
-                                  currentPriceStr = hasDiscount
-                                      ? details.discountPrice
-                                      : details.price;
-                                  originalPriceStr = details.price;
-                                }
+                                        String? currentPriceStr;
+                                        String? originalPriceStr;
+                                        final details = c.details.value;
+                                        if (details != null) {
+                                          final hasDiscount = (details
+                                                      .discountPrice !=
+                                                  null &&
+                                              details.discountPrice!
+                                                  .trim()
+                                                  .isNotEmpty);
+                                          currentPriceStr = hasDiscount
+                                              ? details.discountPrice
+                                              : details.price;
+                                          originalPriceStr = details.price;
+                                        }
 
-                                final resp = await NetworkCaller().postRequest(
-                                  AppUrls.slotBooking,
-                                  body: {'slot_id': slotId},
-                                  token: AuthService.accessToken,
-                                );
+                                        final resp =
+                                            await NetworkCaller().postRequest(
+                                          AppUrls.slotBooking,
+                                          body: {'slot_id': slotId},
+                                          token: AuthService.accessToken,
+                                        );
 
-                                if (!resp.isSuccess) {
-                                  // Many backends return an HTML debug page for IntegrityError.
-                                  final responseData =
-                                      resp.responseData
-                                          as Map<String, dynamic>? ??
-                                      {};
-                                  final body =
-                                      '${resp.responseData ?? resp.errorMessage ?? ''}';
-                                  if (body.contains('IntegrityError')) {
-                                    // Slot likely taken or duplicate booking
-                                    AppSnackBar.showError(
-                                      'That time slot was just taken. Please pick another.',
-                                    );
-                                    // refresh slots so the user sees up-to-date availability
-                                    await c.fetchSlotsForDate(
-                                      c.selectedDate.value,
-                                    );
-                                    return;
-                                  }
-                                  AppSnackBar.showError(
-                                    resp.errorMessage ??
-                                        'Failed to create booking. Please try again.',
-                                  );
-                                  return;
-                                }
+                                        if (!resp.isSuccess) {
+                                          final body =
+                                              '${resp.responseData ?? resp.errorMessage ?? ''}';
+                                          if (body.contains('IntegrityError')) {
+                                            AppSnackBar.showError(
+                                              'That time slot was just taken. Please pick another.',
+                                            );
+                                            await c.fetchSlotsForDate(
+                                                c.selectedDate.value);
+                                            return;
+                                          }
+                                          AppSnackBar.showError(
+                                            resp.errorMessage ??
+                                                'Failed to create booking. Please try again.',
+                                          );
+                                          return;
+                                        }
 
-                                final responseData =
-                                    resp.responseData
-                                        as Map<String, dynamic>? ??
-                                    {};
-                                final bookingId = responseData['id'] as int?;
+                                        final responseData =
+                                            resp.responseData
+                                                    as Map<String, dynamic>? ??
+                                                {};
+                                        final bookingId =
+                                            responseData['id'] as int?;
 
-                                final args = {
-                                  'bookingId': bookingId,
-                                  'serviceName': details?.title ?? '',
-                                  'shopName': details?.shopName ?? '',
-                                  'service_img': details?.serviceImg ?? '',
-                                  'shopAddress': details?.shopAddress ?? '',
-                                  'serviceDurationMinutes':
-                                      details?.duration ?? 0,
-                                  'selectedSlotLabel': slotLabel,
-                                  'price': originalPriceStr ?? '',
-                                  'discountPrice':
-                                      (details?.discountPrice
-                                              ?.trim()
-                                              .isNotEmpty ??
-                                          false)
-                                      ? details?.discountPrice
-                                      : null,
-                                  'booking': resp.responseData,
-                                };
+                                        final args = {
+                                          'bookingId': bookingId,
+                                          'serviceName': details?.title ?? '',
+                                          'shopName': details?.shopName ?? '',
+                                          'service_img':
+                                              details?.serviceImg ?? '',
+                                          'shopAddress':
+                                              details?.shopAddress ?? '',
+                                          'serviceDurationMinutes':
+                                              details?.duration ?? 0,
+                                          'selectedSlotLabel': slotLabel,
+                                          'price': originalPriceStr ?? '',
+                                          'discountPrice': (details
+                                                          ?.discountPrice
+                                                          ?.trim()
+                                                          .isNotEmpty ??
+                                                      false)
+                                              ? details?.discountPrice
+                                              : null,
+                                          'booking': resp.responseData,
+                                        };
 
-                                Get.to(
-                                  () => BookingSummaryScreen(),
-                                  arguments: args,
-                                );
-                              } catch (e) {
-                                AppSnackBar.showError('Booking failed: $e');
-                              } finally {
-                                _bookingBusy.value =
-                                    false; // ✅ re-enable button
-                              }
-                            },
-
-                            child: const Text(
-                              'Book Now',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
+                                        Get.to(
+                                          () => BookingSummaryScreen(),
+                                          arguments: args,
+                                        );
+                                      } catch (e) {
+                                        AppSnackBar.showError(
+                                            'Booking failed: $e');
+                                      } finally {
+                                        _bookingBusy.value = false;
+                                      }
+                                    },
+                              // ─── Spinner or label ────────────────────────
+                              child: busy
+                                  ? const SizedBox(
+                                      height: 22,
+                                      width: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.4,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Book Now',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                            );
+                          }),
                         ),
                       ],
                     ),
@@ -667,16 +621,12 @@ class ServiceDetailsScreen extends StatelessWidget {
     final price = (d?.discountPrice?.toString()?.isNotEmpty == true)
         ? d?.discountPrice
         : d?.price;
-    // (Optional) deep link/URL if you have one
-    // final url = 'https://fidden.app/service/$serviceId';
 
     final msg = StringBuffer()
       ..writeln(
         'Check out "$title"${shop.isNotEmpty ? ' at $shop' : ''} on Fidden.',
       )
       ..write(price != null ? 'Price: \$$price' : '');
-    // ..writeln()
-    // ..write(url);
 
     Share.share(msg.toString());
   }
@@ -794,19 +744,19 @@ class _DatePill extends StatelessWidget {
   String _wkday(int w) =>
       const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][w - 1];
   String _mon(int m) => const [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ][m - 1];
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ][m - 1];
 }
 
 class _TimeChip extends StatelessWidget {
@@ -838,7 +788,7 @@ class _TimeChip extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: available ? onTap : null, // ⬅️ disabled if not available
+      onTap: available ? onTap : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
@@ -866,7 +816,6 @@ class _TimeChip extends StatelessWidget {
 class _SlotsShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // simple shimmer stub (no Shimmer dep to keep it light)
     return Wrap(
       spacing: 10,
       runSpacing: 10,
@@ -908,7 +857,6 @@ class _ExpandableTextState extends State<_ExpandableText>
 
   @override
   Widget build(BuildContext context) {
-    // measure overflow
     final tp = TextPainter(
       text: TextSpan(text: widget.text, style: widget.style),
       maxLines: widget.maxLines,
@@ -940,9 +888,8 @@ class _ExpandableTextState extends State<_ExpandableText>
             onPressed: () => setState(() => _expanded = !_expanded),
             child: Text(
               _expanded ? 'Show Less' : 'Show More',
-              style:
-                  widget.linkStyle ??
-                  TextStyle(
+              style: widget.linkStyle ??
+                  const TextStyle(
                     color: Color(0xff111827),
                     fontWeight: FontWeight.w800,
                   ),

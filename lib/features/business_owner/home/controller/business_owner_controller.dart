@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-
+import 'package:fidden/features/business_owner/home/model/growth_suggestion_model.dart';
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
@@ -26,6 +26,8 @@ class BusinessOwnerController extends GetxController {
   var allServiceList = <GetMyServiceModel>[].obs;
   final RxList<GetMyServiceModel> discountedServices =
       <GetMyServiceModel>[].obs;
+  final RxList<GrowthSuggestion> growthSuggestions = <GrowthSuggestion>[].obs;
+
   var allBusinessOwnerBookingOne = OwnerBookingsResponse(next: null, previous: null, results: []).obs;
   final shopMissing = false.obs;
   final shopMissingMessage = ''.obs;
@@ -42,6 +44,7 @@ class BusinessOwnerController extends GetxController {
       if (id != null && id > 0) {
         debugPrint('[revenue] myShopId updated -> $id, fetching…');
         fetchShopRevenues(shopId: id);
+        fetchGrowthSuggestions();
       }
     });
 
@@ -62,6 +65,7 @@ class BusinessOwnerController extends GetxController {
     final id = myShopId.value;
     if (id != null && id > 0) {
       await fetchShopRevenues(shopId: id);
+      await fetchGrowthSuggestions();
     }
   }
 
@@ -112,37 +116,126 @@ class BusinessOwnerController extends GetxController {
   }
 
   Future<void> fetchBusinessOwnerBooking() async {
-  isLoading.value = true;
-  try {
-    final id = myShopId.value;
-    if (id == null || id <= 0) {
-      allBusinessOwnerBookingOne.value =
-          OwnerBookingsResponse(next: null, previous: null, results: []);
-      return;
-    }
+    isLoading.value = true;
+    try {
+      final id = myShopId.value;
+      if (id == null || id <= 0) {
+        allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+          next: null,
+          previous: null,
+          results: [],
+          stats: OwnerBookingStats(
+            totalBookings: 0,
+            newBookings: 0,
+            cancelled: 0,
+            completed: 0,
+          ),
+        );
+        return;
+      }
 
-    final response = await NetworkCaller().getRequest(
-      AppUrls.ownerBooking(id.toString()), // <-- /payments/bookings/?shop_id={id}
-      token: AuthService.accessToken,
-      treat404AsEmpty: true,
-  emptyPayload: const {"next": null, "previous": null, "results": []},
-    );
+      final response = await NetworkCaller().getRequest(
+        AppUrls.ownerBooking(id.toString()), // /payments/bookings/?shop_id={id}
+        token: AuthService.accessToken,
+        treat404AsEmpty: true,
+        emptyPayload: const {
+          "next": null,
+          "previous": null,
+          "results": [],
+          "stats": {
+            "total_bookings": 0,
+            "new_bookings": 0,
+            "cancelled": 0,
+            "completed": 0
+          }
+        },
+      );
 
-    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
-      allBusinessOwnerBookingOne.value =
-          OwnerBookingsResponse.fromJson(response.responseData);
-    } else {
-      allBusinessOwnerBookingOne.value =
-          OwnerBookingsResponse(next: null, previous: null, results: []);
+      if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+        final data = response.responseData as Map<String, dynamic>;
+        allBusinessOwnerBookingOne.value = OwnerBookingsResponse.fromJson(data);
+      } else {
+        allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+          next: null,
+          previous: null,
+          results: [],
+          stats: OwnerBookingStats(
+            totalBookings: 0,
+            newBookings: 0,
+            cancelled: 0,
+            completed: 0,
+          ),
+        );
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'An error occurred: $e');
+      allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+        next: null,
+        previous: null,
+        results: [],
+        stats: OwnerBookingStats(
+          totalBookings: 0,
+          newBookings: 0,
+          cancelled: 0,
+          completed: 0,
+        ),
+      );
+    } finally {
+      isLoading.value = false;
     }
-  } catch (e) {
-    Get.snackbar('Error', 'An error occurred: $e');
-    allBusinessOwnerBookingOne.value =
-        OwnerBookingsResponse(next: null, previous: null, results: []);
-  } finally {
-    isLoading.value = false;
   }
-}
+
+  Future<void> fetchGrowthSuggestions() async {
+    try {
+      final id = myShopId.value;
+      if (id == null || id <= 0) {
+        growthSuggestions.clear();
+        return;
+      }
+
+      final res = await NetworkCaller().getRequest(
+        AppUrls.growthSuggestions(id.toString()),
+        token: AuthService.accessToken,
+        treat404AsEmpty: true,
+        emptyPayload: const [], // API returns an array
+      );
+
+      dynamic data = res.responseData;
+      if (data is String) {
+        try { data = json.decode(data); } catch (_) {}
+      }
+
+      if (res.isSuccess && data is List) {
+        // keep max 3
+        final list = data
+            .map((e) => GrowthSuggestion.fromJson(Map<String, dynamic>.from(e)))
+            .take(3)
+            .toList();
+        growthSuggestions.assignAll(list);
+      } else {
+        growthSuggestions.clear();
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[growth] error: $e');
+      growthSuggestions.clear();
+    }
+  }
+
+  IconData iconForSuggestionCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'discount':
+        return Icons.local_offer;
+      case 'operational':
+        return Icons.build; // or Icons.handyman
+      case 'marketing':
+        return Icons.campaign;
+      default:
+        return Icons.lightbulb;
+    }
+  }
+
+
+
 
   Future<void> fetchAllMyService() async {
     isLoading.value = true;

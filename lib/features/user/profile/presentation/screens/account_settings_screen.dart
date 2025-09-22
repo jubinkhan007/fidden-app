@@ -31,13 +31,13 @@ class AccountSettingsScreen extends StatelessWidget {
           _buildSettingsSection(
             title: 'App Settings',
             children: [
-              _buildSettingsItem(
-                icon: Icons.notifications_none,
-                title: 'Manage Notifications',
-                onTap: () {
-                  // TODO: Navigate to notification settings screen
-                },
-              ),
+              // _buildSettingsItem(
+              //   icon: Icons.notifications_none,
+              //   title: 'Manage Notifications',
+              //   onTap: () {
+              //     // TODO: Navigate to notification settings screen
+              //   },
+              // ),
               _buildSettingsItem(
                 icon: Icons.cleaning_services_outlined,
                 title: 'Clear App Data',
