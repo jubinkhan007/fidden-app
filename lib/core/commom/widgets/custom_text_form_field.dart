@@ -11,6 +11,7 @@ class CustomTexFormField extends StatefulWidget {
     this.controller,
     this.validator,
     this.isPassword = false,
+    this.obscureText, // <-- ADDED: New optional parameter
     this.maxLines = 1,
     this.radius,
     this.prefixIcon,
@@ -21,13 +22,14 @@ class CustomTexFormField extends StatefulWidget {
     this.suffixIcon,
     this.isPhoneField = false,
     this.contentPadding,
-    this.onFieldSubmitted, // New flag to handle phone input
+    this.onFieldSubmitted,
   });
 
   final String? hintText;
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final bool isPassword;
+  final bool? obscureText; // <-- ADDED: New optional parameter
   final int maxLines;
   final InputDecoration? inputDecoration;
   final double? radius;
@@ -58,73 +60,77 @@ class _CustomTexFormFieldState extends State<CustomTexFormField> {
       maxLines: widget.maxLines,
       controller: widget.controller,
       validator: widget.validator,
-      obscureText: widget.isPassword ? _obscureText : false,
+      // --- MODIFIED LOGIC ---
+      // It prioritizes the new obscureText property if provided.
+      // Otherwise, it falls back to the original isPassword logic.
+      obscureText: widget.obscureText ?? (widget.isPassword ? _obscureText : false),
       keyboardType: widget.isPhoneField
           ? TextInputType.phone
           : TextInputType.text,
       style: getTextStyleMsrt(),
       decoration:
-          widget.inputDecoration ??
+      widget.inputDecoration ??
           InputDecoration(
             prefixIcon: widget.prefixIcon,
             filled: true,
             //fillColor: Color(0xffFFFFFF),
             labelStyle: TextStyle(
-              color: Color(0xff616161),
+              color: const Color(0xff616161),
               fontSize: getWidth(14),
               fontWeight: FontWeight.w500,
             ),
             contentPadding:
-                widget.contentPadding ??
+            widget.contentPadding ??
                 const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             hintText: widget.hintText,
-            hintStyle: TextStyle(color: Color(0xFF84828E), fontSize: 16),
+            hintStyle: const TextStyle(color: Color(0xFF84828E), fontSize: 16),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.all(
                 Radius.circular(widget.radius ?? 8),
               ),
-              borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.all(
                 Radius.circular(widget.radius ?? 8),
               ),
-              borderSide: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.all(
                 Radius.circular(widget.radius ?? 8),
               ),
-              borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.all(
                 Radius.circular(widget.radius ?? 8),
               ),
-              borderSide: BorderSide(color: Colors.red),
+              borderSide: const BorderSide(color: Colors.red),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.all(
                 Radius.circular(widget.radius ?? 8),
               ),
-              borderSide: BorderSide(color: Colors.orange),
+              borderSide: const BorderSide(color: Colors.orange),
             ),
             suffixIcon: widget.isPassword
                 ? IconButton(
-                    icon: Icon(
-                      _obscureText
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: Colors.blue.withAlpha(150),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
-                  )
+              icon: Icon(
+                _obscureText
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                color: Colors.blue.withAlpha(150),
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscureText = !_obscureText;
+                });
+              },
+            )
                 : widget.suffixIcon,
           ),
     );
   }
 }
+

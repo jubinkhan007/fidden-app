@@ -24,7 +24,7 @@ class NewPasswordController extends GetxController {
       isLoading.value = true;
 
       final response = await NetworkCaller().postRequest(
-        AppUrls.changePassword,
+        AppUrls.resetPassword,
         body: requestBody,
       );
 

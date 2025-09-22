@@ -132,7 +132,7 @@ class MapScreenController extends GetxController {
       }
       if (nearest.value) {
         filtered.sort(
-              (a, b) => ((a.distance ?? 1e9).compareTo(b.distance ?? 1e9)),
+          (a, b) => ((a.distance ?? 1e9).compareTo(b.distance ?? 1e9)),
         );
       }
 

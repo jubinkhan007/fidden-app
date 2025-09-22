@@ -15,6 +15,7 @@ class CustomButton extends StatelessWidget {
     this.color,
     this.radious,
     this.borderColor,
+    this.isLoading = false, // <-- ADDED: New optional parameter
   });
   final bool isPrimary;
   final VoidCallback? onPressed;
@@ -25,28 +26,44 @@ class CustomButton extends StatelessWidget {
   final Color? color;
   final double? radious;
   final Color? borderColor;
+  final bool isLoading; // <-- ADDED: New optional parameter
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      // --- MODIFIED: Disable taps when loading ---
+      onTap: isLoading ? null : onPressed,
       child: Container(
         height: height,
         width: width,
         padding: padding ?? EdgeInsets.all(getWidth(13)),
         decoration: BoxDecoration(
           color:
-              color ??
+          color ??
               (isPrimary ? Theme.of(context).primaryColor : AppColors.white),
           borderRadius: BorderRadius.circular(radious ?? 8),
           border: Border.all(
             color: isPrimary
                 ? Theme.of(context).primaryColor
-                : borderColor ?? Color(0xFFCCD9D6),
+                : borderColor ?? const Color(0xFFCCD9D6),
             width: 1,
           ),
         ),
-        child: Center(child: child),
+        // --- MODIFIED: Show a loader or the child widget ---
+        child: Center(
+          child: isLoading
+              ? SizedBox(
+            height: 24,
+            width: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: isPrimary ? Colors.white : Theme.of(context).primaryColor,
+            ),
+          )
+              : child,
+        ),
       ),
     );
   }
 }
+

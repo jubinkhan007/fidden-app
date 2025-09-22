@@ -18,7 +18,8 @@ class AppUrls {
   static const String createAccount = '$_baseUrl/accounts/register/';
   static const String forgotEmail = '$_baseUrl/accounts/request-reset/';
   static const String verifyOtp = '$_baseUrl/accounts/verify-otp/';
-  static const String changePassword = '$_baseUrl/accounts/reset-password/';
+  static const String resetPassword = '$_baseUrl/accounts/reset-password/';
+  static const String changePassword = '$_baseUrl/accounts/change-password/';
 
   static const String login = '$_baseUrl/accounts/login/';
   static const String socialLogin = '$_baseUrl/accounts/login/google/';

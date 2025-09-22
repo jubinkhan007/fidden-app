@@ -1,8 +1,8 @@
+import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../../../core/commom/widgets/app_snackbar.dart';
-import '../../../../auth/presentation/screens/change_password_bottom_sheet.dart';
+import '../../../auth/presentation/screens/change_password_bottom_sheet.dart';
 
 class AccountSettingsScreen extends StatelessWidget {
   const AccountSettingsScreen({super.key});
@@ -34,9 +34,9 @@ class AccountSettingsScreen extends StatelessWidget {
                     ),
                   );
                   if (ok == true) {
-                    AppSnackBar.showSuccess('Password changed successfully!');
-                    // also refresh UI if needed
-                  }
+  AppSnackBar.showSuccess('Password changed successfully!');
+  // also refresh UI if needed
+}
                 },
               ),
             ],
