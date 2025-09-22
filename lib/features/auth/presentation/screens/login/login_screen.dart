@@ -26,6 +26,7 @@ class LoginScreen extends StatelessWidget {
   static const _primary = Color(0xFFDC143C); // button + brand red
   static const _divider = Color(0xFFEDEDED);
 
+
   InputDecoration _decor(String hint, {bool isPassword = false}) {
     return InputDecoration(
       hintText: hint,
@@ -128,14 +129,20 @@ class LoginScreen extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                         SizedBox(height: getHeight(10)),
-                        CustomTexFormField(
-                          controller: loginController.passwordController,
-                          hintText: "Enter your password",
-                          inputDecoration: _decor(
-                            "Enter your password",
-                            isPassword: true,
-                          ),
-                          isPassword: true,
+                  Obx(() => CustomTexFormField(
+                    controller: loginController.passwordController,
+                    hintText: "Enter your password",
+                    obscureText: loginController.obscurePassword.value,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        loginController.obscurePassword.value
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () => loginController
+                          .togglePasswordVisibility(loginController.obscurePassword),
+                    ),
+                    isPassword: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Password is required';
@@ -145,6 +152,7 @@ class LoginScreen extends StatelessWidget {
                             return null;
                           },
                         ),
+                  ),
 
                         SizedBox(height: getHeight(12)),
                         Align(

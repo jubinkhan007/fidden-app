@@ -15,10 +15,15 @@ class LoginController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final rememberMe = false.obs;
+  var obscurePassword = true.obs;
 
   bool _loggingIn = false;
 
   void toggleRememberMe() => rememberMe.value = !rememberMe.value;
+
+  void togglePasswordVisibility(RxBool obscureVar) {
+    obscureVar.value = !obscureVar.value;
+  }
 
   String _friendlyApiError(
     dynamic data, {
