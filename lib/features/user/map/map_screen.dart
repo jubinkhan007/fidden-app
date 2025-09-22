@@ -1,3 +1,4 @@
+import 'dart:math';
 // lib/features/user/map/map_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
@@ -25,7 +26,8 @@ class MapScreen extends StatelessWidget {
             GoogleMap(
               initialCameraPosition: c.camera,
               onMapCreated: c.onMapCreated,
-              myLocationEnabled: true,
+              // IMPORTANT: only enable when the app actually has permission.
+              myLocationEnabled: c.hasLocationPermission.value,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
               markers: c.markers.value,
@@ -43,7 +45,7 @@ class MapScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   _FilterChips(controller: c),
                   if (!c.hasLocationPermission.value)
-                    _PermissionBanner(onEnable: c.recenter),
+                    _PermissionBanner(onEnable: c.requestPermissionAndCenter),
                 ],
               ),
             ),
@@ -99,7 +101,7 @@ class MapScreen extends StatelessWidget {
               right: 16,
               bottom: 24 + 16,
               child: FloatingActionButton(
-                onPressed: c.recenter,
+                onPressed: c.requestPermissionAndCenter,
                 heroTag: 'recenter',
                 backgroundColor: Colors.white,
                 elevation: 3,
@@ -616,6 +618,3 @@ class _ShimmerList extends StatelessWidget {
     );
   }
 }
-
-
-// 

@@ -7,31 +7,104 @@ String trendingServiceModelToJson(TrendingServiceModel data) =>
     json.encode(data.toJson());
 
 class TrendingServiceModel {
-  String? next;
-  dynamic previous;
-  List<TrendingService>? results;
+  final String? next;
+  final String? previous;
+  final List<TrendingServiceItem> results;
 
-  TrendingServiceModel({this.next, this.previous, this.results});
+  TrendingServiceModel({
+    this.next,
+    this.previous,
+    required this.results,
+  });
 
-  factory TrendingServiceModel.fromJson(Map<String, dynamic> json) =>
-      TrendingServiceModel(
-        next: json["next"],
-        previous: json["previous"],
-        results: json["results"] == null
-            ? []
-            : List<TrendingService>.from(
-                json["results"]!.map((x) => TrendingService.fromJson(x)),
-              ),
+  factory TrendingServiceModel.fromJson(Map<String, dynamic> j) {
+    final list = (j['results'] as List<dynamic>? ?? [])
+        .map((e) => TrendingServiceItem.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ))
+        .toList();
+    return TrendingServiceModel(
+      next: j['next'] as String?,
+      previous: j['previous'] as String?,
+      results: list,
+    );
+  }
+
+  factory TrendingServiceModel.fromList(List<dynamic> arr) {
+    final list = arr
+        .map((e) => TrendingServiceItem.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ))
+        .toList();
+    return TrendingServiceModel(next: null, previous: null, results: list);
+  }
+
+  Map<String, dynamic> toJson() => {
+        'next': next,
+        'previous': previous,
+        'results': results.map((e) => e.toJson()).toList(),
+      };
+}
+
+class TrendingServiceItem {
+  final int id;
+  final String title;
+  final String? price;
+  final String? discountPrice;
+  final String? shopAddress;
+  final double? avgRating;
+  final int? reviewCount;
+  final String? serviceImg;
+  final String? badge;
+  final double? distance;
+  final bool? isActive;
+
+  TrendingServiceItem({
+    required this.id,
+    required this.title,
+    this.price,
+    this.discountPrice,
+    this.shopAddress,
+    this.avgRating,
+    this.reviewCount,
+    this.serviceImg,
+    this.badge,
+    this.distance,
+    this.isActive,
+  });
+
+  factory TrendingServiceItem.fromJson(Map<String, dynamic> j) =>
+      TrendingServiceItem(
+        id: j['id'] as int,
+        title: (j['title'] ?? '').toString(),
+        price: j['price']?.toString(),
+        discountPrice: j['discount_price']?.toString(),
+        shopAddress: j['shop_address']?.toString(),
+        avgRating:
+            j['avg_rating'] == null ? null : (j['avg_rating'] as num).toDouble(),
+        reviewCount: j['review_count'] as int?,
+        serviceImg: j['service_img']?.toString(),
+        badge: j['badge']?.toString(),
+        distance:
+            j['distance'] == null ? null : (j['distance'] as num).toDouble(),
+        isActive: j['is_active'] as bool?,
       );
 
   Map<String, dynamic> toJson() => {
-    "next": next,
-    "previous": previous,
-    "results": results == null
-        ? []
-        : List<dynamic>.from(results!.map((x) => x.toJson())),
-  };
+        'id': id,
+        'title': title,
+        'price': price,
+        'discount_price': discountPrice,
+        'shop_address': shopAddress,
+        'avg_rating': avgRating,
+        'review_count': reviewCount,
+        'service_img': serviceImg,
+        'badge': badge,
+        'distance': distance,
+        'is_active': isActive,
+      };
 }
+
 
 class TrendingService {
   int? id;

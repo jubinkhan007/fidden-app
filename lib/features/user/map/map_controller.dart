@@ -1,4 +1,3 @@
-// lib/features/user/map/map_controller.dart
 import 'dart:async';
 import 'dart:math';
 import 'package:fidden/core/services/location_service.dart';
@@ -7,35 +6,37 @@ import 'package:fidden/features/user/shops/data/all_shops_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
 class MapScreenController extends GetxController {
   final AllShopsController _shopsController = Get.find<AllShopsController>();
   final LocationService _locationService = LocationService();
 
-  // Map + UI state
+  // State
   final isLoading = true.obs;
   final markers = <Marker>{}.obs;
   final shops = <Shop>[].obs;
   final selectedShop = Rxn<Shop>();
   final suggestions = <Shop>[].obs;
   final showSearchThisArea = false.obs;
-  final hasLocationPermission = true.obs;
+  final hasLocationPermission = false.obs; // start false
 
   final searchController = TextEditingController();
   Timer? _searchDebounce;
 
-  // Map bits
+  // Map
   final mapControllerCompleter = Completer<GoogleMapController>();
   CameraPosition camera = const CameraPosition(
-    target: LatLng(23.7808875, 90.2792371), // safe default (Dhaka)
+    target: LatLng(23.7808875, 90.2792371),
     zoom: 14,
   );
   LatLng _lastFetchCenter = const LatLng(23.7808875, 90.2792371);
   bool _userDragged = false;
 
-  // Filters (lightweight)
-  final topRated = false.obs; // rating >= 4.5
-  final nearest = true.obs; // sort by distance
+  // Filters
+  final topRated = false.obs;
+  final nearest = true.obs;
 
   @override
   void onInit() {
@@ -55,22 +56,57 @@ class MapScreenController extends GetxController {
     try {
       isLoading.value = true;
 
-      // location permission + center
-      final pos = await _locationService.getCurrentPosition();
-      if (pos != null) {
-        camera = CameraPosition(
-          target: LatLng(pos.latitude, pos.longitude),
-          zoom: 14,
-        );
-        _lastFetchCenter = camera.target;
-      } else {
-        hasLocationPermission.value = false; // banner will show on UI
+      final p = await Geolocator.checkPermission();
+      hasLocationPermission.value =
+          p == LocationPermission.always || p == LocationPermission.whileInUse;
+
+      if (hasLocationPermission.value) {
+        final pos = await _safePosition();
+        if (pos != null) {
+          camera = CameraPosition(
+            target: LatLng(pos.latitude, pos.longitude),
+            zoom: 14,
+          );
+          _lastFetchCenter = camera.target;
+        }
       }
 
-      await fetchNearby(); // initial load
+      await fetchNearby();
     } finally {
       isLoading.value = false;
     }
+  }
+
+  // Called by banner + FAB
+  Future<void> requestPermissionAndCenter() async {
+    // If permanently denied, push to app settings
+    var p = await Geolocator.checkPermission();
+    if (p == LocationPermission.denied) {
+      p = await Geolocator.requestPermission();
+    }
+    if (p == LocationPermission.deniedForever) {
+      // open platform settings once; return early
+      await ph.openAppSettings();
+      return;
+    }
+
+    final granted =
+        p == LocationPermission.always || p == LocationPermission.whileInUse;
+    hasLocationPermission.value = granted;
+
+    if (!granted) return;
+
+    final pos = await _safePosition();
+    if (pos == null) {
+      Get.snackbar('Location', 'Couldn’t get your current position.');
+      return;
+    }
+
+    final c = await mapControllerCompleter.future;
+    final t = LatLng(pos.latitude, pos.longitude);
+    camera = CameraPosition(target: t, zoom: 14);
+    await c.animateCamera(CameraUpdate.newCameraPosition(camera));
+    await searchThisArea();
   }
 
   // Debounced text search
@@ -82,27 +118,21 @@ class MapScreenController extends GetxController {
     });
   }
 
-  // Fetch from your API via AllShopsController (it already handles location in body)
   Future<void> fetchNearby({String? query}) async {
     isLoading.value = true;
     try {
-      // 🔧 If you want “search this area”: pass map center to your AllShopsController.
-      // Add an optional `LatLng? at` param in fetchAllShops and use `at` instead of device GPS (snippet below).
       await _shopsController.fetchAllShops(
         query: (query != null && query.isNotEmpty) ? query : null,
-        // at: camera.target, // <- enable if you add support (see patch at bottom)
       );
 
       final list = _shopsController.allShops.value.shops;
-
-      // optional filters
       List<Shop> filtered = List.of(list);
       if (topRated.value) {
         filtered = filtered.where((s) => (s.avgRating ?? 0) >= 4.5).toList();
       }
       if (nearest.value) {
         filtered.sort(
-          (a, b) => ((a.distance ?? 1e9).compareTo(b.distance ?? 1e9)),
+              (a, b) => ((a.distance ?? 1e9).compareTo(b.distance ?? 1e9)),
         );
       }
 
@@ -121,36 +151,30 @@ class MapScreenController extends GetxController {
         final lat = double.tryParse(loc[0]);
         final lng = double.tryParse(loc[1]);
         if (lat != null && lng != null) {
-          set.add(
-            Marker(
-              markerId: MarkerId('shop_${s.id}'),
-              position: LatLng(lat, lng),
-              onTap: () => selectedShop.value = s,
-            ),
-          );
+          set.add(Marker(
+            markerId: MarkerId('shop_${s.id}'),
+            position: LatLng(lat, lng),
+            onTap: () => selectedShop.value = s,
+          ));
         }
       }
     }
     markers.value = set;
   }
 
-  // Suggestions under the search bar (simple: show top 5 by name match)
   void _buildSuggestions() {
     final q = searchController.text.trim().toLowerCase();
     if (q.isEmpty) {
       suggestions.clear();
       return;
     }
-    final res = shops
-        .where((s) => (s.name ?? '').toLowerCase().contains(q))
-        .take(5)
-        .toList();
-    suggestions.assignAll(res);
+    suggestions.assignAll(
+      shops.where((s) => (s.name ?? '').toLowerCase().contains(q)).take(5),
+    );
   }
 
   void clearSelection() => selectedShop.value = null;
 
-  // Map callbacks
   void onMapCreated(GoogleMapController c) {
     if (!mapControllerCompleter.isCompleted) {
       mapControllerCompleter.complete(c);
@@ -165,9 +189,8 @@ class MapScreenController extends GetxController {
   void onCameraIdle() {
     if (_userDragged) {
       _userDragged = false;
-      // show “Search this area” pill if moved a meaningful distance
       final movedMeters = _haversineMeters(_lastFetchCenter, camera.target);
-      showSearchThisArea.value = movedMeters > 120; // tweak threshold
+      showSearchThisArea.value = movedMeters > 120;
     }
   }
 
@@ -177,17 +200,16 @@ class MapScreenController extends GetxController {
     await fetchNearby(query: searchController.text.trim());
   }
 
-  Future<void> recenter() async {
-    final pos = await _locationService.getCurrentPosition();
-    if (pos == null) return;
-    final c = await mapControllerCompleter.future;
-    final t = LatLng(pos.latitude, pos.longitude);
-    camera = CameraPosition(target: t, zoom: 14);
-    await c.animateCamera(CameraUpdate.newCameraPosition(camera));
-    await searchThisArea();
+  Future<Position?> _safePosition() async {
+    try {
+      return await Geolocator
+          .getCurrentPosition()
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      return Geolocator.getLastKnownPosition();
+    }
   }
 
-  // Tap a suggestion → center + select
   Future<void> goToShop(Shop s) async {
     final loc = (s.location ?? '').split(',');
     if (loc.length != 2) return;
@@ -204,15 +226,13 @@ class MapScreenController extends GetxController {
     selectedShop.value = s;
   }
 
-  // Helpers
   double _haversineMeters(LatLng a, LatLng b) {
     const R = 6371000.0;
     final dLat = _deg(b.latitude - a.latitude);
     final dLon = _deg(b.longitude - a.longitude);
     final lat1 = _deg(a.latitude);
     final lat2 = _deg(b.latitude);
-    final h =
-        (sin(dLat / 2) * sin(dLat / 2)) +
+    final h = (sin(dLat / 2) * sin(dLat / 2)) +
         (sin(dLon / 2) * sin(dLon / 2)) * cos(lat1) * cos(lat2);
     return 2 * R * asin(sqrt(h));
   }

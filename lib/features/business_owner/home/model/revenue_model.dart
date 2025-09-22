@@ -17,12 +17,17 @@ class RevenueResponse {
 
   RevenueResponse({required this.totalRevenue, required this.points});
 
-  factory RevenueResponse.fromJson(Map<String, dynamic> j) => RevenueResponse(
-    totalRevenue: (j['total_revenue'] is num)
-        ? (j['total_revenue'] as num).toDouble()
-        : double.tryParse('${j['total_revenue']}') ?? 0.0,
-    points: (j['revenues'] as List? ?? const [])
-        .map((e) => RevenuePoint.fromJson(Map<String, dynamic>.from(e)))
-        .toList(),
-  );
+  factory RevenueResponse.fromJson(Map<String, dynamic> j) {
+    return RevenueResponse(
+      // Use the correct key: 'total_revenue'
+      totalRevenue: (j['total_revenue'] is num)
+          ? (j['total_revenue'] as num).toDouble()
+          : double.tryParse('${j['total_revenue']}') ?? 0.0,
+      
+      // Use the correct key: 'revenues'
+      points: (j['revenues'] as List? ?? const [])
+          .map((e) => RevenuePoint.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+    );
+  }
 }

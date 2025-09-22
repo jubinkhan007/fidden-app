@@ -747,7 +747,7 @@ class _TrendingServices extends GetView<HomeController> {
 class _TrendingCard extends StatelessWidget {
   const _TrendingCard({required this.r, required this.service});
   final R r;
-  final TrendingService service;
+  final TrendingServiceItem service;
 
   @override
   Widget build(BuildContext context) {

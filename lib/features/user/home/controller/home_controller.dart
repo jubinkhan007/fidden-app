@@ -34,7 +34,7 @@ class HomeController extends GetxController {
   // --- New Properties for Home Screen ---
   var promotions = <PromotionModel>[].obs;
   var categories = <CategoryModel>[].obs;
-  var trendingServices = TrendingServiceModel().obs;
+  var trendingServices = TrendingServiceModel(results: []).obs;
   var popularShops = AllShopsModel().obs;
 
   @override
@@ -70,21 +70,42 @@ class HomeController extends GetxController {
 
   // --- New Individual Fetch Methods ---
   Future<void> fetchPromotions() async {
-    try {
-      final response = await NetworkCaller().getRequest(
-        AppUrls.promotions,
-        token: AuthService.accessToken,
-      );
-      if (response.isSuccess) {
-        // API returns a list directly
-        promotions.value = List<PromotionModel>.from(
-          response.responseData.map((item) => PromotionModel.fromJson(item)),
-        );
-      }
-    } catch (e) {
-      AppSnackBar.showError('Could not fetch promotions: $e');
+  try {
+    final resp = await NetworkCaller().getRequest(
+      AppUrls.promotions,
+      token: AuthService.accessToken,
+    );
+    if (!resp.isSuccess) return;
+
+    final raw = resp.responseData;
+
+    // Accept either a root array or a wrapped map containing a list.
+    late final List<dynamic> list;
+
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map && raw['data'] is List) {
+      list = raw['data'] as List;
+    } else if (raw is Map && raw['results'] is List) {
+      // (optional) support "results" pagination shape
+      list = raw['results'] as List;
+    } else if (raw is Map && raw.values.isNotEmpty && raw.values.first is List) {
+      // (optional) last-resort: first list inside the map
+      list = raw.values.first as List;
+    } else {
+      throw Exception('Unexpected promotions format: ${raw.runtimeType}');
     }
+
+    promotions.value = list
+        .map((e) => PromotionModel.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ))
+        .toList();
+  } catch (e) {
+    AppSnackBar.showError('Could not fetch promotions: $e');
   }
+}
+
 
   Future<void> fetchCategories() async {
   try {
@@ -121,20 +142,27 @@ class HomeController extends GetxController {
 
 
   Future<void> fetchTrendingServices() async {
-    try {
-      final response = await NetworkCaller().getRequest(
-        AppUrls.trendingServices,
-        token: AuthService.accessToken,
-      );
-      if (response.isSuccess) {
-        trendingServices.value = TrendingServiceModel.fromJson(
-          response.responseData,
-        );
-      }
-    } catch (e) {
-      AppSnackBar.showError('Could not fetch trending services: $e');
+  try {
+    final res = await NetworkCaller().getRequest(
+      AppUrls.trendingServices,
+      token: AuthService.accessToken,
+    );
+    if (!res.isSuccess) return;
+
+    final raw = res.responseData;
+
+    if (raw is Map<String, dynamic>) {
+      trendingServices.value = TrendingServiceModel.fromJson(raw);
+    } else if (raw is List) {
+      trendingServices.value = TrendingServiceModel.fromList(raw);
+    } else {
+      throw Exception('Unexpected trending services format: ${raw.runtimeType}');
     }
+  } catch (e) {
+    AppSnackBar.showError('Could not fetch trending services: $e');
   }
+}
+
 
   Future<void> fetchPopularShops() async {
   try {

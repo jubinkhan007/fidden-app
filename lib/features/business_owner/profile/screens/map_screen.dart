@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_google_places_hoc081098/flutter_google_places_hoc081098.dart';
 
@@ -33,6 +34,7 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
   final _markers = <Marker>{};
   Marker? _currentMarker;
   LatLng? _selected;
+  bool _hasLocationPermission = false;
 
   late LatLng _initialCenter;
 
@@ -84,16 +86,106 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
       await _updateAddressFor(widget.initialPosition!);
       return;
     }
+    final ok = await _ensureLocationPermission(context);
+    _hasLocationPermission = ok;
+    if (!ok) {
+      if (mounted) setState(() {});   // so myLocationEnabled reflects it
+      return;
+    }
+
+    final pos = await Geolocator.getCurrentPosition();
+    final here = LatLng(pos.latitude, pos.longitude);
+
+    _initialCenter = here;
+    _setCurrentMarker(here);
+    _setSelected(here, animate: true);
+    await _updateAddressFor(here);
+  }
+
+  Future<void> _goMyLocation() async {
+    try {
+      final ok = await _ensureLocationPermission(context);
+      _hasLocationPermission = ok;
+      if (!ok) {
+        if (mounted) setState(() {});
+        return; // don’t proceed
+      }
+
+      final pos = await Geolocator.getCurrentPosition();
+      final here = LatLng(pos.latitude, pos.longitude);
+      _setCurrentMarker(here);
+      _setSelected(here, animate: true);
+      if (mounted) setState(() {});
+    } catch (_) {
+      Get.snackbar('Location', 'Unable to fetch your current location.');
+    }
 
     // fallback: current location
     await _ensureLocationPermissionThenCenter();
+  }
+
+  Future<bool> _ensureLocationPermission(BuildContext context) async {
+    final servicesOn = await Geolocator.isLocationServiceEnabled();
+    if (!servicesOn) {
+      if (!mounted) return false;
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Turn On Location'),
+          content: const Text('Location services are off. Turn them on to find nearby places.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Not now')),
+            TextButton(
+              onPressed: () async {
+                await Geolocator.openLocationSettings();
+                if (context.mounted) Navigator.pop(context);
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+
+    var p = await Geolocator.checkPermission();
+    if (p == LocationPermission.denied) {
+      p = await Geolocator.requestPermission();
+      if (p == LocationPermission.denied) return false;
+    }
+
+    if (p == LocationPermission.deniedForever) {
+      if (!mounted) return false;
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Enable Location'),
+          content: const Text(
+            'Location permission was denied previously. Enable it in Settings to use your current location.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Not now')),
+            TextButton(
+              onPressed: () async {
+                await openAppSettings(); // from permission_handler
+                if (context.mounted) Navigator.pop(context);
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+
+    return true;
   }
 
   Future<void> _ensureLocationPermissionThenCenter() async {
     LocationPermission p = await Geolocator.checkPermission();
     if (p == LocationPermission.denied ||
         p == LocationPermission.deniedForever) {
-      p = await Geolocator.requestPermission();
+      // p = await Geolocator.requestPermission();
     }
     if (p == LocationPermission.denied || p == LocationPermission.deniedForever)
       return;
@@ -142,16 +234,6 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _goMyLocation() async {
-    try {
-      final pos = await Geolocator.getCurrentPosition();
-      final here = LatLng(pos.latitude, pos.longitude);
-      _setCurrentMarker(here);
-      _setSelected(here, animate: true);
-    } catch (_) {
-      Get.snackbar('Location', 'Unable to fetch your current location.');
-    }
-  }
 
   // ---------- Reverse geocode nicely ----------
   Future<void> _updateAddressFor(LatLng p) async {
@@ -291,11 +373,38 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
               target: _initialCenter,
               zoom: 14,
             ),
-            myLocationEnabled: true,
+            myLocationEnabled: _hasLocationPermission,
             myLocationButtonEnabled: false,
             onTap: _onTap,
             markers: _markers,
           ),
+          if (!_hasLocationPermission)
+            Positioned(
+              left: 12, right: 12, bottom: 110,
+              child: Material(
+                elevation: 8, color: Colors.white, borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Location is off', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      const Text('Enable location to center the map on you and find nearby places.'),
+                      const SizedBox(height: 10),
+                      FilledButton(
+                        onPressed: () async {
+                          final ok = await _ensureLocationPermission(context);
+                          if (mounted) setState(() {});
+                          if (ok) _goMyLocation();
+                        },
+                        child: const Text('Enable location'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
           // Floating search pill (tap to open autocomplete)
           Positioned(
