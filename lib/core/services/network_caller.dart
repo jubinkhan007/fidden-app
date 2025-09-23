@@ -209,7 +209,7 @@ class NetworkCaller {
         return newResponse; // Return the response from the retried request.
       } else {
         // If refresh failed, log out the user.
-        await AuthService.logoutUser();
+        await AuthService.clearAuthData();
 
         // Reject all pending requests.
         for (var completer in _pendingRequests) {

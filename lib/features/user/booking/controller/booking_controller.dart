@@ -175,54 +175,60 @@ Future<void> _fetchHistory({bool reset = false}) async {
   }
 
   Future<void> cancelBooking(BookingItem booking) async {
-  // Show a confirmation dialog
-  Get.defaultDialog(
-    title: "Cancel Booking",
-    middleText: "Are you sure you want to cancel this booking?",
-    textConfirm: "Yes, Cancel",
-    textCancel: "No",
-    confirmTextColor: Colors.white,
-    onConfirm: () async {
-      Get.back(); // Close the confirmation dialog
-
-      // Show loading indicator
-      Get.dialog(
-        const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false,
-      );
-
-      ResponseData? response;
-      try {
-        // Await the network call and store the response
-        response = await NetworkCaller().postRequest(
-          AppUrls.cancelBooking(booking.id),
-          token: AuthService.accessToken,
+    // --- No changes needed in the dialog or network call logic ---
+    Get.defaultDialog(
+      title: "Cancel Booking",
+      middleText: "Are you sure you want to cancel this booking?",
+      textConfirm: "Yes, Cancel",
+      textCancel: "No",
+      confirmTextColor: Colors.white,
+      onConfirm: () async {
+        Get.back();
+        Get.dialog(
+          const Center(child: CircularProgressIndicator()),
+          barrierDismissible: false,
         );
-      } catch (e) {
-        // In case of an exception, ensure the response is null
-        response = null;
-      } finally {
-        // This is the crucial part:
-        // ALWAYS close the loading dialog before proceeding.
-        if (Get.isDialogOpen ?? false) {
-          Get.back();
-        }
-      }
 
-      // Now, handle the result AFTER the dialog is closed
-      if (response != null && response.isSuccess) {
-        AppSnackBar.showSuccess(
-            "Booking canceled successfully and refund initiated.");
-        // Move the booking from the active list to the cancelled list
-        active.removeWhere((b) => b.id == booking.id);
-        cancelled.insert(0, booking.copyWith(status: 'cancelled'));
-      } else {
-        AppSnackBar.showError(
-            response?.errorMessage ?? "Failed to cancel booking.");
-      }
-    },
-  );
-}
+        ResponseData? response;
+        try {
+          response = await NetworkCaller().postRequest(
+            AppUrls.cancelBooking(booking.id),
+            token: AuthService.accessToken,
+          );
+        } catch (e) {
+          response = null;
+        } finally {
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+        }
+
+        if (response != null && response.isSuccess) {
+          AppSnackBar.showSuccess(
+              "Booking canceled successfully and refund initiated.");
+
+          // ✅ THE FIX: Update all relevant lists for a seamless UI update.
+
+          // 1. Create the new "cancelled" version of the booking.
+          final cancelledBooking = booking.copyWith(status: 'cancelled');
+
+          // 2. Remove the booking from the 'active' list.
+          active.removeWhere((b) => b.id == booking.id);
+
+          // 3. Add it to the top of the dedicated 'cancelled' list.
+          cancelled.insert(0, cancelledBooking);
+
+          // 4. ✨ CRUCIAL STEP: Add it to the top of the 'historyAll' list,
+          //    which controls the UI's display order.
+          historyAll.insert(0, cancelledBooking);
+
+        } else {
+          AppSnackBar.showError(
+              response?.errorMessage ?? "Failed to cancel booking.");
+        }
+      },
+    );
+  }
   
 }
 

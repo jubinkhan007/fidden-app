@@ -103,7 +103,7 @@ class AppUrls {
 
   //User-Home_Screen
   static const String promotions = '$_baseUrl/api/promotions/';
-  static const String trendingServices = '$_baseUrl/api/users/services/?top=2';
+  static const String trendingServices = '$_baseUrl/api/users/services/?top=5';
   static const String popularShops = '$_baseUrl/api/users/shops/?top=5';
   static const String categories = '$_baseUrl/api/categories/';
 

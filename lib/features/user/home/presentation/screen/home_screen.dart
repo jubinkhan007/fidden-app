@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
+import 'package:fidden/features/splash/controller/splash_controller.dart';
 import 'package:fidden/features/user/home/controller/home_controller.dart';
 import 'package:fidden/features/user/home/data/category_model.dart';
 import 'package:fidden/features/user/home/data/promotion_offers_model.dart';
@@ -270,22 +271,27 @@ class _Header extends StatelessWidget {
                     ),
                     SizedBox(height: r.h(10)),
                     Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: r.w(16),
-                          color: const Color(0xFFFFE082),
-                        ),
-                        SizedBox(width: r.w(6)),
-                        Text(
-                          'California, US',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: r.sp(14),
-                          ),
-                        ),
-                      ],
-                    ),
+  children: [
+    Icon(
+      Icons.location_on,
+      size: r.w(16),
+      color: const Color(0xFFFFE082),
+    ),
+    SizedBox(width: r.w(6)),
+
+    //Use Obx here
+    Obx(() {
+      final addr = SplashController.address.value.trim();
+      return Text(
+        addr.isNotEmpty ? addr : "Location not available", // fallback text
+        style: TextStyle(
+          color: Colors.white70,
+          fontSize: r.sp(14),
+        ),
+      );
+    }),
+  ],
+),
                     //SizedBox(height: 2,)
                   ],
                 ),

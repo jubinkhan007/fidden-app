@@ -28,6 +28,21 @@ class AuthService {
     _role = _preferences.getString(_roleKey);
   }
 
+  static Future<void> clearAuthData() async {
+    try {
+      await _preferences.remove(_accessTokenKey);
+      await _preferences.remove(_refreshTokenKey); // Also clear the refresh token
+      await _preferences.remove(_roleKey);
+      _accessToken = null;
+      _refreshToken = null;
+      _role = null;
+      log('Auth data cleared.');
+    } catch (e) {
+      log('Error clearing auth data: $e');
+    }
+  }
+
+
   static bool hasToken() {
     return _preferences.containsKey(_accessTokenKey);
   }
@@ -71,18 +86,10 @@ class AuthService {
   }
 
   static Future<void> logoutUser() async {
-    try {
-      await _preferences.remove(_accessTokenKey);
-      await _preferences.remove(_roleKey);
-      //await _preferences.remove(_isSeeOnboardingKey); // explicitly remove onboarding flag
-      _accessToken = null;
-      _refreshToken = null;
-      _role = null;
-      log("+++++++++++++ Logout called");
-      await goToLogin();
-    } catch (e) {
-      log('Error during logout: $e');
-    }
+    await clearAuthData();
+    log("+++++++++++++ Logout called, navigating to login");
+    // This now directly handles the navigation
+    Get.offAll(() => LoginScreen());
   }
 
   static Future<void> goToLogin() async {
