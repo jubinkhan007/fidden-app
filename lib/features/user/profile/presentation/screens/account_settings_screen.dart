@@ -1,3 +1,4 @@
+import 'package:fidden/features/settings/presentation/utils/app_data_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -56,8 +57,13 @@ class AccountSettingsScreen extends StatelessWidget {
                 icon: Icons.cleaning_services_outlined,
                 title: 'Clear App Data',
                 onTap: () {
-                  // TODO: Implement clear app data functionality
-                },
+              _showConfirmationDialog(
+                context: context,
+                title: 'Clear App Data',
+                content: 'This will clear the app cache and log you out. Are you sure?',
+                onConfirm: AppDataUtils.clearAppData,
+              );
+            },
               ),
             ],
           ),
@@ -69,8 +75,13 @@ class AccountSettingsScreen extends StatelessWidget {
                 icon: Icons.power_settings_new,
                 title: 'Deactivate Account',
                 onTap: () {
-                  // TODO: Implement deactivate account functionality
-                },
+              _showConfirmationDialog(
+                context: context,
+                title: 'Deactivate Account',
+                content: 'This will permanently clear all app data and log you out. Are you sure?',
+                onConfirm: AppDataUtils.deactivateAccount,
+              );
+            },
               ),
               _buildSettingsItem(
                 icon: Icons.delete_outline,
@@ -143,4 +154,36 @@ class AccountSettingsScreen extends StatelessWidget {
       onTap: onTap,
     );
   }
+
+// Add this helper method inside your screen's State class
+void _showConfirmationDialog({
+  required BuildContext context,
+  required String title,
+  required String content,
+  required VoidCallback onConfirm,
+}) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: const Text('Confirm'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              onConfirm();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 }

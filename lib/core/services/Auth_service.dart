@@ -92,6 +92,14 @@ class AuthService {
     Get.offAll(() => LoginScreen());
   }
 
+  static Future<void> clearAllDataForDeactivation() async {
+    final prefs = _preferences ?? await SharedPreferences.getInstance();
+    // .clear() is the most reliable way to reset the app state.
+    await prefs.clear(); 
+    log('All SharedPreferences data has been cleared for deactivation.');
+  }
+
+
   static Future<void> goToLogin() async {
     Get.offAll(() => LoginScreen());
   }

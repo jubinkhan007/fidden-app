@@ -16,10 +16,10 @@ class BookingSummaryController extends GetxController {
   // In lib/features/user/booking/controller/booking_summary_controller.dart
 
   Future<void> payForBooking({
-    required int bookingId,
+    required int slotId,
     Map<String, dynamic>? successArgs, // <-- This is preserved
   }) async {
-    if (bookingId == 0) {
+    if (slotId == 0) {
       Get.snackbar('Error', 'Missing booking id');
       return;
     }
@@ -28,7 +28,7 @@ class BookingSummaryController extends GetxController {
     try {
       // 1. Ask backend for all payment secrets
       final res = await NetworkCaller().postRequest(
-        AppUrls.paymentIntent(bookingId),
+        AppUrls.paymentIntent(slotId),
         token: AuthService.accessToken,
         body: const {},
       );
@@ -42,6 +42,7 @@ class BookingSummaryController extends GetxController {
 
       // --- ⬇️ MODIFIED BLOCK ⬇️ ---
       // Extract all three required keys now
+      final bookingId = data['booking_id'] as int?;
       final clientSecret = data['client_secret'] as String?;
       final ephemeralKey = data['ephemeral_key'] as String?;
       final customerId = data['customer_id'] as String?;
@@ -77,8 +78,13 @@ class BookingSummaryController extends GetxController {
 
       await Stripe.instance.presentPaymentSheet();
 
+      final mergedArgs = <String, dynamic>{
+  if (successArgs != null) ...successArgs!,
+  if (bookingId != null) 'bookingId': bookingId, // ← ensure server ID wins
+};
+
       // 3. Success navigation is preserved exactly as you had it
-      Get.offAllNamed('/booking-confirmation', arguments: successArgs ?? {});
+      Get.offAllNamed('/booking-confirmation', arguments: mergedArgs ?? {});
     } on StripeException catch (e) {
       // Your existing Stripe error handling is preserved
       if (e.error.code != FailureCode.Canceled) {

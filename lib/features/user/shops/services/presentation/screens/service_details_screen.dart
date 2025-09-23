@@ -450,117 +450,74 @@ class ServiceDetailsScreen extends StatelessWidget {
                                 elevation: 0,
                               ),
                               onPressed: busy
-                                  ? null
-                                  : () async {
-                                      if (_bookingBusy.value) return;
-                                      _bookingBusy.value = true;
-                                      try {
-                                        final slotId = c.selectedSlotId.value;
-                                        if (slotId == null) {
-                                          Get.snackbar(
-                                            'Select a time',
-                                            'Please select a time slot to continue.',
-                                            snackPosition:
-                                                SnackPosition.BOTTOM,
-                                          );
-                                          return;
-                                        }
+    ? null
+    : () async {
+        if (_bookingBusy.value) return;
+        _bookingBusy.value = true;
+        try {
+          final slotId = c.selectedSlotId.value;
+          if (slotId == null) {
+            Get.snackbar(
+              'Select a time',
+              'Please select a time slot to continue.',
+              snackPosition: SnackPosition.BOTTOM,
+            );
+            return;
+          }
 
-                                        // find the selected slot to format the date/time
-                                        DateTime? slotStartLocal;
-                                        try {
-                                          final slot = c.slots
-                                              .firstWhere((s) => s.id == slotId);
-                                          slotStartLocal =
-                                              slot.startTimeUtc.toLocal();
-                                        } catch (_) {}
+          // find the selected slot to format the date/time
+          DateTime? slotStartLocal;
+          try {
+            final slot = c.slots.firstWhere((s) => s.id == slotId);
+            slotStartLocal = slot.startTimeUtc.toLocal();
+          } catch (_) {}
 
-                                        final slotLabel = (slotStartLocal != null)
-                                            ? DateFormat('MMMM d, yyyy, h.mm a')
-                                                .format(slotStartLocal)
-                                            : '—';
+          final slotLabel = (slotStartLocal != null)
+              ? DateFormat('MMMM d, yyyy, h.mm a').format(slotStartLocal)
+              : '—';
 
-                                        String? currentPriceStr;
-                                        String? originalPriceStr;
-                                        final details = c.details.value;
-                                        if (details != null) {
-                                          final hasDiscount = (details
-                                                      .discountPrice !=
-                                                  null &&
-                                              details.discountPrice!
-                                                  .trim()
-                                                  .isNotEmpty);
-                                          currentPriceStr = hasDiscount
-                                              ? details.discountPrice
-                                              : details.price;
-                                          originalPriceStr = details.price;
-                                        }
+          String? currentPriceStr;
+          String? originalPriceStr;
+          final details = c.details.value;
+          if (details != null) {
+            final hasDiscount = (details.discountPrice != null &&
+                details.discountPrice!.trim().isNotEmpty);
+            currentPriceStr = hasDiscount ? details.discountPrice : details.price;
+            originalPriceStr = details.price;
+          }
 
-                                        final resp =
-                                            await NetworkCaller().postRequest(
-                                          AppUrls.slotBooking,
-                                          body: {'slot_id': slotId},
-                                          token: AuthService.accessToken,
-                                        );
+          // ✅ No API call here. Just navigate with arguments.
+          //    Use the selected slotId as the bookingId to keep the arg name.
+          final args = {
+            'bookingId': slotId, // ← passing slotId as the bookingId
+            'serviceName': details?.title ?? '',
+            'shopName': details?.shopName ?? '',
+            'service_img': details?.serviceImg ?? '',
+            'shopAddress': details?.shopAddress ?? '',
+            'serviceDurationMinutes': details?.duration ?? 0,
+            'selectedSlotLabel': slotLabel,
+            'price': originalPriceStr ?? '',
+            'discountPrice':
+                (details?.discountPrice?.trim().isNotEmpty ?? false)
+                    ? details?.discountPrice
+                    : null,
 
-                                        if (!resp.isSuccess) {
-                                          final body =
-                                              '${resp.responseData ?? resp.errorMessage ?? ''}';
-                                          if (body.contains('IntegrityError')) {
-                                            AppSnackBar.showError(
-                                              'That time slot was just taken. Please pick another.',
-                                            );
-                                            await c.fetchSlotsForDate(
-                                                c.selectedDate.value);
-                                            return;
-                                          }
-                                          AppSnackBar.showError(
-                                            resp.errorMessage ??
-                                                'Failed to create booking. Please try again.',
-                                          );
-                                          return;
-                                        }
+            // keep a reference payload if the summary screen needs context
+            'booking': {
+              'slot_id': slotId,
+              'service_id': details?.id,
+              'shop_id': details?.shopId,
+            },
+          };
 
-                                        final responseData =
-                                            resp.responseData
-                                                    as Map<String, dynamic>? ??
-                                                {};
-                                        final bookingId =
-                                            responseData['id'] as int?;
+          Get.to(() => BookingSummaryScreen(), arguments: args);
+        } catch (e) {
+          AppSnackBar.showError('Could not continue: $e');
+        } finally {
+          _bookingBusy.value = false;
+        }
+      },
 
-                                        final args = {
-                                          'bookingId': bookingId,
-                                          'serviceName': details?.title ?? '',
-                                          'shopName': details?.shopName ?? '',
-                                          'service_img':
-                                              details?.serviceImg ?? '',
-                                          'shopAddress':
-                                              details?.shopAddress ?? '',
-                                          'serviceDurationMinutes':
-                                              details?.duration ?? 0,
-                                          'selectedSlotLabel': slotLabel,
-                                          'price': originalPriceStr ?? '',
-                                          'discountPrice': (details
-                                                          ?.discountPrice
-                                                          ?.trim()
-                                                          .isNotEmpty ??
-                                                      false)
-                                              ? details?.discountPrice
-                                              : null,
-                                          'booking': resp.responseData,
-                                        };
-
-                                        Get.to(
-                                          () => BookingSummaryScreen(),
-                                          arguments: args,
-                                        );
-                                      } catch (e) {
-                                        AppSnackBar.showError(
-                                            'Booking failed: $e');
-                                      } finally {
-                                        _bookingBusy.value = false;
-                                      }
-                                    },
                               // ─── Spinner or label ────────────────────────
                               child: busy
                                   ? const SizedBox(

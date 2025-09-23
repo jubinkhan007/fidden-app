@@ -182,7 +182,7 @@ void dispose() {
                     (controller.isTermsAgreed.value &&
                         !controller.isPaying.value)
                     ? () => controller.payForBooking(
-                        bookingId: bookingId,
+                        slotId: bookingId,
                         successArgs: {
     'serviceName': serviceName,
     'dateTimeText': selectedSlot, // Use 'dateTimeText' key
