@@ -28,7 +28,10 @@ class ServiceDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final RxBool _bookingBusy = false.obs; // ← spinner state
-    final c = Get.put(ServiceDetailsController(serviceId));
+    final tag = 'svc_${serviceId}';
+final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
+    ? Get.find<ServiceDetailsController>(tag: tag)
+    : Get.put(ServiceDetailsController(serviceId), tag: tag, permanent: true);
 
     //  Ensure we have a WishlistController to manage the heart state
     final wishlist = Get.isRegistered<WishlistController>()
@@ -358,7 +361,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           Obx(() {
                             if (c.isLoadingSlots.value) {
-                              return _SlotsShimmer();
+                              return SlotsShimmer();
                             }
                             if (c.slots.isEmpty) {
                               return Padding(
@@ -376,7 +379,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                               children: c.slots.map((s) {
                                 final isSel = c.selectedSlotId.value == s.id;
                                 final label = c.fmtTimeLocal(s.startTimeUtc);
-                                return _TimeChip(
+                                return TimeChip(
                                   text: label,
                                   selected: isSel,
                                   available: s.available,
@@ -508,6 +511,18 @@ class ServiceDetailsScreen extends StatelessWidget {
               'service_id': details?.id,
               'shop_id': details?.shopId,
             },
+            'preload': {
+    'selectedDate': c.selectedDate.value.toIso8601String(),
+    'slots': c.slots.map((s) => {
+      'id': s.id,
+      'start': s.startTimeUtc.toIso8601String(),
+      'end': s.endTimeUtc.toIso8601String(),
+      'available': s.available,
+      'service': s.service,
+      'shop': s.shop,
+      'capLeft': s.capacityLeft,
+    }).toList(),
+  },
           };
 
           Get.to(() => BookingSummaryScreen(), arguments: args);
@@ -716,8 +731,8 @@ class _DatePill extends StatelessWidget {
       ][m - 1];
 }
 
-class _TimeChip extends StatelessWidget {
-  const _TimeChip({
+class TimeChip extends StatelessWidget {
+  const TimeChip({
     required this.text,
     required this.selected,
     required this.available,
@@ -770,7 +785,7 @@ class _TimeChip extends StatelessWidget {
   }
 }
 
-class _SlotsShimmer extends StatelessWidget {
+class SlotsShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(

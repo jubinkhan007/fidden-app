@@ -1,10 +1,17 @@
 import 'package:fidden/features/user/booking/controller/booking_summary_controller.dart';
+import 'package:fidden/features/user/shops/services/data/time_slots_model.dart';
+import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:fidden/routes/app_routes.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:developer';
+import 'package:intl/intl.dart';
+import 'package:fidden/features/user/shops/services/controller/service_details_controller.dart';
+import 'package:table_calendar/table_calendar.dart';
 
+// same format you used when creating selectedSlotLabel
+final _slotFmt = DateFormat('MMMM d, yyyy, h.mm a');
 // --- FIX: Converted to StatefulWidget for safe argument handling ---
 class BookingSummaryScreen extends StatefulWidget {
   const BookingSummaryScreen({super.key});
@@ -20,10 +27,12 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   late final String serviceImg;
   late final String shopAddress;
   late final int serviceDuration;
-  late final String selectedSlot;
+  late String selectedSlot;
   late final double servicePrice;
   late final double? discountPrice;
-  late final int bookingId; // <-- Will hold the booking ID
+  late int bookingId; // <-- Will hold the booking ID
+  final _openingSheet = false.obs;
+
 
   final controller = Get.put(BookingSummaryController());
   late final TapGestureRecognizer _termsTap;
@@ -106,7 +115,18 @@ void dispose() {
               const SizedBox(height: 24),
               _buildSectionTitle("Date & Time", color: primaryTextColor),
               const SizedBox(height: 12),
-              _DateTimeCard(selectedSlot: selectedSlot),
+              Obx(() => _DateTimeCard(
+  selectedSlot: selectedSlot,
+  opening: _openingSheet.value,        // <— NEW
+  onEdit: () async {
+    _openingSheet.value = true;
+    try {
+      await _openScheduleSheet();
+    } finally {
+      _openingSheet.value = false;
+    }
+  },
+)),
               const SizedBox(height: 24),
               _buildSectionTitle("Pricing Details", color: primaryTextColor),
               const SizedBox(height: 12),
@@ -233,6 +253,244 @@ void dispose() {
       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
     );
   }
+
+DateTime? _parseSelectedSlot() {
+  try {
+    if (selectedSlot.trim().isEmpty) return null;
+    return _slotFmt.parse(selectedSlot).toLocal();
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<void> _openScheduleSheet() async {
+  final args = Get.arguments as Map<String, dynamic>? ?? {};
+  final booking = (args['booking'] as Map<String, dynamic>?) ?? {};
+  final serviceId = booking['service_id'] as int? ?? 0;
+  if (serviceId == 0) {
+    Get.snackbar('Unavailable', 'Cannot edit time without a service id.');
+    return;
+  }
+
+  // Reuse a stable, permanent controller (cached)
+  final tag = 'svc_$serviceId';
+  final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
+      ? Get.find<ServiceDetailsController>(tag: tag)
+      : Get.put(ServiceDetailsController(serviceId), tag: tag, permanent: true);
+
+  // parse the current selected slot (for preselect after data arrives)
+  final initLocal = _parseSelectedSlot();
+
+  // Seed from preload if present (fast path, no network)
+  final preload = (args['preload'] as Map<String, dynamic>?) ?? {};
+  if (preload.isNotEmpty) {
+    final preSlots = (preload['slots'] as List?) ?? const [];
+    if (preSlots.isNotEmpty) {
+      final sel = DateTime.tryParse(preload['selectedDate'] ?? '');
+      final seeded = preSlots.map((m) => SlotItem(
+        id: m['id'],
+        shop: m['shop'],
+        service: m['service'],
+        startTimeUtc: DateTime.parse(m['start']),
+        endTimeUtc: DateTime.parse(m['end']),
+        capacityLeft: m['capLeft'],
+        available: m['available'],
+      )).toList();
+      if (sel != null) {
+        c.seedPreloadedSlots(selected: sel, preloaded: seeded); // fills cache + UI
+      } else {
+        c.slots.assignAll(seeded); // fallback
+      }
+    }
+  }
+
+  // 🔹 SHOW THE SHEET *NOW* — no awaits above this line
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) {
+      final media = MediaQuery.of(context);
+      final height = media.size.height * 0.80;
+      return SizedBox(
+        height: height,
+        child: Obx(() {
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final windowEnd = today.add(const Duration(days: 6));
+          final firstVisible = DateTime(today.year, today.month, 1);
+          final lastVisible  = DateTime(today.year, today.month + 1, 0);
+          bool inWindow(DateTime d) => !d.isBefore(today) && !d.isAfter(windowEnd);
+
+          return Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 6),
+                decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 12),
+              const Text('Select a new date & time',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 12),
+
+              // Calendar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: TableCalendar(
+                  firstDay: firstVisible,
+                  lastDay: lastVisible,
+                  focusedDay: c.selectedDate.value,
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false, titleCentered: true,
+                    leftChevronVisible: true, rightChevronVisible: true,
+                  ),
+                  startingDayOfWeek: StartingDayOfWeek.sunday,
+                  availableGestures: AvailableGestures.none,
+                  selectedDayPredicate: (d) =>
+                      d.year == c.selectedDate.value.year &&
+                      d.month == c.selectedDate.value.month &&
+                      d.day == c.selectedDate.value.day,
+                  onDaySelected: (sel, foc) async {
+                    if (!inWindow(sel) || c.isClosedDay(sel)) return;
+                    c.selectedDate.value = sel;
+                    // fire & forget; cache returns instantly if warm
+                    c.fetchSlotsForDate(sel, useCache: true);
+                  },
+                  enabledDayPredicate: (day) {
+                    if (!inWindow(day)) return false;
+                    return !c.isClosedDay(day);
+                  },
+                  calendarBuilders: CalendarBuilders(
+                    defaultBuilder: (ctx, day, foc) {
+                      final disabled = !inWindow(day) || c.isClosedDay(day);
+                      return Center(child: Text('${day.day}',
+                        style: TextStyle(fontWeight: FontWeight.w800,
+                          color: disabled ? Colors.grey.shade400 : const Color(0xFF120D1C))));
+                    },
+                    todayBuilder: (ctx, day, foc) => const Center(
+                      child: Text('',
+                        style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF120D1C))),
+                    ),
+                    selectedBuilder: (ctx, day, foc) => Center(
+                      child: Container(width: 36, height: 36,
+                        decoration: BoxDecoration(color: Get.theme.primaryColor, shape: BoxShape.circle),
+                        alignment: Alignment.center,
+                        child: Text('${day.day}',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Slots
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Select a time',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.grey.shade900)),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Obx(() {
+                    if (c.isLoadingSlots.value && c.slots.isEmpty) {
+                      return SlotsShimmer();
+                    }
+                    if (c.slots.isEmpty) {
+                      return Center(child: Text('No time slots available.', style: TextStyle(color: Colors.grey.shade700)));
+                    }
+                    return SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: c.slots.map((s) {
+                          final isSel = c.selectedSlotId.value == s.id;
+                          final label = c.fmtTimeLocal(s.startTimeUtc);
+                          return TimeChip(
+                            text: label,
+                            selected: isSel,
+                            available: s.available,
+                            onTap: () => c.selectedSlotId.value = s.id,
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+
+              // Update button
+              SafeArea(
+                top: false,
+                minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Obx(() {
+                  final canUpdate = c.selectedSlotId.value != null;
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: canUpdate ? () {
+                        final selId = c.selectedSlotId.value!;
+                        final sel = c.slots.firstWhere((e) => e.id == selId);
+                        final localStart = sel.startTimeUtc.toLocal();
+                        setState(() {
+                          bookingId   = selId;
+                          selectedSlot = _slotFmt.format(localStart);
+                        });
+                        Navigator.of(context).pop();
+                      } : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Get.theme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Update', style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          );
+        }),
+      );
+    },
+  );
+
+  // AFTER the sheet is shown: kick off any missing data loads in the background
+  if (c.details.value == null) {
+    // don’t block UI; when it finishes it will warm the cache
+    c.fetchServiceDetails();
+  }
+
+  // preselect current slot day and load from cache/network in background
+  final dayToLoad = initLocal != null
+      ? DateTime(initLocal.year, initLocal.month, initLocal.day)
+      : c.selectedDate.value;
+
+  c.fetchSlotsForDate(dayToLoad, useCache: true).then((_) {
+    if (initLocal != null) {
+      for (final s in c.slots) {
+        final diff = s.startTimeUtc.toLocal().difference(initLocal).inMinutes.abs();
+        if (diff <= 1) {
+          c.selectedSlotId.value = s.id;
+          break;
+        }
+      }
+    }
+  });
+}
+
+
+
 }
 
 // --- WIDGETS ---
@@ -314,7 +572,14 @@ class _ServiceDetailsCard extends StatelessWidget {
 
 class _DateTimeCard extends StatelessWidget {
   final String selectedSlot;
-  const _DateTimeCard({required this.selectedSlot});
+  final VoidCallback onEdit;
+  final bool opening; // NEW
+
+  const _DateTimeCard({
+    required this.selectedSlot,
+    required this.onEdit,
+    this.opening = false, // default
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -324,10 +589,23 @@ class _DateTimeCard extends StatelessWidget {
       child: ListTile(
         title: const Text('Experience Date & Time'),
         subtitle: Text(selectedSlot),
+        trailing: opening
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : IconButton(
+                icon: const Icon(Icons.edit_calendar_rounded),
+                onPressed: onEdit,
+                tooltip: 'Edit date & time',
+              ),
       ),
     );
   }
 }
+
+
 
 class _PricingDetailsCard extends StatelessWidget {
   final double servicePrice;
@@ -408,3 +686,5 @@ class _PaymentMethodCard extends StatelessWidget {
     );
   }
 }
+
+
