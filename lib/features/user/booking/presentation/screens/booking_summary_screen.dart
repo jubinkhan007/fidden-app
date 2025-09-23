@@ -73,11 +73,13 @@ void dispose() {
 
     // --- FIX: WillPopScope now correctly calls the controller with the bookingId ---
     return WillPopScope(
-      onWillPop: () async {
-        // This will now correctly call the cancellation API
-        await controller.cancelBooking(bookingId);
-        return true; // Allow the back navigation to proceed
-      },
+  onWillPop: () async {
+    final realBookingId = controller.paymentBookingId.value; // 0 until paymentIntent returns
+    if (realBookingId > 0) {
+      await controller.cancelBooking(realBookingId);
+    }
+    return true;
+  },
       child: Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(

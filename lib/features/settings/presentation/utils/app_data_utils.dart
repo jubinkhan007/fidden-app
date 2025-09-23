@@ -1,7 +1,7 @@
 // lib/features/settings/presentation/utils/app_data_utils.dart
 
 import 'dart:developer';
-import 'dart:io'; // Make sure 'dart:io' is imported
+import 'dart:io';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/features/splash/presentation/screens/splash_screen.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -9,9 +9,11 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 
 class AppDataUtils {
-  // This function is correct and does not need changes.
+  /// Clears cache and logs out, navigating to LoginScreen.
   static Future<void> clearAppData() async {
     log('--- Starting Clear App Data ---');
+    // Gracefully shut down the cache manager BEFORE clearing data.
+    await DefaultCacheManager().dispose();
     await DefaultCacheManager().emptyCache();
     log('Cache cleared successfully.');
     await AuthService.logoutUser();
@@ -22,7 +24,11 @@ class AppDataUtils {
   static Future<void> deactivateAccount() async {
     log('--- Starting Deactivate Account ---');
     try {
-      // 1. Delete file system cache and data (Corrected Logic)
+      // 1. Gracefully shut down the cache manager to prevent I/O errors.
+      await DefaultCacheManager().dispose();
+      log('Cache Manager disposed.');
+
+      // 2. Delete file system cache and data
       final cacheDir = await getTemporaryDirectory();
       final appDir = await getApplicationSupportDirectory();
 
@@ -31,21 +37,18 @@ class AppDataUtils {
         log('Cache directory deleted: ${cacheDir.path}');
       }
 
-      // --- START: MODIFIED CODE ---
       if (appDir.existsSync()) {
-        // Delete the CONTENTS of the directory, not the directory itself.
         final entities = appDir.listSync(recursive: false);
         for (final FileSystemEntity entity in entities) {
           entity.deleteSync(recursive: true);
         }
         log('Contents of App support directory cleared: ${appDir.path}');
       }
-      // --- END: MODIFIED CODE ---
 
-      // 2. Wipe all SharedPreferences data
+      // 3. Wipe all SharedPreferences data
       await AuthService.clearAllDataForDeactivation();
 
-      // 3. Navigate to the SplashScreen to trigger the "first time" logic
+      // 4. Navigate to the SplashScreen
       Get.offAll(() => SplashScreen());
 
     } catch (e) {
