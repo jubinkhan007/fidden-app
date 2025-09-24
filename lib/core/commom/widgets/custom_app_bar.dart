@@ -1,48 +1,86 @@
-import 'package:flutter/widgets.dart';
+// lib/core/commom/widgets/custom_app_bar.dart
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import '../../utils/constants/app_colors.dart';
-import '../../utils/constants/app_sizes.dart';
-import '../../utils/constants/icon_path.dart';
-import 'custom_text.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomAppBar({
-    super.key, required this.firstText, required this.secondText, this.width,
+    super.key,
+    required this.firstText,
+    required this.secondText,
+    this.trailing,
   });
 
-  final String firstText,secondText;
-  final double? width;
+  final String firstText;
+  final String secondText;
+  final Widget? trailing;
+
+  // toolbar + subline
+  static const double _toolbarH = 34;
+  static const double _sublineH = 22;
 
   @override
-  Size get preferredSize => Size.fromHeight(getHeight(56));
+  Size get preferredSize =>
+      const Size.fromHeight(_toolbarH + _sublineH); // <-- real height
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
+    final top = MediaQuery.of(context).padding.top; // <-- status-bar height
 
+    return Material(
+      color: Colors.white,
+      elevation: 0,
+      child: Container(
+        padding: EdgeInsets.only(top: top, left: 12, right: 12, bottom: 8),
+        // keep the height predictable for Scaffold
+        height: top + _toolbarH + _sublineH,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
-              onTap: (){
-                Get.back();
-              },
-                child: Image.asset(IconPath.backArrow,width: getWidth(24),height: getHeight(24),)),
-            SizedBox(width: getWidth(14),),
-            CustomText(text: firstText,fontSize: getWidth(17),fontWeight: FontWeight.w700,color: AppColors.black,),
+            // row 1
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                  onPressed: Get.back,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    textAlign: TextAlign.center,
+                    firstText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  trailing!,
+                ],
+              ],
+            ),
+            // row 2
+            if (secondText.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 44), // align under title
+                child: Text(
+                  secondText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF616161),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
           ],
         ),
-        SizedBox(height: getHeight(6),),
-        Row(
-          children: [
-            SizedBox(width: getWidth(40),),
-            SizedBox(
-                width: width??getWidth(250),
-                child: CustomText(text: secondText,color: Color(0xff616161),fontSize: getWidth(14),)),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }

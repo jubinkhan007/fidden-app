@@ -129,7 +129,7 @@ class NetworkCaller {
   Future<ResponseData> _makeRequestWithRetry(Future<ResponseData> Function() request) async {
     // 1. Check for internet connectivity first
     final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult.contains(ConnectivityResult.none)) {
+    if (connectivityResult == ConnectivityResult.none) {
       log('No internet connection.');
       return ResponseData(
         isSuccess: false,
@@ -479,4 +479,30 @@ class NetworkCaller {
     // ultimate fallback
     return 'Something went wrong. Please try again.';
   }
+  Future<ResponseData> patchRequest(
+      String endpoint, {
+        Map<String, dynamic>? body,
+        String? token,
+        bool treat404AsEmpty = false,
+        dynamic emptyPayload,
+      }) {
+    return _makeRequestWithRetry(() async {
+      log('PATCH Request: $endpoint');
+      log('Request Body: ${jsonEncode(body)}');
+      final response = await http.patch(
+        Uri.parse(endpoint),
+        headers: {
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      return _handleResponse(
+        response,
+        treat404AsEmpty: treat404AsEmpty,
+        emptyPayload: emptyPayload,
+      );
+    });
+  }
+
 }

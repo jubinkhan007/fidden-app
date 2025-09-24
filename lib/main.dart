@@ -24,7 +24,11 @@ Future<void> main() async {
   // Only the absolute minimum before UI:
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_bg);
-
+FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    // print a full stack to console
+    Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
+  };
   // Show the app immediately
   runApp(const MyApp());
 

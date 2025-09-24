@@ -32,7 +32,9 @@ class BookingSummaryController extends GetxController {
       final res = await NetworkCaller().postRequest(
         AppUrls.paymentIntent(slotId),
         token: AuthService.accessToken,
-        body: const {},
+        body: const {
+    "coupon_id": 2
+},
       );
       if (!res.isSuccess || res.responseData is! Map<String, dynamic>) {
         Get.snackbar('Error', res.errorMessage ?? 'Failed to start payment');

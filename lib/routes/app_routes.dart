@@ -1,3 +1,5 @@
+import 'package:fidden/features/business_owner/coupons/screens/add_edit_coupon_screen.dart';
+import 'package:fidden/features/business_owner/coupons/screens/all_coupons_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/all_service_screen.dart';
 import 'package:fidden/features/business_owner/transactions/screens/transactions_screen.dart';
 import 'package:fidden/features/notifications/presentation/screens/notification_screen.dart';
@@ -52,6 +54,10 @@ class AppRoute {
   static String accountSettingsScreen = "/account-settings";
   static String termsAndCondition = "/terms-and-conditions";
   static const String transactionsScreen = '/transactions';
+    static const String allCouponsScreen = '/all-coupons';
+  static const String addCouponScreen = '/add-coupon';
+  static const String editCouponScreen = '/edit-coupon';
+
 
   static List<GetPage> routes = [
     //Splash Screen: initial screen
@@ -89,6 +95,19 @@ class AppRoute {
     GetPage(
       name: bookingConfirmScreen,
       page: () => BookingConfirmationScreen(),
+    ),
+
+    GetPage(
+      name: allCouponsScreen,
+      page: () => const AllCouponsScreen(),
+    ),
+    GetPage(
+      name: addCouponScreen,
+      page: () => const AddEditCouponScreen(),
+    ),
+    GetPage(
+      name: editCouponScreen,
+      page: () => const AddEditCouponScreen(),
     ),
     // GetPage(name: searchResultScreen, page: () => SearchResultScreen()),
     // GetPage(name: bookingSuccessFullScreen, page: () => BookingSuccessfulScreen ()),

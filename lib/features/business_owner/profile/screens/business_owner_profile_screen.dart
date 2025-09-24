@@ -152,7 +152,7 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                     ),
               SizedBox(height: getHeight(16)),
               CustomProfileButton(
-                title: 'My Reviews',
+                title: 'Shop Reviews',
                 firstImageString: IconPath.waiverFormIcon,
                 onTap: () {
                   final shopId = controller1.profileDetails.value.data?.id
@@ -174,6 +174,14 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                 firstImageString: IconPath.transactionIcon,
                 onTap: () {
                   Get.toNamed(AppRoute.transactionsScreen);
+                },
+              ),
+SizedBox(height: getHeight(16)),
+              CustomProfileButton(
+                title: 'My Coupons',
+                firstImageString: IconPath.couponIcon,
+                onTap: () {
+                  Get.toNamed(AppRoute.allCouponsScreen);
                 },
               ),
               SizedBox(height: getHeight(16)),
