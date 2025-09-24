@@ -1,5 +1,7 @@
+import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/fallBack_image.dart'; // <-- fallback image
+import 'package:fidden/features/inbox/controller/chat_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -18,7 +20,15 @@ class BookingDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateText = formatApiDate(booking.slotTimeIso); // e.g. "Sun, 21 Sep 2025"
     final timeText = formatApiTime(booking.slotTimeIso); // e.g. "01:30 PM"
-
+    final chatController = Get.put(
+  ChatController(
+    threadId: 0,                    // no existing thread yet
+    shopId: booking.shop,           // <- from your booking
+    shopName: booking.shopName,     // <- from your booking
+    isOwner: false,                 // this is the USER app
+  ),
+  tag: 'bk_msg_${booking.id}',      // unique tag, avoids clashes
+);
 
     return Scaffold(
       backgroundColor: const Color(0xffF4F4F4),
@@ -32,6 +42,12 @@ class BookingDetailsScreen extends StatelessWidget {
           fontWeight: FontWeight.w700,
           fontSize: getWidth(20),
         ),
+        actions: [
+          IconButton(
+            onPressed: () => _showMessageDialog(context, chatController),
+            icon: const Icon(Icons.message_outlined),
+          ),
+        ],
         centerTitle: true,
         backgroundColor: const Color(0xffF4F4F4),
         surfaceTintColor: Colors.transparent,
@@ -235,6 +251,42 @@ class BookingDetailsScreen extends StatelessWidget {
             SizedBox(height: getHeight(24)),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showMessageDialog(BuildContext context, ChatController chatController) {
+    final messageController = TextEditingController();
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Message Shop"),
+        content: TextFormField(
+          controller: messageController,
+          decoration: const InputDecoration(
+            hintText: "Type your message...",
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+  final text = messageController.text.trim();
+  if (text.isEmpty) return;
+
+  Get.back(); // close dialog
+
+  await chatController.send(text);
+
+  // toast/snackbar
+  AppSnackBar.showSuccess('Message sent');
+},
+            child: const Text("Send"),
+          ),
+        ],
       ),
     );
   }
