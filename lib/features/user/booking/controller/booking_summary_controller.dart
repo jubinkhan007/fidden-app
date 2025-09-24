@@ -20,6 +20,7 @@ class BookingSummaryController extends GetxController {
 
   Future<void> payForBooking({
     required int slotId,
+    int? couponId,                    // <— NEW
     Map<String, dynamic>? successArgs,
   }) async {
     if (slotId == 0) {
@@ -29,13 +30,15 @@ class BookingSummaryController extends GetxController {
 
     isPaying.value = true;
     try {
+      final body = <String, dynamic>{};
+      if (couponId != null && couponId > 0) body['coupon_id'] = couponId; // only send if chosen
+
       final res = await NetworkCaller().postRequest(
         AppUrls.paymentIntent(slotId),
         token: AuthService.accessToken,
-        body: const {
-    "coupon_id": 2
-},
+        body: body,
       );
+
       if (!res.isSuccess || res.responseData is! Map<String, dynamic>) {
         Get.snackbar('Error', res.errorMessage ?? 'Failed to start payment');
         return;

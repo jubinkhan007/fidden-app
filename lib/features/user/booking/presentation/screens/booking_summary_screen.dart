@@ -1,4 +1,5 @@
 import 'package:fidden/features/user/booking/controller/booking_summary_controller.dart';
+import 'package:fidden/features/user/coupons/data/user_coupon_model.dart';
 import 'package:fidden/features/user/shops/services/data/time_slots_model.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:fidden/routes/app_routes.dart';
@@ -36,6 +37,40 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
 
   final controller = Get.put(BookingSummaryController());
   late final TapGestureRecognizer _termsTap;
+
+  UserCoupon? _appliedCoupon; // from the select screen
+double get _basePrice => discountPrice ?? servicePrice;
+double get _couponDiscount {
+  if (_appliedCoupon == null) return 0;
+  final c = _appliedCoupon!;
+  final raw = c.inPercentage ? (_basePrice * c.amount / 100.0) : c.amount;
+  return raw.clamp(0, _basePrice); // don’t drop below zero
+}
+double get _payable => (_basePrice - _couponDiscount);
+
+// helper to open select screen
+Future<void> _chooseCoupon() async {
+  final args = (Get.arguments as Map<String, dynamic>?) ?? {};
+  final booking = (args['booking'] as Map<String, dynamic>?) ?? {};
+  final serviceId = booking['service_id'] as int? ?? args['serviceId'] as int? ?? 0;
+  final shopId    = booking['shop_id'] as int? ?? args['shopId'] as int? ?? 0;
+
+  if (serviceId == 0 || shopId == 0) {
+    Get.snackbar('Unavailable', 'Missing shop/service to lookup coupons.');
+    return;
+  }
+
+  final res = await Get.toNamed('/select-coupon', arguments: {
+    'shopId': shopId,
+    'serviceId': serviceId,
+  });
+
+  if (res == null) {
+    setState(() => _appliedCoupon = null); // cleared
+  } else if (res is UserCoupon) {
+    setState(() => _appliedCoupon = res);
+  }
+}
 
   @override
   void initState() {
@@ -131,22 +166,62 @@ void dispose() {
               _buildSectionTitle("Pricing Details", color: primaryTextColor),
               const SizedBox(height: 12),
               _PricingDetailsCard(
-                servicePrice: servicePrice,
-                discountPrice: discountPrice,
-              ),
+  servicePrice: _basePrice,
+  couponDiscount: _couponDiscount, // NEW
+),
               const SizedBox(height: 24),
               _buildSectionTitle("Pay with", color: primaryTextColor),
               const SizedBox(height: 12),
               const _PaymentMethodCard(),
               const SizedBox(height: 24),
               _buildSectionTitle("Coupon", color: primaryTextColor),
-              const SizedBox(height: 12),
-              const TextField(
-                decoration: InputDecoration(
-                  hintText: 'Enter promo code',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+const SizedBox(height: 12),
+if (_appliedCoupon != null) ...[
+  Card(
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: ListTile(
+      leading: Container(
+        width: 44, height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(_appliedCoupon!.shortAmountLabel,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+      ),
+      title: Text(_appliedCoupon!.code, style: const TextStyle(fontWeight: FontWeight.w800)),
+      subtitle: Text(_appliedCoupon!.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+      trailing: IconButton(
+        icon: const Icon(Icons.close_rounded),
+        onPressed: () => setState(() => _appliedCoupon = null),
+        tooltip: 'Remove',
+      ),
+    ),
+  ),
+  const SizedBox(height: 10),
+],
+SizedBox(
+  width: double.infinity,
+  child: OutlinedButton.icon(
+    onPressed: _chooseCoupon,
+    icon: const Icon(Icons.local_offer_rounded),
+    label: Text(_appliedCoupon == null ? 'Apply coupon' : 'Change coupon',
+        style: const TextStyle(fontWeight: FontWeight.w800)),
+    style: OutlinedButton.styleFrom(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+  ),
+),
+// const SizedBox(height: 12),
+//               const TextField(
+//                 decoration: InputDecoration(
+//                   hintText: 'Enter promo code',
+//                   border: OutlineInputBorder(),
+//                 ),
+//               ),
               const SizedBox(height: 24),
               _buildSectionTitle(
                 "Cancellation policy",
@@ -200,23 +275,26 @@ void dispose() {
             padding: const EdgeInsets.all(16.0),
             child: Obx(
               () => ElevatedButton(
-                onPressed:
-                    (controller.isTermsAgreed.value &&
-                        !controller.isPaying.value)
-                    ? () => controller.payForBooking(
-                        slotId: bookingId,
-                        successArgs: {
-    'serviceName': serviceName,
-    'dateTimeText': selectedSlot, // Use 'dateTimeText' key
-    'shopName': shopName,
-    'location': shopAddress, // Use 'location' key
-    'bookingId': bookingId,
-    'service_img': serviceImg,
-    'price': servicePrice,
-    'discountPrice': discountPrice,
-},
-                      )
-                    : null,
+                onPressed: (controller.isTermsAgreed.value && !controller.isPaying.value)
+    ? () => controller.payForBooking(
+          slotId: bookingId,
+          couponId: _appliedCoupon?.id,     // <— NEW
+          successArgs: {
+            'serviceName': serviceName,
+            'dateTimeText': selectedSlot,
+            'shopName': shopName,
+            'location': shopAddress,
+            'bookingId': bookingId,
+            'service_img': serviceImg,
+            'price': servicePrice,
+            'discountPrice': discountPrice,
+            'appliedCoupon': _appliedCoupon == null ? null : {
+              'id': _appliedCoupon!.id,
+              'code': _appliedCoupon!.code,
+            },
+          },
+        )
+    : null,
 
                 child: controller.isPaying.value
                     ? const SizedBox(
@@ -608,15 +686,20 @@ class _DateTimeCard extends StatelessWidget {
 
 
 class _PricingDetailsCard extends StatelessWidget {
-  final double servicePrice;
-  final double? discountPrice;
-  const _PricingDetailsCard({required this.servicePrice, this.discountPrice});
+  final double servicePrice;     // base (already discounted by service, if any)
+  final double couponDiscount;   // NEW
+
+  const _PricingDetailsCard({
+    required this.servicePrice,
+    this.couponDiscount = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final double total = (discountPrice ?? servicePrice);
-    final bool hasDiscount =
-        discountPrice != null && discountPrice! < servicePrice;
+    final double total = (servicePrice - couponDiscount).clamp(0, double.infinity);
+    final bool hasCoupon = couponDiscount > 0.0001;
+
+    String money(double v) => '\$${v.toStringAsFixed(2)}';
 
     return Card(
       elevation: 0,
@@ -625,50 +708,39 @@ class _PricingDetailsCard extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            _priceRow('Service Fee', '\$${servicePrice.toStringAsFixed(2)}'),
-            if (hasDiscount) ...[
+            _row('Service Fee', money(servicePrice)),
+            if (hasCoupon) ...[
               const SizedBox(height: 8),
-              _priceRow(
-                'Discount',
-                '- \$${(servicePrice - discountPrice!).toStringAsFixed(2)}',
-              ),
+              _row('Coupon', '- ${money(couponDiscount)}'),
             ],
             const Divider(height: 24),
-            _priceRow(
-              'Total Amount',
-              '\$${total.toStringAsFixed(2)}',
-              isTotal: true,
-            ),
+            _row('Total Amount', money(total), isTotal: true),
           ],
         ),
       ),
     );
   }
 
-  Widget _priceRow(String label, String amount, {bool isTotal = false}) {
+  Widget _row(String label, String value, {bool isTotal = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            color: isTotal ? Colors.black : Colors.grey,
-          ),
-        ),
-        Text(
-          amount,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            color: Colors.black,
-          ),
-        ),
+        Text(label,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              color: isTotal ? Colors.black : Colors.grey,
+            )),
+        Text(value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+            )),
       ],
     );
   }
 }
+
 
 class _PaymentMethodCard extends StatelessWidget {
   const _PaymentMethodCard();
@@ -688,3 +760,44 @@ class _PaymentMethodCard extends StatelessWidget {
 }
 
 
+// design me a mordern, sleek and user friendly coupons screens which will show all the coupons in a list with api endpoint /api/users/coupons/?shop_id={shop_id}}&service_id={service_id} which returns all the available coupons for that service of that shop. The response is like this:
+// [
+//     {
+//         "id": 4,
+//         "code": "MX1758645088",
+//         "description": "$20 off all services",
+//         "amount": "20.00",
+//         "in_percentage": false,
+//         "discount_type": "amount",
+//         "shop": 7,
+//         "services": [
+//             9,
+//             10
+//         ],
+//         "validity_date": "2025-12-31",
+//         "is_active": true,
+//         "max_usage_per_user": 2,
+//         "created_at": "2025-09-23T22:31:28.792845+06:00",
+//         "updated_at": "2025-09-24T17:05:08.160868+06:00"
+//     },
+//     {
+//         "id": 2,
+//         "code": "MX1758644098",
+//         "description": "20% off all services",
+//         "amount": "20.00",
+//         "in_percentage": true,
+//         "discount_type": "percentage",
+//         "shop": 7,
+//         "services": [
+//             9,
+//             10
+//         ],
+//         "validity_date": "2025-12-31",
+//         "is_active": true,
+//         "max_usage_per_user": 3,
+//         "created_at": "2025-09-23T22:14:58.931919+06:00",
+//         "updated_at": "2025-09-24T17:55:54.476142+06:00"
+//     }
+// ]
+// we will navigate to this screen from booking summary screen when user taps on apply coupon button (remove the input text field for the coupon and add a button). The screen will have a back button to go back to booking summary screen. After applying the coupon, we will automatically go back to booking summary screen with the applied coupon details. The applied coupon details will be shown in booking summary screen and the price will be updated accordingly.
+// 

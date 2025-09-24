@@ -133,6 +133,8 @@ class AppUrls {
   static const String getOwnerCoupons = '$_baseUrl/api/coupons/';
   static String updateCoupon(int id) => '$_baseUrl/api/coupons/$id/';
 
+// user coupons
+static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/coupons/?shop_id=$shopId&service_id=$serviceId';
   // seller booking
   static String ownerBooking (String shop_id) => '$_baseUrl/payments/bookings/?shop_id=$shop_id';
 
