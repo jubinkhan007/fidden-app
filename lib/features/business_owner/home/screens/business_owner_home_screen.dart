@@ -304,8 +304,8 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           ),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
-            // No waiver form in the new API payload; keep simple or navigate to an owner booking details page if you add one.
-          },
+  Get.toNamed('/owner-booking-details', arguments: booking);
+},
         ),
       );
     },

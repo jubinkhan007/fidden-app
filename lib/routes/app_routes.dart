@@ -1,3 +1,4 @@
+import 'package:fidden/features/business_owner/booking/screen/booking_details_screen.dart';
 import 'package:fidden/features/business_owner/coupons/screens/add_edit_coupon_screen.dart';
 import 'package:fidden/features/business_owner/coupons/screens/all_coupons_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/all_service_screen.dart';
@@ -113,6 +114,10 @@ class AppRoute {
     GetPage(
   name: '/select-coupon',
   page: () => const SelectCouponScreen(),
+),
+GetPage(
+  name: '/owner-booking-details',
+  page: () => const BookingDetailsScreen(),
 ),
     // GetPage(name: searchResultScreen, page: () => SearchResultScreen()),
     // GetPage(name: bookingSuccessFullScreen, page: () => BookingSuccessfulScreen ()),
