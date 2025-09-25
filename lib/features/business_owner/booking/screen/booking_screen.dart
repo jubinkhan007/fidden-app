@@ -45,7 +45,7 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(BusinessOwnerController());
+    final controller = Get.find<BusinessOwnerController>();
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -86,55 +86,71 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
         }
 
         // 3) List with pull-to-refresh + nice cards
-        return RefreshIndicator(
-          onRefresh: () async => controller.fetchBusinessOwnerBooking(),
-          child: ListView.separated(
-            padding: EdgeInsets.fromLTRB(getWidth(16), getHeight(12), getWidth(16), getHeight(24)),
-            itemCount: results.length,
-            separatorBuilder: (_, __) => SizedBox(height: getHeight(12)),
-            itemBuilder: (context, index) {
-              final b = results[index];
+        // inside build(...)
+return RefreshIndicator(
+  onRefresh: () async => controller.fetchBusinessOwnerBooking(reset: true), // <-- pass reset:true
+  child: Obx(() {
+    final results = controller.allBusinessOwnerBookingOne.value.results;
+    final hasNext = controller.allBusinessOwnerBookingOne.value.next != null;
 
-              final displayName = (b.userName?.trim().isNotEmpty == true)
-                  ? b.userName!.trim()
-                  : b.userEmail;
+    return ListView.separated(
+      padding: EdgeInsets.fromLTRB(getWidth(16), getHeight(12), getWidth(16), getHeight(24)),
+      itemCount: results.length + (hasNext ? 1 : 0), // <-- add footer when there's a next page
+      separatorBuilder: (_, __) => SizedBox(height: getHeight(12)),
+      itemBuilder: (context, index) {
+        // FOOTER ROW
+        if (index >= results.length) {
+          // kick off next page once footer is visible
+          controller.fetchMoreBookings();
 
-              final date = DateFormat('EEE, d MMM yyyy').format(b.slotTime);
-              final time = DateFormat('hh:mm a').format(b.slotTime);
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: getHeight(12)),
+            child: Center(
+              child: Obx(() => controller.isPaging.value
+                  ? const SizedBox(height: 28, width: 28, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const SizedBox.shrink()),
+            ),
+          );
+        }
 
-              // The 'status' field comes directly from your data model.
-              // Add a fallback in case the string is ever empty.
-              final bookingStatus = b.status.isNotEmpty ? b.status : 'Pending';
+        // NORMAL ROW
+        final b = results[index];
+        final displayName = (b.userName?.trim().isNotEmpty == true) ? b.userName!.trim() : b.userEmail;
+        final date = DateFormat('EEE, d MMM yyyy').format(b.slotTime);
+        final time = DateFormat('hh:mm a').format(b.slotTime);
+        final bookingStatus = b.status.isNotEmpty ? b.status : 'Pending';
 
-              return _BookingCard(
-                cs: cs,
-                avatarUrl: b.profileImage,
-                title: displayName,
-                subtitle: b.serviceTitle,
-                dateText: date,
-                timeText: time,
-                status: bookingStatus, // <-- PASS the status to the card
-                onTap: () => showModalBottomSheet(
-                  context: context,
-                  showDragHandle: true,
-                  backgroundColor: Colors.white,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  builder: (_) => _BookingDetailsSheet(
-                    cs: cs,
-                    avatarUrl: b.profileImage,
-                    name: displayName,
-                    service: b.serviceTitle,
-                    when: "$time • $date",
-                    shop: b.shopName,
-                    status: bookingStatus, // <-- PASS the status to the bottom sheet
-                  ),
-                ),
-              );
-            },
+        return _BookingCard(
+          cs: cs,
+          avatarUrl: b.profileImage,
+          title: displayName,
+          subtitle: b.serviceTitle,
+          dateText: date,
+          timeText: time,
+          status: bookingStatus,
+          onTap: () => showModalBottomSheet(
+            context: context,
+            showDragHandle: true,
+            backgroundColor: Colors.white,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            builder: (_) => _BookingDetailsSheet(
+              cs: cs,
+              avatarUrl: b.profileImage,
+              name: displayName,
+              service: b.serviceTitle,
+              when: "$time • $date",
+              shop: b.shopName,
+              status: bookingStatus,
+            ),
           ),
         );
+      },
+    );
+  }),
+);
+
       }),
     );
   }

@@ -125,69 +125,79 @@ Future<void> _boot() async {
     super.onClose();
   }
 
-  Future<void> fetchBusinessOwnerBooking() async {
-  isLoading.value = true;
+  final isPaging = false.obs;
+
+Future<void> fetchBusinessOwnerBooking({bool reset = true}) async {
+  if (reset) isPaging.value = false;
+  isLoading.value = reset;                // only show big loader on first page
   try {
-    await _ensureAuthReady();                        // <-- NEW
+    await _ensureAuthReady();
 
     final id = myShopId.value;
     if (id == null || id <= 0) {
       allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
-        next: null,
-        previous: null,
-        results: [],
-        stats: OwnerBookingStats(
-          totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0,
-        ),
+        next: null, previous: null, results: [],
+        stats: OwnerBookingStats(totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0),
       );
       return;
     }
 
-    final response = await NetworkCaller().getRequest(
+    final res = await NetworkCaller().getRequest(
       AppUrls.ownerBooking(id.toString()),
       token: AuthService.accessToken,
       treat404AsEmpty: true,
-      emptyPayload: const {
-        "next": null,
-        "previous": null,
-        "results": [],
-        "stats": {
-          "total_bookings": 0,
-          "new_bookings": 0,
-          "cancelled": 0,
-          "completed": 0
-        }
-      },
+      emptyPayload: const {"next": null,"previous": null,"results": [],"stats":{
+        "total_bookings":0,"new_bookings":0,"cancelled":0,"completed":0}}
     );
 
-    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
-      final data = response.responseData as Map<String, dynamic>;
-      allBusinessOwnerBookingOne.value = OwnerBookingsResponse.fromJson(data);
+    if (res.isSuccess && res.responseData is Map<String, dynamic>) {
+      final page1 = OwnerBookingsResponse.fromJson(
+        Map<String, dynamic>.from(res.responseData),
+      );
+      allBusinessOwnerBookingOne.value = page1;     // first page only
     } else {
       allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
-        next: null,
-        previous: null,
-        results: [],
-        stats: OwnerBookingStats(
-          totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0,
-        ),
+        next: null, previous: null, results: [],
+        stats: OwnerBookingStats(totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0),
       );
     }
-  } catch (e) {
-    // Startup often hits here because token/shopId wasn't ready yet. Don't spam the user.
-    debugPrint('[ownerBooking] suppressed startup error: $e');
-    allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
-      next: null,
-      previous: null,
-      results: [],
-      stats: OwnerBookingStats(
-        totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0,
-      ),
-    );
-    // Remove the Get.snackbar for this expected case.
-    // If you still want a toast, only show it when kDebugMode && mounted.
   } finally {
     isLoading.value = false;
+  }
+}
+
+/// Call this when you’re near the bottom.
+/// Uses the absolute `next` URL returned by the API.
+Future<void> fetchMoreBookings() async {
+  final nextUrl = allBusinessOwnerBookingOne.value.next;
+  if (nextUrl == null || nextUrl.isEmpty) return;
+  if (isPaging.value) return;
+
+  isPaging.value = true;
+  try {
+    final res = await NetworkCaller().getRequest(
+      nextUrl,                              // <-- absolute URL
+      token: AuthService.accessToken,
+      treat404AsEmpty: true,
+      emptyPayload: const {"next": null, "previous": null, "results": []}
+    );
+
+    if (res.isSuccess && res.responseData is Map<String, dynamic>) {
+      final nextPage = OwnerBookingsResponse.fromJson(
+        Map<String, dynamic>.from(res.responseData),
+      );
+
+      // append new results; keep latest cursor & stats
+      final current = allBusinessOwnerBookingOne.value;
+      allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+        next: nextPage.next,
+        previous: current.previous,
+        results: [...current.results, ...nextPage.results],
+        stats: nextPage.stats ?? current.stats,
+      );
+    }
+  } finally {
+    isPaging.value = false;
   }
 }
 
