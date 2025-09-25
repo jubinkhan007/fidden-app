@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:fidden/features/inbox/controller/inbox_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:web_socket_channel/io.dart';
@@ -277,18 +278,24 @@ class WsService extends GetxService with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      // App is in the foreground
-      print("App resumed, ensuring WebSocket is connected.");
-      ensureConnected();
-    } else if (state == AppLifecycleState.paused) {
-      // App is in the background
-      print("App paused, closing WebSocket connection.");
-      _teardownChannel(); // <-- ADD THIS LINE
+  // lib/core/ws/ws_service.dart
+@override
+void didChangeAppLifecycleState(AppLifecycleState state) {
+  super.didChangeAppLifecycleState(state);
+  if (state == AppLifecycleState.resumed) {
+    print("App resumed, ensuring WebSocket is connected.");
+    ensureConnected();
+
+    // 🔁 Pull any messages that arrived while we were backgrounded
+    if (Get.isRegistered<InboxController>()) {
+      Get.find<InboxController>().fetchConversations();
     }
+  } else if (state == AppLifecycleState.paused) {
+    print("App paused, closing WebSocket connection.");
+    _teardownChannel();
   }
+}
+
 
   @override
   void onClose() {

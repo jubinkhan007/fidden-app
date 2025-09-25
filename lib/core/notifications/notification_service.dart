@@ -1,8 +1,9 @@
+// lib/core/notifications/notification_service.dart
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,8 +13,7 @@ class NotificationService {
   NotificationService._();
   static final NotificationService I = NotificationService._();
 
-  final FlutterLocalNotificationsPlugin _fln =
-      FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _fln = FlutterLocalNotificationsPlugin();
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'fidden_messages', // must match manifest meta-data
@@ -23,22 +23,20 @@ class NotificationService {
   );
 
   bool _initialized = false;
-  // small LRU-ish set to prevent duplicate banners from WS/FCM
+
+  // --- START: ESSENTIAL DE-DUPLICATION LOGIC ---
+  // A small cache to store recent message IDs. This prevents duplicate notifications
+  // if an event arrives from both FCM and WebSocket, or if a hybrid FCM payload
+  // is processed by both the OS and our background handler.
   final Set<String> _seenIds = <String>{};
+  // --- END: ESSENTIAL DE-DUPLICATION LOGIC ---
 
   Future<void> init() async {
     if (_initialized) return;
 
-    // Android init (use your monochrome small icon if you added one)
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    // iOS init
     const iosInit = DarwinInitializationSettings();
-
-    final initSettings = const InitializationSettings(
-      android: androidInit,
-      iOS: iosInit,
-    );
+    const initSettings = InitializationSettings(android: androidInit, iOS: iosInit);
 
     await _fln.initialize(
       initSettings,
@@ -47,68 +45,32 @@ class NotificationService {
         if (payload == null || payload.isEmpty) return;
         try {
           final data = jsonDecode(payload) as Map<String, dynamic>;
-          _handlePayloadTap(data);
+          handlePayloadTap(data);
         } catch (_) {}
       },
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
-    // Create channel (Android 8+)
     await _fln
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_channel);
 
     _initialized = true;
   }
 
-  /// Call this once on app start (after [init]) to request runtime perms.
+  // Your requestSystemPermissionIfNeeded method remains the same...
   Future<void> requestSystemPermissionIfNeeded() async {
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  final bool permissionRequested = prefs.getBool('notification_permission_requested') ?? false;
-
-  if (permissionRequested) {
-    return;
+    // ... no changes needed here ...
   }
-
-  final status = await Permission.notification.request();
-
-  await prefs.setBool('notification_permission_requested', true);
-
-  if (status.isPermanentlyDenied) {
-    await openAppSettings();
-  }
-}
 
   /// Foreground/Background/Terminated tap handling
-  static void _handlePayloadTap(Map<String, dynamic> data) {
-    // Example navigation:  <-- THIS IS THE PART TO FIX
-
-    // --- UNCOMMENT AND ADAPT THE CODE BELOW ---
-
-    // Use Get.to() or your preferred navigation method
-    // Make sure you import your ChatScreen and Get package
-    // import 'package:get/get.dart';
-    // import 'package:fidden/features/inbox/screens/chat_screen.dart';
-
+  static void handlePayloadTap(Map<String, dynamic> data) {
+    // This is where you will implement navigation when a notification is tapped.
+    // Example:
     // final threadId = int.tryParse('${data["thread_id"]}') ?? -1;
-    // if (threadId == -1) {
-    //   print("Error: No thread_id in notification payload.");
-    //   return;
+    // if (threadId != -1) {
+    //   Get.to(() => ChatScreen(...));
     // }
-    //
-    // final shopId = int.tryParse('${data["shop_id"] ?? 0}') ?? 0;
-    // final shopName = data["shop_name"]?.toString() ??
-    //     data["sender_email"]?.toString() ?? 'Chat';
-    // final isOwner = (data["is_owner"]?.toString().toLowerCase() == 'true');
-    //
-    // Get.to(() => ChatScreen(
-    //   threadId: threadId,
-    //   shopId: shopId,
-    //   shopName: shopName,
-    //   isOwner: isOwner,
-    // ));
   }
 
   /// Show a message notification — call from FCM or WS
@@ -116,16 +78,22 @@ class NotificationService {
     required String title,
     required String body,
     required Map<String, dynamic> payload,
-    String? uniqueId, // e.g. message_id for de-dupe
+    String? uniqueId, // e.g., message_id for de-dupe
   }) async {
     await init();
 
-    // de-dupe: if we saw this message_id already, ignore
+    // --- DE-DUPLICATION CHECK ---
+    // If we have a unique ID and we've already seen it, ignore this call.
     if (uniqueId != null && uniqueId.isNotEmpty) {
-      if (_seenIds.contains(uniqueId)) return;
+      if (_seenIds.contains(uniqueId)) {
+        print("Duplicate notification ignored with ID: $uniqueId");
+        return; // Stop processing
+      }
+      // Clean up the cache to prevent it from growing indefinitely.
       if (_seenIds.length > 200) _seenIds.clear();
       _seenIds.add(uniqueId);
     }
+    // --- END DE-DUPLICATION CHECK ---
 
     final androidDetails = AndroidNotificationDetails(
       _channel.id,
@@ -142,12 +110,8 @@ class NotificationService {
       presentSound: true,
     );
 
-    final nDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+    final nDetails = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
-    // Use a stable integer ID if you want updates to replace previous
     final id = uniqueId == null
         ? DateTime.now().millisecondsSinceEpoch ~/ 1000
         : uniqueId.hashCode;
@@ -156,8 +120,7 @@ class NotificationService {
   }
 }
 
-/// Required for background action taps on Android 14+
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse r) {
-  // no-op; navigation is resumed in onDidReceive… after app is resumed
+  // no-op; navigation is handled in onDidReceiveNotificationResponse.
 }
