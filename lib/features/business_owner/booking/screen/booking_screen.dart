@@ -9,6 +9,10 @@ import 'package:intl/intl.dart';
 
 import '../../home/controller/business_owner_controller.dart';
 
+String _capitalize(String s) {
+  if (s.isEmpty) return s;
+  return s[0].toUpperCase() + s.substring(1);
+}
 class CircleNetAvatar extends StatelessWidget {
   const CircleNetAvatar({
     super.key,
@@ -98,6 +102,10 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
               final date = DateFormat('EEE, d MMM yyyy').format(b.slotTime);
               final time = DateFormat('hh:mm a').format(b.slotTime);
 
+              // The 'status' field comes directly from your data model.
+              // Add a fallback in case the string is ever empty.
+              final bookingStatus = b.status.isNotEmpty ? b.status : 'Pending';
+
               return _BookingCard(
                 cs: cs,
                 avatarUrl: b.profileImage,
@@ -105,7 +113,7 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
                 subtitle: b.serviceTitle,
                 dateText: date,
                 timeText: time,
-                onReminder: () => Get.to(() => AddReminderScreen(userId: b.user.toString())),
+                status: bookingStatus, // <-- PASS the status to the card
                 onTap: () => showModalBottomSheet(
                   context: context,
                   showDragHandle: true,
@@ -120,7 +128,7 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
                     service: b.serviceTitle,
                     when: "$time • $date",
                     shop: b.shopName,
-                    onReminder: () => Get.to(() => AddReminderScreen(userId: b.user.toString())),
+                    status: bookingStatus, // <-- PASS the status to the bottom sheet
                   ),
                 ),
               );
@@ -133,6 +141,7 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
 }
 
 /// Card UI for each booking item
+/// Card UI for each booking item
 class _BookingCard extends StatelessWidget {
   const _BookingCard({
     required this.cs,
@@ -141,8 +150,9 @@ class _BookingCard extends StatelessWidget {
     required this.subtitle,
     required this.dateText,
     required this.timeText,
-    required this.onReminder,
+    required this.status, // ADD this parameter
     required this.onTap,
+    // REMOVED: onReminder
   });
 
   final ColorScheme cs;
@@ -151,7 +161,7 @@ class _BookingCard extends StatelessWidget {
   final String? subtitle;
   final String dateText;
   final String timeText;
-  final VoidCallback onReminder;
+  final String status;   // ADDED
   final VoidCallback onTap;
 
   @override
@@ -165,92 +175,74 @@ class _BookingCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-  padding: EdgeInsets.all(getWidth(14)),
-  decoration: BoxDecoration(
-    borderRadius: BorderRadius.circular(16),
-    border: Border.all(color: cs.outlineVariant),
-  ),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      CircleNetAvatar(url: avatarUrl, size: getWidth(56)),
-      SizedBox(width: getWidth(14)),
-
-      // Put EVERYTHING else in one Column so chips can use full width
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // HEADER ROW: title + reminder button
-            Row(
-  crossAxisAlignment: CrossAxisAlignment.center, // optional: nicer alignment
-  children: [
-    Expanded(
-      child: Text(
-        title ?? 'Customer',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: getWidth(16),
-          fontWeight: FontWeight.w700,
-          height: 1.1, // tighter line-height (optional)
-        ),
-      ),
-    ),
-    FilledButton.tonal(
-      style: FilledButton.styleFrom(
-        padding: EdgeInsets.symmetric(
-          horizontal: getWidth(10),
-          vertical: getHeight(4),
-        ),
-        minimumSize: const Size(0, 28),             // ↓ make it short
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: const VisualDensity(vertical: -4, horizontal: -2),
-        backgroundColor: const Color(0xff7A49A5).withOpacity(0.08),
-        foregroundColor: const Color(0xff7A49A5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      onPressed: onReminder,
-      child: const Text('Reminder'),
-    ),
-  ],
-),
-
-
-            SizedBox(height: getHeight(4)),
-            Row(
-              children: [
-                const Icon(Icons.design_services, size: 16, color: Color(0xff898989)),
-                SizedBox(width: getWidth(6)),
-                Expanded(
-                  child: Text(
-                    subtitle ?? 'Service',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: getWidth(14), color: const Color(0xff898989)),
-                  ),
+          padding: EdgeInsets.all(getWidth(14)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cs.outlineVariant),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleNetAvatar(url: avatarUrl, size: getWidth(56)),
+              SizedBox(width: getWidth(14)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // HEADER ROW: title + status pill
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title ?? 'Customer',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: getWidth(16),
+                              fontWeight: FontWeight.w700,
+                              height: 1.1,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: getWidth(8)),
+                        // --- REPLACEMENT ---
+                        // The FilledButton has been replaced with our new StatusPill
+                        _StatusPill(status: status),
+                      ],
+                    ),
+                    SizedBox(height: getHeight(4)),
+                    Row(
+                      children: [
+                        const Icon(Icons.design_services, size: 16, color: Color(0xff898989)),
+                        SizedBox(width: getWidth(6)),
+                        Expanded(
+                          child: Text(
+                            subtitle ?? 'Service',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: getWidth(14), color: const Color(0xff898989)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: getHeight(8)),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _chip(icon: Icons.calendar_month, text: dateText, cs: cs),
+                          const SizedBox(width: 8),
+                          _chip(icon: Icons.schedule, text: timeText, cs: cs),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            SizedBox(height: getHeight(8)),
-
-            // CHIPS ROW: now gets full card width
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _chip(icon: Icons.calendar_month, text: dateText, cs: cs),
-                  const SizedBox(width: 8),
-                  _chip(icon: Icons.schedule, text: timeText, cs: cs),
-                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    ],
-  ),
-),
       ),
     );
   }
@@ -276,6 +268,7 @@ class _BookingCard extends StatelessWidget {
 }
 
 /// Details bottom sheet
+/// Details bottom sheet
 class _BookingDetailsSheet extends StatelessWidget {
   const _BookingDetailsSheet({
     required this.cs,
@@ -284,7 +277,8 @@ class _BookingDetailsSheet extends StatelessWidget {
     required this.service,
     required this.when,
     required this.shop,
-    required this.onReminder,
+    required this.status, // ADD this parameter
+    // REMOVED: onReminder
   });
 
   final ColorScheme cs;
@@ -293,18 +287,18 @@ class _BookingDetailsSheet extends StatelessWidget {
   final String? service;
   final String when;
   final String? shop;
-  final VoidCallback onReminder;
+  final String status;   // ADDED
 
   @override
   Widget build(BuildContext context) {
     Widget row(String label, String value) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Row(
-            children: [
-              SizedBox(width: 120, child: Text(label, style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600))),
-              Expanded(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700))),
-            ],
-          ),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          SizedBox(width: 120, child: Text(label, style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600))),
+          Expanded(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700))),
+        ],
+      ),
     );
 
     return Padding(
@@ -322,26 +316,15 @@ class _BookingDetailsSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
           row('Service', service ?? '—'),
           row('When', when),
           row('Shop', shop ?? '—'),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onReminder,
-              style: FilledButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: getHeight(12)),
-                backgroundColor: const Color(0xff7A49A5),
-              ),
-              child: const Text('Add Reminder'),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
+          // ADD this status row for displaying the booking status
+          row('Status', _capitalize(status)),
+          const SizedBox(height: 20),
+          // REMOVED the FilledButton and TextButton for a cleaner, display-only sheet.
         ],
       ),
     );
@@ -431,6 +414,79 @@ class _BookingSkeletonList extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+// In /lib/features/business_owner/booking/screen/booking_screen.dart
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color backgroundColor;
+    final Color foregroundColor;
+    final IconData iconData;
+
+    // Use .toLowerCase() for case-insensitive matching from the API
+    switch (status.toLowerCase()) {
+    // --- STYLE SWAPPED ---
+    // 'completed' and 'confirmed' now use the green checkmark
+      case 'completed':
+      case 'confirmed':
+        backgroundColor = const Color(0xFFE6F4EA); // Light Green
+        foregroundColor = const Color(0xFF2E7D32); // Dark Green
+        iconData = Icons.check_circle;
+        break;
+
+    // --- STYLE SWAPPED ---
+    // 'active' now has its own distinct "in-progress" style
+      case 'active':
+        backgroundColor = const Color(0xFFE3F2FD); // Light Blue
+        foregroundColor = const Color(0xFF1565C0); // Dark Blue
+        iconData = Icons.timelapse; // Icon for in-progress/active
+        break;
+
+      case 'cancelled':
+        backgroundColor = const Color(0xFFFFEBEE); // Light Red
+        foregroundColor = const Color(0xFFC62828); // Dark Red
+        iconData = Icons.cancel;
+        break;
+
+      case 'pending':
+      default:
+        backgroundColor = const Color(0xFFFFF3E0); // Light Orange
+        foregroundColor = const Color(0xFFF57C00); // Dark Orange
+        iconData = Icons.hourglass_top_rounded;
+        break;
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: getWidth(10),
+        vertical: getHeight(5),
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(iconData, color: foregroundColor, size: 14),
+          SizedBox(width: getWidth(6)),
+          Text(
+            _capitalize(status), // Use the helper for a clean look
+            style: TextStyle(
+              color: foregroundColor,
+              fontSize: getWidth(12),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

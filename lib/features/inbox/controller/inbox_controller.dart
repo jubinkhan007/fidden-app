@@ -258,21 +258,18 @@ class InboxController extends GetxController {
   String getLastMessageTime(Thread thread) {
     final lastMsg = _getLastMessage(thread);
     if (lastMsg == null) return '';
-
+    final localTimestamp = lastMsg.timestamp.toLocal();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final msgDate = DateTime(
-      lastMsg.timestamp.year,
-      lastMsg.timestamp.month,
-      lastMsg.timestamp.day,
-    );
+    final msgDate = DateTime(localTimestamp.year, localTimestamp.month, localTimestamp.day);
+
 
     if (today == msgDate) {
-      return DateFormat('h:mm a').format(lastMsg.timestamp);
-    } else if (today.difference(msgDate).inDays == 1) {
+      return DateFormat('h:mm a').format(localTimestamp);
+    } else if (today.difference(msgDate).inDays == 1 && now.difference(msgDate).inHours < 48) {
       return 'Yesterday';
     }
-    return DateFormat('d MMM').format(lastMsg.timestamp);
+    return DateFormat('d MMM').format(localTimestamp);
   }
 
   int getUnreadCount(Thread thread) {

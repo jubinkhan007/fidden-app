@@ -33,13 +33,26 @@ class MessageModel {
 
   /// Pretty time label for UI
   String get timeLabel {
+    // 1. Convert the UTC timestamp to the user's local timezone immediately.
+    final localTimestamp = timestamp.toLocal();
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final msgDay = DateTime(timestamp.year, timestamp.month, timestamp.day);
-    if (msgDay == today) return DateFormat('h:mm a').format(timestamp);
-    if (msgDay == today.subtract(const Duration(days: 1))) return 'Yesterday';
-    final sameYear = now.year == timestamp.year;
-    return DateFormat(sameYear ? 'd MMM' : 'd MMM yyyy').format(timestamp);
+
+    // 2. Use the local timestamp's date for all comparisons.
+    final msgDay = DateTime(localTimestamp.year, localTimestamp.month, localTimestamp.day);
+
+    if (msgDay == today) {
+      // 3. Format the local time.
+      return DateFormat('h:mm a').format(localTimestamp);
+    }
+    if (msgDay == today.subtract(const Duration(days: 1))) {
+      return 'Yesterday';
+    }
+    final sameYear = now.year == localTimestamp.year;
+
+    // 4. Format the local date.
+    return DateFormat(sameYear ? 'd MMM' : 'd MMM yyyy').format(localTimestamp);
   }
 
   /// ✅ Move copyWith into the model to avoid extension ambiguity

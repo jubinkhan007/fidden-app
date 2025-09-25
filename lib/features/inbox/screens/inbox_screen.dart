@@ -66,13 +66,14 @@ class InboxScreen extends StatelessWidget {
                       onArchive: () => c.archive(thread.id.toString()),
                       onDelete: () => c.delete(thread.id.toString()),
                       onTap: () async {
-                        final isOwner =
-                            (AuthService.role?.toLowerCase() == 'owner');
+                        final isOwner = (AuthService.role?.toLowerCase() == 'owner');
                         final last = await Get.to(
-                          () => ChatScreen(
+                              () => ChatScreen(
                             threadId: thread.id,
                             shopId: thread.shop,
                             shopName: c.getOtherPartyName(thread),
+                            // ADD THIS LINE to pass the avatar URL
+                            shopAvatarUrl: c.getOtherPartyAvatar(thread),
                             isOwner: isOwner,
                             seedMessages: thread.messages,
                           ),
