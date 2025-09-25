@@ -1,8 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../features/inbox/screens/chat_screen.dart';
 
 class NotificationService {
   NotificationService._();
@@ -79,14 +83,31 @@ class NotificationService {
 
   /// Foreground/Background/Terminated tap handling
   static void _handlePayloadTap(Map<String, dynamic> data) {
-    // Example navigation:
+    // Example navigation:  <-- THIS IS THE PART TO FIX
+
+    // --- UNCOMMENT AND ADAPT THE CODE BELOW ---
+
+    // Use Get.to() or your preferred navigation method
+    // Make sure you import your ChatScreen and Get package
+    // import 'package:get/get.dart';
+    // import 'package:fidden/features/inbox/screens/chat_screen.dart';
+
     // final threadId = int.tryParse('${data["thread_id"]}') ?? -1;
+    // if (threadId == -1) {
+    //   print("Error: No thread_id in notification payload.");
+    //   return;
+    // }
+    //
     // final shopId = int.tryParse('${data["shop_id"] ?? 0}') ?? 0;
-    // final shopName = data["shop_name"]?.toString()
-    //     ?? data["sender_email"]?.toString() ?? 'Chat';
+    // final shopName = data["shop_name"]?.toString() ??
+    //     data["sender_email"]?.toString() ?? 'Chat';
     // final isOwner = (data["is_owner"]?.toString().toLowerCase() == 'true');
+    //
     // Get.to(() => ChatScreen(
-    //   threadId: threadId, shopId: shopId, shopName: shopName, isOwner: isOwner,
+    //   threadId: threadId,
+    //   shopId: shopId,
+    //   shopName: shopName,
+    //   isOwner: isOwner,
     // ));
   }
 

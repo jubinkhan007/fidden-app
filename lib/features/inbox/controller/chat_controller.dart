@@ -77,27 +77,27 @@ class ChatController extends GetxController {
 
   @override
   void onInit() {
-    super.onInit();
+  super.onInit();
+  _computeMyActorId();
+  _ws = Get.put(WsService(), permanent: true);
+  _ws.ensureConnected();
+  _ws.subscribeThread(threadId);
 
-    _computeMyActorId(); // <<< IMPORTANT
+  _msgSub = _ws.messages$.listen((ev) {
+    if (ev.threadId != threadId) return;
 
-    _ws = Get.put(WsService(), permanent: true);
-    _ws.ensureConnected();
-    _ws.subscribeThread(threadId);
+    // Try to replace optimistic first
+    _replaceOptimisticIfMatch(ev.message);
 
-    _msgSub = _ws.messages$.listen((ev) {
-      if (ev.threadId != threadId) return;
-
+    // For other-party messages, normal add + read
+    if (ev.message.sender != _myActorId) {
       final already = messages.any((m) => m.id == ev.message.id);
       if (!already) messages.insert(0, ev.message);
-
       _touchInbox(ev.message);
+      if (ev.message.isRead == false) _markTheseRead([ev.message.id]);
+    }
+  });
 
-      // mark as read only if message is from the other actor
-      if (ev.message.sender != _myActorId && ev.message.isRead == false) {
-        _markTheseRead([ev.message.id]);
-      }
-    });
 
     _ackSub = _ws.markReadAcks$.listen((ack) {
       if (ack.threadId != threadId) return;
@@ -158,33 +158,128 @@ class ChatController extends GetxController {
   }
 
   Future<void> send(String content) async {
-    final text = content.trim();
-    if (text.isEmpty) return;
+  final text = content.trim();
+  if (text.isEmpty) return;
 
+  // 1) Create optimistic message
+  final now = DateTime.now();
+  final tempLocalId = 'local_${now.microsecondsSinceEpoch}';
+  final optimistic = MessageModel(
+    id: -now.microsecondsSinceEpoch,      // temp negative id
+    sender: _myActorId,
+    senderEmail: _guessMyEmail(),         // optional helper
+    content: text,
+    timestamp: now,
+    isRead: true,
+    localId: tempLocalId,
+    status: MessageStatus.sending,
+  );
+
+  messages.insert(0, optimistic);
+
+  try {
     sending.value = true;
-    try {
-      final body = {'content': text};
-      // The HTTP request logic remains the same.
-      if (isOwner) {
-        await NetworkCaller().postRequest(
-          AppUrls.replyInThread(threadId),
-          body: body,
-          token: AuthService.accessToken,
-        );
-      } else {
-        await NetworkCaller().postRequest(
-          AppUrls.sendToShop(shopId),
-          body: body,
-          token: AuthService.accessToken,
-        );
-      }
 
-      // REMOVE the optimistic update block.
-      // The WebSocket listener will now be responsible for adding the message.
-    } finally {
-      sending.value = false;
+    final body = {'content': text};
+
+    if (isOwner) {
+      await NetworkCaller().postRequest(
+        AppUrls.replyInThread(threadId),
+        body: body,
+        token: AuthService.accessToken,
+      );
+    } else {
+      await NetworkCaller().postRequest(
+        AppUrls.sendToShop(shopId),
+        body: body,
+        token: AuthService.accessToken,
+      );
+    }
+
+    // 2) Wait for the WebSocket echo. When it arrives, we replace the optimistic one.
+    //    In case it doesn't come (rare), mark as sent after a short delay to avoid stuck "sending".
+    Future.delayed(const Duration(seconds: 3), () {
+      final idx = messages.indexWhere((m) => m.localId == tempLocalId);
+      if (idx != -1 && messages[idx].status == MessageStatus.sending) {
+        messages[idx] = messages[idx].copyWith(status: MessageStatus.sent);
+      }
+    });
+  } catch (_) {
+    // 3) Mark as failed (shows retry UI)
+    final idx = messages.indexWhere((m) => m.localId == tempLocalId);
+    if (idx != -1) {
+      messages[idx] = messages[idx].copyWith(status: MessageStatus.failed);
+    }
+  } finally {
+    sending.value = false;
+  }
+}
+String _guessMyEmail() {
+  if (!Get.isRegistered<ProfileController>()) return '';
+  return Get.find<ProfileController>().profileDetails.value.data?.email ?? '';
+}
+
+Future<void> resend(MessageModel failed) async {
+  if (failed.status != MessageStatus.failed) return;
+  // Turn it back to "sending"
+  final idx = messages.indexWhere((m) => m.localId == failed.localId);
+  if (idx == -1) return;
+  messages[idx] = failed.copyWith(status: MessageStatus.sending);
+
+  try {
+    final body = {'content': failed.content};
+    if (isOwner) {
+      await NetworkCaller().postRequest(
+        AppUrls.replyInThread(threadId),
+        body: body,
+        token: AuthService.accessToken,
+      );
+    } else {
+      await NetworkCaller().postRequest(
+        AppUrls.sendToShop(shopId),
+        body: body,
+        token: AuthService.accessToken,
+      );
+    }
+    // WS will replace/confirm; fallback timer:
+    Future.delayed(const Duration(seconds: 3), () {
+      final j = messages.indexWhere((m) => m.localId == failed.localId);
+      if (j != -1 && messages[j].status == MessageStatus.sending) {
+        messages[j] = messages[j].copyWith(status: MessageStatus.sent);
+      }
+    });
+  } catch (_) {
+    // Still failed; flip back
+    final j = messages.indexWhere((m) => m.localId == failed.localId);
+    if (j != -1) {
+      messages[j] = messages[j].copyWith(status: MessageStatus.failed);
     }
   }
+}
+
+
+/// Replace optimistic message when server WS message arrives
+void _replaceOptimisticIfMatch(MessageModel incoming) {
+  // Only try to match my outgoing messages
+  if (incoming.sender != _myActorId) return;
+
+  // Find optimistic message with same content within 10s window
+  final i = messages.indexWhere((m) =>
+      m.status != MessageStatus.sent &&
+      m.sender == _myActorId &&
+      m.content == incoming.content &&
+      (m.timestamp.difference(incoming.timestamp).inSeconds).abs() <= 10);
+
+  if (i != -1) {
+    // Replace optimistic with the server message (real id, status=sent)
+    messages[i] = incoming.copyWith(status: MessageStatus.sent, localId: null);
+  } else {
+    // If not found, just insert if not duplicated by id
+    final already = messages.any((m) => m.id == incoming.id);
+    if (!already) messages.insert(0, incoming);
+  }
+}
+
 
   void _touchInbox(MessageModel m) {
     if (!Get.isRegistered<InboxController>()) return;

@@ -35,29 +35,39 @@ class BusinessOwnerController extends GetxController {
   final isShopVerified = false.obs;
   final verificationMessage = ''.obs;
 
-  @override
   void onInit() {
-    super.onInit();
+  super.onInit();
 
-    // Fetch whenever myShopId becomes available
-    ever<int?>(myShopId, (id) {
-      if (id != null && id > 0) {
-        debugPrint('[revenue] myShopId updated -> $id, fetching…');
-        fetchShopRevenues(shopId: id);
-        fetchGrowthSuggestions();
-      }
-    });
+  // React only when shop id is known
+  ever<int?>(myShopId, (id) {
+    if (id != null && id > 0) {
+      fetchShopRevenues(shopId: id);
+      fetchGrowthSuggestions();
+      fetchBusinessOwnerBooking();   // moved here so it runs only when we truly have shopId
+    }
+  });
 
-    // Ensure we fetch after guards resolve the shop id
-    _initProfileAndGuards().then((_) async {
-      final id = myShopId.value;
-      if (id != null && id > 0) {
-        await fetchShopRevenues(shopId: id);
-      }
-      await fetchAllMyService();
-      await fetchBusinessOwnerBooking();
-    });
+  _boot();
+}
+
+Future<void> _ensureAuthReady() async {
+  // Wait briefly until AuthService.accessToken is non-empty
+  for (var i = 0; i < 100; i++) {                   // ~10s max
+    final t = AuthService.accessToken;
+    if (t != null && t.isNotEmpty) return;
+    await Future.delayed(const Duration(milliseconds: 100));
   }
+  // If still not ready, just return; callers will handle gracefully.
+}
+
+Future<void> _boot() async {
+  await _ensureAuthReady();          // <-- wait for token
+  await _initProfileAndGuards();     // <-- sets myShopId (triggers ever above)
+  await fetchAllMyService();         // services do not depend on shopId
+  // DO NOT call fetchShopRevenues()/fetchBusinessOwnerBooking() here:
+  // 'ever(myShopId, …)' will trigger them exactly once with a non-null id.
+}
+
 
   Future<void> refreshGuardsAndServices() async {
     await _initProfileAndGuards();
@@ -116,74 +126,71 @@ class BusinessOwnerController extends GetxController {
   }
 
   Future<void> fetchBusinessOwnerBooking() async {
-    isLoading.value = true;
-    try {
-      final id = myShopId.value;
-      if (id == null || id <= 0) {
-        allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
-          next: null,
-          previous: null,
-          results: [],
-          stats: OwnerBookingStats(
-            totalBookings: 0,
-            newBookings: 0,
-            cancelled: 0,
-            completed: 0,
-          ),
-        );
-        return;
-      }
+  isLoading.value = true;
+  try {
+    await _ensureAuthReady();                        // <-- NEW
 
-      final response = await NetworkCaller().getRequest(
-        AppUrls.ownerBooking(id.toString()), // /payments/bookings/?shop_id={id}
-        token: AuthService.accessToken,
-        treat404AsEmpty: true,
-        emptyPayload: const {
-          "next": null,
-          "previous": null,
-          "results": [],
-          "stats": {
-            "total_bookings": 0,
-            "new_bookings": 0,
-            "cancelled": 0,
-            "completed": 0
-          }
-        },
-      );
-
-      if (response.isSuccess && response.responseData is Map<String, dynamic>) {
-        final data = response.responseData as Map<String, dynamic>;
-        allBusinessOwnerBookingOne.value = OwnerBookingsResponse.fromJson(data);
-      } else {
-        allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
-          next: null,
-          previous: null,
-          results: [],
-          stats: OwnerBookingStats(
-            totalBookings: 0,
-            newBookings: 0,
-            cancelled: 0,
-            completed: 0,
-          ),
-        );
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'An error occurred: $e');
+    final id = myShopId.value;
+    if (id == null || id <= 0) {
       allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
         next: null,
         previous: null,
         results: [],
         stats: OwnerBookingStats(
-          totalBookings: 0,
-          newBookings: 0,
-          cancelled: 0,
-          completed: 0,
+          totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0,
         ),
       );
-    } finally {
-      isLoading.value = false;
+      return;
     }
+
+    final response = await NetworkCaller().getRequest(
+      AppUrls.ownerBooking(id.toString()),
+      token: AuthService.accessToken,
+      treat404AsEmpty: true,
+      emptyPayload: const {
+        "next": null,
+        "previous": null,
+        "results": [],
+        "stats": {
+          "total_bookings": 0,
+          "new_bookings": 0,
+          "cancelled": 0,
+          "completed": 0
+        }
+      },
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      final data = response.responseData as Map<String, dynamic>;
+      allBusinessOwnerBookingOne.value = OwnerBookingsResponse.fromJson(data);
+    } else {
+      allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+        next: null,
+        previous: null,
+        results: [],
+        stats: OwnerBookingStats(
+          totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0,
+        ),
+      );
+    }
+  } catch (e) {
+    // Startup often hits here because token/shopId wasn't ready yet. Don't spam the user.
+    debugPrint('[ownerBooking] suppressed startup error: $e');
+    allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+      next: null,
+      previous: null,
+      results: [],
+      stats: OwnerBookingStats(
+        totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0,
+      ),
+    );
+    // Remove the Get.snackbar for this expected case.
+    // If you still want a toast, only show it when kDebugMode && mounted.
+  } finally {
+    isLoading.value = false;
   }
+}
+
 
   Future<void> fetchGrowthSuggestions() async {
     try {
@@ -243,6 +250,7 @@ class BusinessOwnerController extends GetxController {
     shopMissingMessage.value = '';
 
     try {
+      await _ensureAuthReady(); 
       final res = await NetworkCaller().getRequest(
         AppUrls.getMyService,
         token: AuthService.accessToken,
@@ -316,6 +324,7 @@ class BusinessOwnerController extends GetxController {
     debugPrint("inside fetchShopRevenues");
     try {
       isRevenueLoading.value = true;
+      await _ensureAuthReady();                       // <-- NEW
 
       final res = await NetworkCaller().getRequest(
         AppUrls.shopRevenues(shopId, day: day),

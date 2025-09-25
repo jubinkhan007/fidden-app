@@ -133,12 +133,20 @@ class _SearchBarState extends State<_SearchBar> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE6E8EC)),
+        boxShadow: [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.03),
+      blurRadius: 10,
+      offset: const Offset(0, 4),
+    ),
+  ],
+        // border: Border.all(color: Colors.white),
       ),
       child: Row(
         children: [
@@ -151,6 +159,12 @@ class _SearchBarState extends State<_SearchBar> {
               decoration: InputDecoration(
                 hintText: widget.hint,
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
+                
               ),
             ),
           ),

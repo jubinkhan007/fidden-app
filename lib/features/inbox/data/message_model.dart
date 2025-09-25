@@ -5,13 +5,19 @@ List<MessageModel> messageListFromJson(String str) => List<MessageModel>.from(
   json.decode(str).map((x) => MessageModel.fromJson(x)),
 );
 
+enum MessageStatus { sending, sent, failed }
+
 class MessageModel {
   final int id;
-  final int sender; // from sender_id
+  final int sender;
   final String senderEmail;
   final String content;
   final DateTime timestamp;
   final bool isRead;
+
+  // NEW
+  final String? localId;               // identifies optimistic messages
+  final MessageStatus status;          // sending/sent/failed
 
   MessageModel({
     required this.id,
@@ -20,7 +26,10 @@ class MessageModel {
     required this.content,
     required this.timestamp,
     required this.isRead,
+    this.localId,
+    this.status = MessageStatus.sent,   // server messages default to 'sent'
   });
+
 
   /// Pretty time label for UI
   String get timeLabel {
@@ -41,6 +50,8 @@ class MessageModel {
     String? content,
     DateTime? timestamp,
     bool? isRead,
+    String? localId,
+    MessageStatus? status,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -49,6 +60,8 @@ class MessageModel {
       content: content ?? this.content,
       timestamp: timestamp ?? this.timestamp,
       isRead: isRead ?? this.isRead,
+      localId: localId ?? this.localId,
+      status: status ?? this.status,
     );
   }
 
@@ -61,6 +74,9 @@ class MessageModel {
       content: (json['content'] ?? '').toString(),
       timestamp: DateTime.parse((json['timestamp'] ?? '').toString()),
       isRead: json['is_read'] == true || json['is_read']?.toString() == 'true',
+      // server messages: no localId, status=sent
+      localId: null,
+      status: MessageStatus.sent,
     );
   }
 

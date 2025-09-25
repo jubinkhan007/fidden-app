@@ -1,3 +1,6 @@
+// lib/features/splash/controller/splash_controller.dart
+
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -23,30 +26,32 @@ class SplashController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _initializeApp();
+  }
 
-    // 1) Ensure AuthService is initialized (defensive, even if you also do it in main())
-    _ensureAuthReady().then((_) {
-      // 2) Navigate immediately; do NOT block on permissions.
-      _navigate();
+  Future<void> _initializeApp() async {
+    // Wait for a minimum amount of time to show the splash screen
+    await Future.delayed(const Duration(seconds: 3));
 
-      // 3) Start permissions/location in the background (no blocking).
-      _requestPermissionsAndFetchLocation();
-    });
+    // Ensure Auth Service is ready before navigating
+    await _ensureAuthReady();
+
+    // Navigate to the correct screen
+    _navigate();
+
+    // Request permissions in the background
+    _requestPermissionsAndFetchLocation();
   }
 
   Future<void> _ensureAuthReady() async {
     try {
-      // If your AuthService exposes an init() or ensureInitialized(), call it here.
-      // This prevents LateInitializationError when reading prefs.
-      await AuthService.init(); // <- keep if your AuthService has this
+      await AuthService.init();
     } catch (e) {
       debugPrint('[boot] AuthService.init error: $e');
     }
   }
 
   void _navigate() {
-    // Decide the first screen using AuthService state.
-    // (Use getters or sync methods; by now AuthService is initialized.)
     final seen = AuthService.hasSeenOnboarding();
     final hasToken = AuthService.hasToken();
 
@@ -85,7 +90,6 @@ class SplashController extends GetxController {
       final status = await Permission.notification.status;
 
       if (!requested || (!status.isGranted && !status.isPermanentlyDenied)) {
-        // Don’t care about the result here; it’s a best-effort request.
         await Permission.notification.request();
         await prefs.setBool(_permissionRequestedKey, true);
       }
@@ -112,8 +116,6 @@ class SplashController extends GetxController {
 
       if (permission == LocationPermission.deniedForever) {
         debugPrint('Location permissions are permanently denied.');
-        // Optionally show a one-shot dialog/snackbar; do not block here.
-        // unawaited(openAppSettings());
         return;
       }
 

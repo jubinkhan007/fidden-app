@@ -95,45 +95,75 @@ class _ChatScreenState extends State<ChatScreen> {
                             _myEmail.isNotEmpty &&
                             m.senderEmail == _myEmail); // <- key line
 
-                    return Align(
-                      alignment: isMe
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Column(
-                          crossAxisAlignment: isMe
-                              ? CrossAxisAlignment.end
-                              : CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              constraints: const BoxConstraints(maxWidth: 320),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: isMe
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                m.content,
-                                style: TextStyle(
-                                  color: isMe ? Colors.white : Colors.black87,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              m.timeLabel,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+                    final showTail = isMe && (m.status != MessageStatus.sent);
+final statusText = m.status == MessageStatus.sending
+    ? 'Sending…'
+    : (m.status == MessageStatus.failed ? 'Failed to send' : null);
+
+return Align(
+  alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+  child: Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Column(
+      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Container(
+          constraints: const BoxConstraints(maxWidth: 320),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isMe
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            m.content,
+            style: TextStyle(color: isMe ? Colors.white : Colors.black87),
+          ),
+        ),
+        const SizedBox(height: 4),
+
+        // time + status row
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              m.timeLabel,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
+            if (statusText != null) ...[
+              const SizedBox(width: 8),
+              if (m.status == MessageStatus.sending)
+                Text(
+                  statusText,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                )
+              else if (m.status == MessageStatus.failed)
+                GestureDetector(
+                  onTap: () => Get.find<ChatController>(tag: 'chat_${widget.threadId}')
+                      .resend(m),
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh, size: 12, color: Colors.red.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Tap to resend',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.red.shade600,
                         ),
                       ),
-                    );
+                    ],
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ],
+    ),
+  ),
+);
                   },
                 );
               }),

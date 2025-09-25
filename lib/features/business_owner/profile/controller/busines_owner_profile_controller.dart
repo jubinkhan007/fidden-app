@@ -7,6 +7,7 @@ import 'package:fidden/features/business_owner/profile/data/stripe_models.dart';
 import 'package:fidden/features/business_owner/profile/screens/stripe_webview_screen.dart';
 import 'package:fidden/features/business_owner/profile/services/shop_api.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:flutter/material.dart';
@@ -155,28 +156,32 @@ class BusinessOwnerProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchProfileDetails().then((_) async {
-      final fromApi = profileDetails.value.data?.openDays;
-      if (fromApi != null && fromApi.isNotEmpty) openDays.addAll(fromApi);
+    _init(); // keep onInit lean
 
-      startTime.value = profileDetails.value.data?.startTime ?? startTime.value;
-      endTime.value = profileDetails.value.data?.endTime ?? endTime.value;
-
-      // 🔎 Try verifying Stripe right away if a shop exists
+    // If tokens refresh after we mounted, refetch profile quietly
+    ever(AuthService.tokenRefreshCount, (_) async {
+      await fetchProfileDetails(silentAuthErrors: true);
       await checkStripeStatusIfPossible();
     });
 
-    // Re-verify when app returns to foreground if we were onboarding
     WidgetsBinding.instance.addObserver(
-      _LifecycleObserver(
-        onResumed: () async {
-          if (_awaitingOnboarding) {
-            _awaitingOnboarding = false;
-            await checkStripeStatusIfPossible();
-          }
-        },
-      ),
+      _LifecycleObserver(onResumed: () async {
+        if (_awaitingOnboarding) {
+          _awaitingOnboarding = false;
+          await checkStripeStatusIfPossible();
+        }
+      }),
     );
+  }
+
+  Future<void> _init() async {
+    await AuthService.waitForToken();                 // ← wait for token
+    await fetchProfileDetails(silentAuthErrors: true);
+    final fromApi = profileDetails.value.data?.openDays;
+    if (fromApi != null && fromApi.isNotEmpty) openDays.addAll(fromApi);
+    startTime.value = profileDetails.value.data?.startTime ?? startTime.value;
+    endTime.value   = profileDetails.value.data?.endTime   ?? endTime.value;
+    await checkStripeStatusIfPossible();
   }
 
   Future<void> checkStripeStatusIfPossible() async {
@@ -233,48 +238,50 @@ class BusinessOwnerProfileController extends GetxController {
 
   var profileDetails = GetBusinesModel().obs;
 
-  // lib/features/business_owner/profile/controller/busines_owner_profile_controller.dart
-
-  Future<void> fetchProfileDetails() async {
+  Future<void> fetchProfileDetails({bool silentAuthErrors = false}) async {
     isLoading.value = true;
     try {
+      await AuthService.waitForToken();               // safety if called elsewhere
+
       final response = await NetworkCaller().getRequest(
         AppUrls.getMBusinessProfile,
         token: AuthService.accessToken,
+        treat404AsEmpty: true,
+        emptyPayload: const {"data": null},           // normalize shape
       );
+
       if (response.isSuccess && response.responseData is Map<String, dynamic>) {
         profileDetails.value = GetBusinesModel.fromJson(response.responseData);
-        // After fetching the profile, immediately check the Stripe status.
-        await checkStripeStatusIfPossible();
-      } else {
-  final error = response.errorMessage.toLowerCase();
-  // Check if this is the expected "no shop" error for a new user.
-  if (error.contains('shop')) {
-    // If it is, handle it gracefully without showing an error banner.
-    profileDetails.value = GetBusinesModel(data: null);
-    isCheckingStripeStatus.value = false;
-  } else {
-    // Otherwise, it's an unexpected error, so show the banner.
-    profileDetails.value = GetBusinesModel(data: null);
-    isCheckingStripeStatus.value = false;
-    AppSnackBar.showError(
-      response.errorMessage ?? 'Failed to fetch profile.',
-    );
-  }
-}
+        return;
+      }
+
+      // Normalize expected startup/auth cases without toasting
+      final sc = response.statusCode ?? 0;
+      final err = (response.errorMessage ?? '').toLowerCase();   // ← safe
+
+      // “no shop yet” or unauthorized on boot: keep quiet
+      if (sc == 401 || sc == 403 || err.contains('shop')) {
+        profileDetails.value = GetBusinesModel(data: null);
+        return;
+      }
+
+      // Unexpected failure: only toast if not in silent mode
+      profileDetails.value = GetBusinesModel(data: null);
+      if (!silentAuthErrors) {
+        AppSnackBar.showError(response.errorMessage ?? 'Failed to fetch profile.');
+      }
     } catch (e) {
-      profileDetails.value = GetBusinesModel(
-        data: null,
-      ); // Ensure data is null on error
-      Get.snackbar(
-        'Error',
-        'An error occurred while fetching profile details: $e',
-      );
-      log('Fetch profile details error: $e');
+      // Don’t scare the user on bootstrap—log & set safe state
+      profileDetails.value = GetBusinesModel(data: null);
+      if (!silentAuthErrors) {
+        AppSnackBar.showError('An error occurred while fetching profile details.');
+      }
+      if (kDebugMode) log('Fetch profile details error: $e');
     } finally {
       isLoading.value = false;
     }
   }
+
 
   Future<void> createBusinessProfile({
     required String businessName,

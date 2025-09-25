@@ -11,8 +11,7 @@ import 'package:fidden/features/user/home/presentation/screen/shop_details_scree
 import 'package:fidden/features/user/shops/services/controller/service_details_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-//  NEW
+import 'package:vector_math/vector_math_64.dart' show Matrix4;
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -360,34 +359,43 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
                           ),
                           const SizedBox(height: 12),
                           Obx(() {
-                            if (c.isLoadingSlots.value) {
-                              return SlotsShimmer();
-                            }
-                            if (c.slots.isEmpty) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                child: Text(
-                                  'No time slots available.',
-                                  style: TextStyle(color: Colors.grey.shade700),
-                                ),
-                              );
-                            }
-                            return Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: c.slots.map((s) {
-                                final isSel = c.selectedSlotId.value == s.id;
-                                final label = c.fmtTimeLocal(s.startTimeUtc);
-                                return TimeChip(
-                                  text: label,
-                                  selected: isSel,
-                                  available: s.available,
-                                  onTap: () => c.selectedSlotId.value = s.id,
-                                );
-                              }).toList(),
-                            );
-                          }),
+  // Show shimmer while:
+  // - details still loading, OR
+  // - first slots load hasn’t finished yet, OR
+  // - a fetch is in progress
+  final showShimmer = c.isLoadingDetails.value ||
+                      !c.didLoadSlotsOnce.value ||
+                      c.isLoadingSlots.value;
+
+  if (showShimmer) {
+    return SlotsShimmer(); // now real shimmer (see below)
+  }
+
+  if (c.slots.isEmpty) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        'No time slots available.',
+        style: TextStyle(color: Colors.grey.shade700),
+      ),
+    );
+  }
+
+  return Wrap(
+    spacing: 10,
+    runSpacing: 10,
+    children: c.slots.map((s) {
+      final isSel = c.selectedSlotId.value == s.id;
+      final label = c.fmtTimeLocal(s.startTimeUtc);
+      return TimeChip(
+        text: label,
+        selected: isSel,
+        available: s.available,
+        onTap: () => c.selectedSlotId.value = s.id,
+      );
+    }).toList(),
+  );
+}),
 
                           const SizedBox(height: 26),
                         ],
@@ -785,19 +793,78 @@ class TimeChip extends StatelessWidget {
   }
 }
 
-class SlotsShimmer extends StatelessWidget {
+// Still in the same file, replace your old SlotsShimmer with:
+
+class SlotsShimmer extends StatefulWidget {
+  const SlotsShimmer({super.key});
+
+  @override
+  State<SlotsShimmer> createState() => _SlotsShimmerState();
+}
+
+class _SlotsShimmerState extends State<SlotsShimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ac =
+      AnimationController(vsync: this, duration: const Duration(seconds: 1))
+        ..repeat();
+
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: List.generate(
-        6,
-        (i) => Container(
-          width: 90,
-          height: 40,
+    return AnimatedBuilder(
+      animation: _ac,
+      builder: (context, _) {
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: List.generate(8, (i) => _ShimmerChip(progress: _ac.value)),
+        );
+      },
+    );
+  }
+}
+
+class _ShimmerChip extends StatelessWidget {
+  const _ShimmerChip({required this.progress});
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    // simple moving gradient using animated stops
+    final base = const Color(0xFFECEFF4);
+    final hi = const Color(0xFFF5F7FB);
+
+    // move a highlight across [0,1] by sliding the stops
+    final mid = progress.clamp(0.0, 1.0);
+    final start = (mid - 0.25).clamp(0.0, 1.0);
+    final end = (mid + 0.25).clamp(0.0, 1.0);
+
+    return Container(
+      width: 90,
+      height: 40,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE3E7EE)),
+      ),
+      child: ShaderMask(
+        shaderCallback: (rect) {
+          return LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [base, hi, base],
+            stops: [start, mid, end],
+            tileMode: TileMode.clamp,
+          ).createShader(rect);
+        },
+        blendMode: BlendMode.srcATop,
+        child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFECEFF4),
+            color: base,
             borderRadius: BorderRadius.circular(12),
           ),
         ),
@@ -805,6 +872,21 @@ class SlotsShimmer extends StatelessWidget {
     );
   }
 }
+
+
+/// Convenience gradient transform
+
+// class GradientTranslation extends GradientTransform {
+//   final double dx, dy;
+//   const GradientTranslation(this.dx, this.dy);
+
+//   @override
+//   Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+//     // This now correctly uses the Matrix4 class from the Flutter framework
+//     return Matrix4.translationValues(dx, dy, 0.0);
+//   }
+// }
+
 
 class _ExpandableText extends StatefulWidget {
   const _ExpandableText({

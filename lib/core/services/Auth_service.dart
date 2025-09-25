@@ -42,6 +42,17 @@ class AuthService {
     }
   }
 
+  static Future<void> waitForToken({Duration timeout = const Duration(seconds: 10)}) async {
+  final start = DateTime.now();
+  while (true) {
+    final t = accessToken;
+    if (t != null && t.isNotEmpty) return;
+    if (DateTime.now().difference(start) > timeout) return; // give up quietly
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
+}
+
+
 
   static bool hasToken() {
     return _preferences.containsKey(_accessTokenKey);

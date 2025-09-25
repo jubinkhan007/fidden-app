@@ -16,6 +16,7 @@ class ServiceDetailsController extends GetxController {
 
   final isLoadingDetails = false.obs;
   final isLoadingSlots = false.obs;
+  final didLoadSlotsOnce = false.obs;
 
   final details = Rxn<ServiceDetailsModel>();
   final slots = <SlotItem>[].obs;
@@ -80,7 +81,7 @@ class ServiceDetailsController extends GetxController {
         }
 
         _snapSelectedToNextOpenInWindow();
-        await fetchSlotsForDate(selectedDate.value);
+        await fetchSlotsForDate(selectedDate.value, mutateSelection: true);
 
         // ───────── NEW: warm the cache (today..+6) in the background
         prefetchNext7Days(); // fire & forget
@@ -97,88 +98,100 @@ class ServiceDetailsController extends GetxController {
   /// Fetch slots for a date.
   /// [useCache]: read from cache if available.
   /// [force]: bypass cache and refresh from network.
-  Future<void> fetchSlotsForDate(
-    DateTime date, {
-    bool useCache = true, // NEW
-    bool force = false,   // NEW
-  }) async {
-    final d = details.value;
-    if (d == null) return;
+  // signature
+Future<void> fetchSlotsForDate(
+  DateTime date, {
+  bool useCache = true,
+  bool force = false,
+  bool mutateSelection = true, // NEW
+}) async {
+  final d = details.value;
+  if (d == null) return;
 
-    selectedDate.value = DateTime(date.year, date.month, date.day);
+  // Work on a normalized day for keying/cache
+  final day = DateTime(date.year, date.month, date.day);
+  final key = _fmtDate(day);
+
+  if (mutateSelection) {
+    selectedDate.value = day;
     selectedSlotId.value = null;
-
-    final key = _fmtDate(selectedDate.value);
-
-    // ───────── NEW: serve from cache if allowed and present
-    if (useCache && !force && _slotsCache.containsKey(key)) {
-      slots.assignAll(_slotsCache[key]!);
-      return;
-    }
-
-    isLoadingSlots.value = true;
-
-    try {
-      final uri = Uri.parse('${AppUrls.serviceDetails}/${d.shopId}/slots/')
-          .replace(
-        queryParameters: {
-          'service': serviceId.toString(),
-          'date': key,
-        },
-      );
-
-      final res = await NetworkCaller().getRequest(
-        uri.toString(),
-        token: AuthService.accessToken,
-      );
-
-      if (res.isSuccess && res.responseData is Map<String, dynamic>) {
-        final parsed = SlotsResponse.fromJson(res.responseData);
-        final now = DateTime.now();
-        List<SlotItem> processedSlots = parsed.slots;
-
-        // If the selected date is today, mark past times unavailable
-        if (_isSameDay(selectedDate.value, now)) {
-          processedSlots = parsed.slots.map((slot) {
-            if (!slot.available) return slot;
-            if (slot.startTimeUtc.toLocal().isBefore(now)) {
-              return SlotItem(
-                id: slot.id,
-                shop: slot.shop,
-                service: slot.service,
-                startTimeUtc: slot.startTimeUtc,
-                endTimeUtc: slot.endTimeUtc,
-                capacityLeft: slot.capacityLeft,
-                available: false,
-              );
-            }
-            return slot;
-          }).toList();
-        }
-
-        slots.assignAll(processedSlots);
-
-        // ───────── NEW: write-through cache
-        _slotsCache[key] = processedSlots;
-      } else {
-        AppSnackBar.showError(res.errorMessage ?? 'Failed to load slots.');
-      }
-    } catch (e) {
-      AppSnackBar.showError('Error loading slots: $e');
-    } finally {
-      isLoadingSlots.value = false;
-    }
   }
+
+  // Serve from cache
+  if (useCache && !force && _slotsCache.containsKey(key)) {
+    if (mutateSelection) {
+      slots.assignAll(_slotsCache[key]!);
+      didLoadSlotsOnce.value = true; 
+    }
+    return;
+  }
+
+  isLoadingSlots.value = true;
+  try {
+    final uri = Uri.parse('${AppUrls.serviceDetails}/${d.shopId}/slots/')
+        .replace(queryParameters: {
+      'service': serviceId.toString(),
+      'date': key,
+    });
+
+    final res = await NetworkCaller().getRequest(
+      uri.toString(),
+      token: AuthService.accessToken,
+    );
+
+    if (res.isSuccess && res.responseData is Map<String, dynamic>) {
+      final parsed = SlotsResponse.fromJson(res.responseData);
+      final now = DateTime.now();
+      List<SlotItem> processed = parsed.slots;
+
+      // If "today", mark past times unavailable
+      if (_isSameDay(day, now)) {
+        processed = processed.map((slot) {
+          if (!slot.available) return slot;
+          if (slot.startTimeUtc.toLocal().isBefore(now)) {
+            return SlotItem(
+              id: slot.id,
+              shop: slot.shop,
+              service: slot.service,
+              startTimeUtc: slot.startTimeUtc,
+              endTimeUtc: slot.endTimeUtc,
+              capacityLeft: slot.capacityLeft,
+              available: false,
+            );
+          }
+          return slot;
+        }).toList();
+      }
+
+      // write-through cache
+      _slotsCache[key] = processed;
+
+      // only update visible list if we're fetching the currently selected day
+      if (mutateSelection && _isSameDay(selectedDate.value, day)) {
+        slots.assignAll(processed);
+      }
+    } else {
+      AppSnackBar.showError(res.errorMessage ?? 'Failed to load slots.');
+    }
+  } catch (e) {
+    AppSnackBar.showError('Error loading slots: $e');
+  } finally {
+    isLoadingSlots.value = false;
+    didLoadSlotsOnce.value = true;
+  }
+}
+
 
   // ───────── NEW: warm up cache for today..+6 without blocking UI
-  void prefetchNext7Days() {
-    final start = DateTime.now();
-    for (int i = 0; i < 7; i++) {
-      final d = DateTime(start.year, start.month, start.day).add(Duration(days: i));
-      // no await → background fetches; cache will be filled as they return
-      fetchSlotsForDate(d, useCache: true);
-    }
+// Warm cache WITHOUT touching selection
+void prefetchNext7Days() {
+  final start = DateTime.now();
+  for (int i = 0; i < 7; i++) {
+    final d = DateTime(start.year, start.month, start.day).add(Duration(days: i));
+    fetchSlotsForDate(d, useCache: true, mutateSelection: false); // <-- key change
   }
+}
+
 
   // ───────── NEW: seed cache and UI from preloaded data (Option B handoff)
   void seedPreloadedSlots({

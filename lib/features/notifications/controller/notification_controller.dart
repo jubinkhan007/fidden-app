@@ -8,7 +8,8 @@ import 'package:fidden/features/notifications/data/notification_model.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-class NotificationController extends GetxController {
+
+  class NotificationController extends GetxController {
   final notifications = <NotificationModel>[].obs;
   final isLoading = true.obs;
   final hasUnread = false.obs;
@@ -16,29 +17,60 @@ class NotificationController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchNotifications();
+    _init();
+
+    // If the token changes/refreshes, refetch automatically
+    ever(AuthService.tokenRefreshCount, (_) {
+      // ignore if the controller is not mounted anymore
+      if (!Get.isRegistered<NotificationController>()) return;
+      fetchNotifications(silentAuthErrors: true);
+    });
   }
 
-  Future<void> fetchNotifications() async {
+  Future<void> _init() async {
+    await AuthService.waitForToken();                // <-- wait for a real token
+    await fetchNotifications(silentAuthErrors: true); // <-- no toast on 401 at boot
+  }
+
+  Future<void> fetchNotifications({bool silentAuthErrors = false}) async {
     isLoading.value = true;
     try {
       final response = await NetworkCaller().getRequest(
         AppUrls.notifications,
         token: AuthService.accessToken,
+        // Optional if your NetworkCaller supports it:
+        // treat404AsEmpty: true,
+        // emptyPayload: const [],
       );
+
       if (response.isSuccess && response.responseData is List) {
         final List<dynamic> responseData = response.responseData;
         notifications.value = responseData
             .map((json) => NotificationModel.fromJson(json))
             .toList();
         _updateUnreadStatus();
-      } else {
-        AppSnackBar.showError(
-          response.errorMessage ?? "Failed to load notifications.",
-        );
+        return;
       }
+
+      // Suppress startup noise when auth isn't ready yet
+      final sc = response.statusCode ?? 0;
+      if (silentAuthErrors && (sc == 401 || sc == 403)) {
+        notifications.clear();
+        hasUnread.value = false;
+        return;
+      }
+
+      AppSnackBar.showError(
+        response.errorMessage ?? "Failed to load notifications.",
+      );
     } catch (e) {
-      AppSnackBar.showError('An error occurred: $e');
+      if (silentAuthErrors) {
+        // quiet on boot; just clear state
+        notifications.clear();
+        hasUnread.value = false;
+      } else {
+        AppSnackBar.showError('An error occurred: $e');
+      }
     } finally {
       isLoading.value = false;
     }
@@ -106,7 +138,7 @@ class NotificationController extends GetxController {
       AppSnackBar.showError("An error occurred: $e");
     }
   }
-
+  
   void _updateUnreadStatus() {
     hasUnread.value = notifications.any((n) => !n.isRead);
   }
