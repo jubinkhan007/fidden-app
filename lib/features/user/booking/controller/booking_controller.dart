@@ -73,7 +73,9 @@ class BookingController extends GetxController {
   Future<void> _fetchActive({bool reset = false}) async {
     pagingActive.value = true;
     try {
-      final url = _nextActiveUrl ?? AppUrls.userBookings(_email!);
+      // First page should include active items
+      final firstPage = AppUrls.userBookings(_email!, excludeActive: false);
+      final url = _nextActiveUrl ?? firstPage;
 
       final resp = await NetworkCaller().getRequest(
         url,
@@ -81,12 +83,17 @@ class BookingController extends GetxController {
       );
 
       if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
-        final parsed = BookingListResponse.fromJson(resp.responseData);
+        final parsed = BookingListResponse.fromJson(
+          Map<String, dynamic>.from(resp.responseData),
+        );
+
         _nextActiveUrl = parsed.next;
 
-        final chunk = parsed.results.where((b) => b.status == 'active');
         if (reset) active.clear();
-        active.addAll(chunk);
+        // defensive: keep only active
+        active.addAll(parsed.results.where((b) => b.status == 'active'));
+      } else {
+        // your existing error handling (optional)
       }
     } finally {
       pagingActive.value = false;
@@ -95,34 +102,44 @@ class BookingController extends GetxController {
 
   final historyAll = <BookingItem>[].obs; // non-active, API order
 
-Future<void> _fetchHistory({bool reset = false}) async {
-  pagingHistory.value = true;
-  try {
-    final url = _nextHistoryUrl ?? AppUrls.userBookings(_email!);
-    final resp = await NetworkCaller().getRequest(url, token: AuthService.accessToken);
+  Future<void> _fetchHistory({bool reset = false}) async {
+    pagingHistory.value = true;
+    try {
+      // First page must exclude active
+      final firstPage = AppUrls.userBookings(_email!, excludeActive: true);
+      final url = _nextHistoryUrl ?? firstPage;
 
-    if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
-      final parsed = BookingListResponse.fromJson(resp.responseData);
-      _nextHistoryUrl = parsed.next;
+      final resp = await NetworkCaller().getRequest(
+        url,
+        token: AuthService.accessToken,
+      );
 
-      if (reset) {
-        historyAll.clear();
-        history.clear();
-        cancelled.clear();
+      if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+        final parsed = BookingListResponse.fromJson(
+          Map<String, dynamic>.from(resp.responseData),
+        );
+
+        _nextHistoryUrl = parsed.next;
+
+        if (reset) {
+          historyAll.clear();
+          history.clear();
+          cancelled.clear();
+        }
+
+        // server already excludes active; keep a defensive filter anyway
+        for (final b in parsed.results.where((b) => b.status != 'active')) {
+          historyAll.add(b);                       // preserve API order
+          if (b.status == 'completed') history.add(b);
+          if (b.status == 'cancelled') cancelled.add(b);
+        }
+      } else {
+        // your existing error handling (optional)
       }
-
-      // Preserve API order:
-      for (final b in parsed.results) {
-        if (b.status == 'active') continue;
-        historyAll.add(b);                  // <- ordered list for UI
-        if (b.status == 'completed') history.add(b);
-        if (b.status == 'cancelled') cancelled.add(b);
-      }
+    } finally {
+      pagingHistory.value = false;
     }
-  } finally {
-    pagingHistory.value = false;
   }
-}
 
   Future<void> submitReview(BookingItem booking) async {
     final body = {

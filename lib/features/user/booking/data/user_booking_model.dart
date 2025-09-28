@@ -24,6 +24,13 @@ class BookingListResponse {
           .toList(),
     );
   }
+
+  // ✅ Add this
+  Map<String, dynamic> toJson() => {
+        'next': next,
+        'previous': previous,
+        'results': results.map((e) => e.toJson()).toList(),
+      };
 }
 
 class UserBookingsModel {
@@ -45,10 +52,19 @@ class UserBookingsModel {
         next: json["next"],
         previous: json["previous"],
         results: List<BookingItem>.from(
-            json["results"].map((x) => BookingItem.fromJson(x))),
+          (json["results"] as List<dynamic>? ?? [])
+              .map((x) => BookingItem.fromJson(x as Map<String, dynamic>)),
+        ),
       );
-}
 
+  // (Optional) only if you ever want to cache this shape directly:
+  Map<String, dynamic> toJson() => {
+        'count': count,
+        'next': next,
+        'previous': previous,
+        'results': results.map((e) => e.toJson()).toList(),
+      };
+}
 
 class BookingItem {
   final int id;
@@ -60,10 +76,10 @@ class BookingItem {
   final String shopAddress;
   final String shopImg;
   final int slot;
-  final String slotTimeIso;
+  final String slotTimeIso;      // keep ISO string (as you do)
   final String serviceTitle;
-  final String serviceDuration; // minutes as string from API
-  final String status;          // "active" / "completed" / "cancelled" etc.
+  final String serviceDuration;  // minutes as string from API
+  final String status;           // "active" / "completed" / "cancelled" etc.
   final DateTime createdAt;
   final DateTime updatedAt;
   final double avgRating;
@@ -92,13 +108,8 @@ class BookingItem {
   });
 
   factory BookingItem.fromJson(Map<String, dynamic> json) {
-    // defensive parsing
     double _toDouble(v) => v is num ? v.toDouble() : double.tryParse("$v") ?? 0.0;
     int _toInt(v) => v is num ? v.toInt() : int.tryParse("$v") ?? 0;
-    final String slotTimeString = json['slot_time']; // e.g., "2025-09-20T10:30:00+06:00"
-
-  // Remove the timezone part (+06:00) to prevent conversion
-  // final String localTimeString = slotTimeString.substring(0, 19);
 
     return BookingItem(
       id: _toInt(json['id']),
@@ -111,7 +122,6 @@ class BookingItem {
       shopImg: json['shop_img'] ?? '',
       slot: _toInt(json['slot']),
       slotTimeIso: (json['slot_time'] ?? '').toString(),
-
       serviceTitle: json['service_title'] ?? '',
       serviceDuration: json['service_duration'] ?? '',
       status: (json['status'] ?? '').toString().toLowerCase(),
@@ -123,9 +133,29 @@ class BookingItem {
     );
   }
 
-BookingItem copyWith({
-    String? status,
-  }) {
+  // ✅ Add this
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'user': user,
+        'user_email': userEmail,
+        'shop': shop,
+        'service_id': serviceId,
+        'shop_name': shopName,
+        'shop_address': shopAddress,
+        'shop_img': shopImg,
+        'slot': slot,
+        'slot_time': slotTimeIso,
+        'service_title': serviceTitle,
+        'service_duration': serviceDuration,
+        'status': status,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+        'avg_rating': avgRating,
+        'total_reviews': totalReviews,
+        'is_reviewed': isReviewed,
+      };
+
+  BookingItem copyWith({String? status}) {
     return BookingItem(
       id: id,
       user: user,
@@ -139,7 +169,7 @@ BookingItem copyWith({
       slotTimeIso: slotTimeIso,
       serviceTitle: serviceTitle,
       serviceDuration: serviceDuration,
-      status: status ?? this.status, // Use new status if provided
+      status: status ?? this.status,
       createdAt: createdAt,
       updatedAt: updatedAt,
       avgRating: avgRating,
@@ -148,4 +178,3 @@ BookingItem copyWith({
     );
   }
 }
-

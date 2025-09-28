@@ -261,93 +261,117 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
                           Obx(() {
                             final selected = c.selectedDate.value;
 
-                            final now = DateTime.now();
-                            final today =
-                                DateTime(now.year, now.month, now.day);
-                            final windowEnd = today.add(const Duration(days: 6));
+                            // allow any future date (you can cap with +90 days if you like)
+                            final now    = DateTime.now();
+                            final today  = DateTime(now.year, now.month, now.day);
+                            final firstDay = DateTime(today.year - 1, 1, 1);   // far past (for nav)
+                            final lastDay  = DateTime(today.year + 1, 12, 31); // far future (for nav)
 
-                            // Show the whole current month, enable only today..+6
-                            final firstVisible = DateTime(today.year, today.month, 1);
-                            final lastVisible =
-                                DateTime(today.year, today.month + 1, 0);
+                            bool isPast(DateTime d) => d.isBefore(today);
 
-                            bool inWindow(DateTime d) =>
-                                !d.isBefore(today) && !d.isAfter(windowEnd);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Month label stays in sync with calendar page
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Text(
+                                    DateFormat('MMMM yyyy').format(selected),
+                                    style: const TextStyle(fontWeight: FontWeight.w800),
+                                  ),
+                                ),
+                                TableCalendar(
+                                  firstDay: firstDay,
+                                  lastDay: lastDay,
+                                  focusedDay: selected,                   // keep calendar focused
+                                  calendarFormat: CalendarFormat.month,   // <-- full month
+                                  availableGestures: AvailableGestures.horizontalSwipe,
+                                  startingDayOfWeek: StartingDayOfWeek.sunday,
+                                  headerStyle: const HeaderStyle(
+                                    formatButtonVisible: false,
+                                    titleCentered: true,
+                                    leftChevronVisible: true,
+                                    rightChevronVisible: true,
+                                  ),
 
-                            return TableCalendar(
-                              firstDay: firstVisible,
-                              lastDay: lastVisible,
-                              focusedDay: selected.isBefore(firstVisible) ||
-                                      selected.isAfter(lastVisible)
-                                  ? today
-                                  : selected,
-                              headerStyle: const HeaderStyle(
-                                formatButtonVisible: false,
-                                titleCentered: true,
-                                leftChevronVisible: true,
-                                rightChevronVisible: true,
-                              ),
-                              startingDayOfWeek: StartingDayOfWeek.sunday,
-                              availableGestures: AvailableGestures.none,
-                              selectedDayPredicate: (d) =>
+                                  selectedDayPredicate: (d) =>
                                   d.year == selected.year &&
-                                  d.month == selected.month &&
-                                  d.day == selected.day,
-                              onDaySelected: (sel, foc) {
-                                if (!inWindow(sel) || c.isClosedDay(sel)) return;
-                                c.selectedDate.value = sel;
-                                c.fetchSlotsForDate(sel);
-                              },
-                              enabledDayPredicate: (day) {
-                                if (!inWindow(day)) return false;
-                                return !c.isClosedDay(day);
-                              },
-                              calendarBuilders: CalendarBuilders(
-  defaultBuilder: (ctx, day, foc) {
-    final disabled = !inWindow(day) || c.isClosedDay(day);
-    return Center(
-      child: Text(
-        '${day.day}',
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          color: disabled ? Colors.grey.shade400 : const Color(0xFF120D1C),
-        ),
-      ),
-    );
-  },
-  todayBuilder: (ctx, day, foc) => Center(
-    child: Text(
-      '${day.day}',
-      style: const TextStyle(
-        fontWeight: FontWeight.w800,
-        color: Color(0xFF120D1C),
-      ),
-    ),
-  ),
-  // ✅ draw the number inside the selected circle
-  selectedBuilder: (ctx, day, foc) => Center(
-  child: Container(
-    width: 36,
-    height: 36,
-    decoration: BoxDecoration(
-      color: Get.theme.primaryColor,
-      shape: BoxShape.circle,
-    ),
-    alignment: Alignment.center,
-    // ↓ draw the selected day number (was an empty Text)
-    child: Text(
-      '${day.day}',
-      style: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.w800,
-      ),
-    ),
-  ),
-),
+                                      d.month == selected.month &&
+                                      d.day == selected.day,
 
-),
+                                  // Disable past days and shop closed days
+                                  enabledDayPredicate: (day) => !isPast(day) && !c.isClosedDay(day),
+
+                                  onDaySelected: (sel, foc) {
+                                    if (isPast(sel) || c.isClosedDay(sel)) return;
+                                    c.fetchSlotsForDate(sel); // updates selectedDate & loads slots
+                                  },
+
+                                  // keep the label in sync when user flips months
+                                  onPageChanged: (focused) {
+                                    // move focus but don't trigger slot load
+                                    c.selectedDate.value = DateTime(focused.year, focused.month, c.selectedDate.value.day.clamp(1, 28));
+                                  },
+
+                                  calendarBuilders: CalendarBuilders(
+                                    defaultBuilder: (ctx, day, foc) {
+                                      final disabled = isPast(day) || c.isClosedDay(day);
+                                      return Center(
+                                        child: Text(
+                                          '${day.day}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            color: disabled ? Colors.grey.shade400 : const Color(0xFF120D1C),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    outsideBuilder: (ctx, day, foc) {
+                                      final disabled = isPast(day) || c.isClosedDay(day);
+                                      return Center(
+                                        child: Text(
+                                          '${day.day}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            color: disabled ? Colors.grey.shade300 : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    selectedBuilder: (ctx, day, foc) => Center(
+                                      child: Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: Get.theme.primaryColor,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          '${day.day}',                 // ← show the number
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    todayBuilder: (ctx, day, foc) => Center(
+                                      child: Text(
+                                        '${day.day}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF120D1C),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             );
                           }),
+
 
                           const SizedBox(height: 0),
 

@@ -1,4 +1,8 @@
+// lib/core/utils/constants/api_constants.dart
+
 import 'dart:developer';
+
+
 
 class AppUrls {
   AppUrls._();
@@ -33,7 +37,14 @@ class AppUrls {
       '$_baseUrl/booking/users?status=completed';
   static String cancelBooking(int bookingId) => '$_baseUrl/payments/bookings/cancel/$bookingId/';
 
-      static String userBookings(String email) => '$_baseUrl/payments/bookings/?user_email=$email';
+  static String userBookings(String email, {bool excludeActive = false}) {
+    final base = '$_baseUrl/payments/bookings/';
+    final qp = <String, String>{
+      'user_email': email,
+      if (excludeActive) 'exclude_active': 'true',
+    };
+    return Uri.parse(base).replace(queryParameters: qp).toString();
+  }
   static const String createReview = '$_baseUrl/api/reviews/';
   static const String allShops = '$_baseUrl/api/users/shops/';
   static const String serviceDetails =

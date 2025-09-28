@@ -110,7 +110,7 @@ class ForgetEmailScreen extends StatelessWidget {
                               ),
                             )
                           : SizedBox(
-                              height: getHeight(60),
+                              height: getHeight(62),
                               width: double.infinity,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(

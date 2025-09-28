@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/services/location_service.dart';
@@ -8,11 +9,15 @@ import 'package:fidden/features/user/shops/services/data/all_services_model.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AllServicesController extends GetxController {
   // UI state
   final isLoading = false.obs;
   final allServices = AllServicesModel().obs;
+  bool get hasLocalData =>
+      (allServices.value.results != null && allServices.value.results!.isNotEmpty);
+
 
   // Search (debounced)
   final TextEditingController searchController = TextEditingController();
@@ -35,16 +40,62 @@ class AllServicesController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _bootstrap(); // ⬅️ do async bootstrap
+    isLoading.value = true;           // <-- start in loading state
+    _bootstrap();
     searchController.addListener(_onSearchChanged);
   }
 
   Future<void> _bootstrap() async {
-    await _initLocation(); // ⬅️ wait for GPS
+    await _initLocation();
+
+    // If controller was created with categoryId, pre-apply it BEFORE cache load
     if (categoryId != null) {
-      filters['category'] = categoryId;
+      filters['category'] = categoryId; // this affects the cache key
     }
-    await _fetch(); // ⬅️ first fetch now includes location in body
+
+    await _loadFromCache();            // may populate allServices
+
+    // If we already have cached data, we can drop the loading flag now
+    if (hasLocalData) {
+      isLoading.value = false;         // no shimmer, cached list is visible
+    }
+
+    // Always revalidate in background
+    unawaited(_fetch());
+  }
+
+  // ---------- Cache helpers ----------
+
+  // Cache key based on query+filters+sort (coarse but effective)
+  Future<String> _cacheKey() async {
+    final search = searchController.text.trim();
+    final map = <String, dynamic>{
+      'search': search,
+      'filters': Map<String, dynamic>.from(filters),
+      'sort': sortKey.value,
+      // You can add categoryId if you pass controller(categoryId) externally
+    };
+    return 'all_services_cache:${jsonEncode(map)}'; // stable key by params
+  }
+
+  Future<void> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = await _cacheKey();
+      final s = prefs.getString(key);
+      if (s == null || s.isEmpty) return;
+
+      final decoded = jsonDecode(s) as Map<String, dynamic>;
+      allServices.value = AllServicesModel.fromJson(decoded);
+    } catch (_) {/* ignore */}
+  }
+
+  Future<void> _saveToCache(Map<String, dynamic> json) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = await _cacheKey();
+      await prefs.setString(key, jsonEncode(json));
+    } catch (_) {/* ignore */}
   }
 
   void filterByCategory(int? newCategoryId) {
@@ -197,25 +248,31 @@ class AllServicesController extends GetxController {
 
       final base = _withTrailingSlash(AppUrls.allServices);
       final q = _buildQuery();
-      final url = q.isEmpty
-          ? base
-          : Uri.parse(base).replace(queryParameters: q).toString();
+      final url = q.isEmpty ? base : Uri.parse(base).replace(queryParameters: q).toString();
 
       final response = await networkCaller.getRequestWithBody(
         url,
         token: token,
-        body: _buildBody(), // ⬅️ now populated after _initLocation
+        body: _buildBody(),
       );
 
       if (response.isSuccess && response.responseData is Map<String, dynamic>) {
-        allServices.value = AllServicesModel.fromJson(response.responseData);
+        final map = Map<String, dynamic>.from(response.responseData);
+        allServices.value = AllServicesModel.fromJson(map);
+
+        // ✅ cache fresh success
+        unawaited(_saveToCache(map));
       } else {
-        AppSnackBar.showError(
-          response.errorMessage ?? 'Failed to fetch services.',
-        );
+        // If we have cache, keep showing it quietly; otherwise, surface error
+        if (!hasLocalData) {
+          AppSnackBar.showError(response.errorMessage ?? 'Failed to fetch services.');
+        }
       }
     } catch (e) {
-      AppSnackBar.showError('An error occurred while fetching services: $e');
+      // Offline / exception: if we have cache, keep it; otherwise show error
+      if (!hasLocalData) {
+        AppSnackBar.showError('An error occurred while fetching services: $e');
+      }
     } finally {
       isLoading.value = false;
     }

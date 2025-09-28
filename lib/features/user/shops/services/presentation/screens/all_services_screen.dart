@@ -27,9 +27,9 @@ class AllServicesScreen extends StatelessWidget {
     final controller = Get.put(AllServicesController());
 
     // This callback ensures the controller's state is updated every time this screen is shown.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.filterByCategory(categoryId);
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   controller.filterByCategory(categoryId);
+    // });
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -59,31 +59,26 @@ class AllServicesScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _SearchBar(
               controller: controller.searchController,
-              onChanged: (q) {
-                // The controller's listener already handles the debounce logic
-              },
+              onChanged: (_) {}, // debounce handled in controller
               onFilterTap: () async {
-                final f = controller.filters; // RxMap<String, dynamic>
-
+                final f = controller.filters;
                 final Map<String, dynamic>? result = await Get.to(
-                  () => ServiceFilterScreen(
+                      () => ServiceFilterScreen(
                     initialCategoryId: f['category'] as int?,
                     initialMinPrice: f['min_price'] as int?,
                     initialMaxPrice: f['max_price'] as int?,
                     initialDuration: f['duration'] as int?,
                     initialDistance: f['distance'] as int?,
                     initialRating: (f['rating'] as num?)?.toDouble(),
-                    sliderMin: 0,
-                    sliderMax: 500,
+                    sliderMin: 0, sliderMax: 500,
                   ),
                   transition: Transition.downToUp,
                 );
-
                 if (result != null) {
                   if (result['__reset'] == true) {
-                    await controller.clearFilters(); // ⬅️ show unfiltered list
+                    await controller.clearFilters();
                   } else {
-                    result.removeWhere((k, v) => v == null); // optional tidy
+                    result.removeWhere((k, v) => v == null);
                     await controller.applyFilters(result);
                   }
                 }
@@ -91,10 +86,14 @@ class AllServicesScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+
           Expanded(
             child: Obx(() {
-              if (controller.isLoading.value &&
-                  (controller.allServices.value.results ?? []).isEmpty) {
+              final hasData = controller.hasLocalData;
+              final results = controller.allServices.value.results ?? const [];
+
+              // 1) No cache yet + fetching => shimmer
+              if (!hasData && controller.isLoading.value) {
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   itemCount: 6,
@@ -103,8 +102,8 @@ class AllServicesScreen extends StatelessWidget {
                 );
               }
 
-              final results = controller.allServices.value.results;
-              if (results == null || results.isEmpty) {
+              // 2) After load finished, still empty => true empty state
+              if (!controller.isLoading.value && results.isEmpty) {
                 return const Center(
                   child: CustomText(
                     text: "No services found",
@@ -113,36 +112,26 @@ class AllServicesScreen extends StatelessWidget {
                 );
               }
 
+              // 3) Normal list (will also show cached data while fetching fresh)
               return ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 itemCount: results.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 14),
                 itemBuilder: (context, index) {
                   final service = results[index];
-
-                  final imageUrl =
-                      (service.serviceImg != null &&
-                          service.serviceImg!.isNotEmpty)
+                  // ... existing card building code unchanged ...
+                  // (keep your _ServiceCard usage)
+                  final imageUrl = (service.serviceImg != null && service.serviceImg!.isNotEmpty)
                       ? service.serviceImg!
                       : service.randomPlaceholderImage;
-
                   final rating = (service.avgRating ?? 0).toDouble();
                   final reviewCount = service.reviewCount ?? 0;
-
-                  final hasDiscount =
-                      (service.discountPrice != null &&
-                      service.discountPrice != "0.00");
-                  final displayPrice = hasDiscount
-                      ? service.discountPrice
-                      : service.price;
+                  final hasDiscount = (service.discountPrice != null && service.discountPrice != "0.00");
+                  final displayPrice = hasDiscount ? service.discountPrice : service.price;
                   final originalPrice = hasDiscount ? service.price : null;
-                  final distanceKm = service.distance; // already in KM from API
+                  final distanceKm = service.distance;
                   final String? distanceLabel = (distanceKm != null)
-                      ? '${distanceKm.toStringAsFixed(1)} km'
-                      : null;
-                  debugPrint(
-                    "Distance Label --------------------> $distanceLabel",
-                  );
+                      ? '${distanceKm.toStringAsFixed(1)} km' : null;
 
                   return _ServiceCard(
                     service: service,
@@ -159,17 +148,11 @@ class AllServicesScreen extends StatelessWidget {
                     distanceLabel: distanceLabel,
                     onTap: () {
                       if (service.id != null) {
-                        // Navigate to the Service Details Screen
-                        Get.to(
-                          () => ServiceDetailsScreen(serviceId: service.id!),
-                          transition: Transition.cupertino,
-                        );
+                        Get.to(() => ServiceDetailsScreen(serviceId: service.id!),
+                            transition: Transition.cupertino);
                       }
                     },
-                    onFavoriteToggle: () {
-                      // Hook to your favorite toggle
-                      // controller.toggleFavorite(service.id)
-                    },
+                    onFavoriteToggle: () {},
                   );
                 },
               );

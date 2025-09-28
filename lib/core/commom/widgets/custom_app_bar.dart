@@ -14,27 +14,40 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String secondText;
   final Widget? trailing;
 
-  // toolbar + subline
+  // Row heights
   static const double _toolbarH = 34;
   static const double _sublineH = 22;
+  static const double _bottomPad = 8;
 
+  bool get _hasSubline => secondText.isNotEmpty;
+
+  // ✅ preferredSize must match the actual content height (excluding status bar).
   @override
   Size get preferredSize =>
-      const Size.fromHeight(_toolbarH + _sublineH); // <-- real height
+      Size.fromHeight(_toolbarH + (_hasSubline ? _sublineH : 0) + _bottomPad);
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top; // <-- status-bar height
+    final topInset = MediaQuery.of(context).padding.top;
+
+    // ✅ Real container height includes status bar + rows + bottom padding.
+    final contentHeight =
+        _toolbarH + (_hasSubline ? _sublineH : 0) + _bottomPad;
 
     return Material(
-      color: Colors.white,
-      elevation: 0,
-      child: Container(
-        padding: EdgeInsets.only(top: top, left: 12, right: 12, bottom: 8),
-        // keep the height predictable for Scaffold
-        height: top + _toolbarH + _sublineH,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  color: Colors.white,
+  elevation: 0,
+  child: Padding(
+    padding: EdgeInsets.only(
+      top: MediaQuery.of(context).padding.top,
+      left: 12,
+      right: 12,
+      bottom: _bottomPad,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min, // <-- lets it shrink/expand naturally
+      crossAxisAlignment: CrossAxisAlignment.start,
+
           children: [
             // row 1
             Row(
@@ -46,8 +59,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    textAlign: TextAlign.center,
                     firstText,
+                    textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -64,13 +77,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
             // row 2
-            if (secondText.isNotEmpty)
+            if (_hasSubline)
+              const SizedBox(height: 2), // small buffer to feel balanced
+            if (_hasSubline)
               Padding(
                 padding: const EdgeInsets.only(left: 44), // align under title
                 child: Text(
                   secondText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
+                  // maxLines: 1,
+                  overflow: TextOverflow.visible,
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF616161),

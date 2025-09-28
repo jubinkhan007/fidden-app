@@ -111,16 +111,22 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
           ),
           Expanded(
             child: Obx(() {
-              if (controller.isLoading.value) {
+              final hasData = controller.hasLocalData;
+              final items = controller.allShops.value.shops ?? const [];
+
+// 1) No cache yet + loading => shimmer
+              if (!hasData && controller.isLoading.value) {
                 return _buildShimmerEffect();
               }
-              if (controller.allShops.value.shops == null ||
-                  controller.allShops.value.shops!.isEmpty) {
+
+// 2) Finished loading and still empty => true empty state
+              if (!controller.isLoading.value && items.isEmpty) {
                 return const Center(child: CustomText(text: "No shops found"));
               }
+
               return ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                itemCount: controller.allShops.value.shops!.length,
+                itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 14),
                 itemBuilder: (context, index) {
                   final shop = controller.allShops.value.shops![index];
