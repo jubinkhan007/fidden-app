@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:fidden/core/ws/ws_service.dart';
 import 'package:fidden/features/inbox/controller/inbox_controller.dart';
 import 'package:fidden/features/inbox/data/message_model.dart';
+import 'package:fidden/features/inbox/services/paged_messages.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 import 'package:get/get.dart';
 
@@ -14,7 +15,6 @@ import 'package:fidden/features/inbox/controller/inbox_controller.dart';
 import 'package:fidden/features/inbox/data/thread_data_model.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 
-// ...
 
 class ChatController extends GetxController {
   ChatController({
@@ -25,8 +25,7 @@ class ChatController extends GetxController {
     List<MessageModel>? seedMessages,
   }) {
     if (seedMessages != null && seedMessages.isNotEmpty) {
-      final sorted = [...seedMessages]
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      final sorted = [...seedMessages]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
       messages.assignAll(sorted);
     }
   }
@@ -36,68 +35,53 @@ class ChatController extends GetxController {
   final String shopName;
   final bool isOwner;
 
-  final messages = <MessageModel>[].obs;
+  final messages = <MessageModel>[].obs;   // DESC (newest first) in UI
   final sending = false.obs;
 
   late WsService _ws;
   StreamSubscription? _msgSub;
   StreamSubscription? _ackSub;
 
-  // NEW: resolved once at init
   int _myActorIdResolved = -1;
   int get _myActorId => _myActorIdResolved;
 
-  void _computeMyActorId() {
-    if (isOwner) {
-      _myActorIdResolved = shopId;
-      return;
-    }
+  String? _nextCursor;                // NEW: pagination
+  final isPaging = false.obs;
+  bool get hasMore => _nextCursor != null;
 
-    // Prefer the thread user id (correct actor id for end-user)
+
+  void _computeMyActorId() {
+    if (isOwner) { _myActorIdResolved = shopId; return; }
     Thread? t;
     if (Get.isRegistered<InboxController>()) {
-      final inbox = Get.find<InboxController>();
-      for (final th in inbox.threads) {
-        if (th.id == threadId) {
-          t = th;
-          break;
-        }
-      }
+      t = Get.find<InboxController>().threads.firstWhereOrNull((th) => th.id == threadId);
     }
-    if (t != null) {
-      _myActorIdResolved = t.user;
-      return;
-    }
-
-    // Fallback to profile numeric id
+    if (t != null) { _myActorIdResolved = t.user; return; }
     final profile = Get.find<ProfileController>();
-    final raw = profile.profileDetails.value.data?.id;
-    _myActorIdResolved = int.tryParse('${raw ?? ''}') ?? -1;
+    _myActorIdResolved = int.tryParse('${profile.profileDetails.value.data?.id ?? ''}') ?? -1;
   }
 
   @override
   void onInit() {
-  super.onInit();
-  _computeMyActorId();
-  _ws = Get.put(WsService(), permanent: true);
-  _ws.ensureConnected();
-  _ws.subscribeThread(threadId);
+    super.onInit();
+    _computeMyActorId();
+    _ws = Get.put(WsService(), permanent: true);
+    _ws.ensureConnected();
+    _ws.subscribeThread(threadId);
 
-  _msgSub = _ws.messages$.listen((ev) {
-    if (ev.threadId != threadId) return;
+    // Initial page load from API
+    _loadFirstPage();
 
-    // Try to replace optimistic first
-    _replaceOptimisticIfMatch(ev.message);
-
-    // For other-party messages, normal add + read
-    if (ev.message.sender != _myActorId) {
-      final already = messages.any((m) => m.id == ev.message.id);
-      if (!already) messages.insert(0, ev.message);
-      _touchInbox(ev.message);
-      if (ev.message.isRead == false) _markTheseRead([ev.message.id]);
-    }
-  });
-
+    _msgSub = _ws.messages$.listen((ev) {
+      if (ev.threadId != threadId) return;
+      _replaceOptimisticIfMatch(ev.message);
+      if (ev.message.sender != _myActorId) {
+        final already = messages.any((m) => m.id == ev.message.id);
+        if (!already) messages.insert(0, ev.message);
+        _touchInbox(ev.message);
+        if (!ev.message.isRead) _markTheseRead([ev.message.id]);
+      }
+    });
 
     _ackSub = _ws.markReadAcks$.listen((ack) {
       if (ack.threadId != threadId) return;
@@ -120,20 +104,57 @@ class ChatController extends GetxController {
       messages.refresh();
     });
 
-    // mark initial incoming as read
-    Future.microtask(markThreadRead);
+    // optimistic marking for whatever came first page
+    // Future.microtask(markThreadRead);
+  }
+final isInitialLoading = false.obs;
+    Future<void> _loadFirstPage() async {
+    isInitialLoading.value = true;     // NEW
+    try {
+      final url = '${AppUrls.threads}$threadId/';
+      final resp = await NetworkCaller().getRequest(url, token: AuthService.accessToken);
+      if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+        final page = PagedMessages.fromJson(Map<String, dynamic>.from(resp.responseData));
+        _nextCursor = page.next;
+        messages.assignAll(page.results);  // DESC
+        if (messages.isNotEmpty) _touchInbox(messages.first);
+        markThreadRead();
+      }
+    } catch (_) {
+      // swallow
+    } finally {
+      isInitialLoading.value = false;  // NEW
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (_nextCursor == null || isPaging.value) return;
+    isPaging.value = true;
+    try {
+      final resp = await NetworkCaller().getRequest(_nextCursor!, token: AuthService.accessToken);
+      if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+        final page = PagedMessages.fromJson(Map<String, dynamic>.from(resp.responseData));
+        _nextCursor = page.next;
+        // Append older messages to the end (list is DESC)
+        final incoming = page.results;
+        // avoid dupes
+        for (final m in incoming) {
+          if (!messages.any((x) => x.id == m.id)) messages.add(m);
+        }
+        messages.refresh();
+      }
+    } finally {
+      isPaging.value = false;
+    }
   }
 
   void markThreadRead() {
     final ids = messages
-        .where((m) => m.isRead == false && m.sender != _myActorId)
+        .where((m) => !m.isRead && m.sender != _myActorId)
         .map((m) => m.id)
         .toList();
     if (ids.isEmpty) return;
-
     _ws.sendMarkRead(threadId, ids);
-
-    // optimistic flip
     for (var i = 0; i < messages.length; i++) {
       final m = messages[i];
       if (!m.isRead && m.sender != _myActorId) {
@@ -142,8 +163,6 @@ class ChatController extends GetxController {
     }
     messages.refresh();
   }
-
-  // ... send(), _markTheseRead(), _touchInbox(), onClose() stay unchanged
 
   void _markTheseRead(List<int> ids) {
     if (ids.isEmpty) return;
@@ -158,133 +177,95 @@ class ChatController extends GetxController {
   }
 
   Future<void> send(String content) async {
-  final text = content.trim();
-  if (text.isEmpty) return;
+    final text = content.trim();
+    if (text.isEmpty) return;
 
-  // 1) Create optimistic message
-  final now = DateTime.now();
-  final tempLocalId = 'local_${now.microsecondsSinceEpoch}';
-  final optimistic = MessageModel(
-    id: -now.microsecondsSinceEpoch,      // temp negative id
-    sender: _myActorId,
-    senderEmail: _guessMyEmail(),         // optional helper
-    content: text,
-    timestamp: now,
-    isRead: true,
-    localId: tempLocalId,
-    status: MessageStatus.sending,
-  );
+    final now = DateTime.now();
+    final tempLocalId = 'local_${now.microsecondsSinceEpoch}';
+    final optimistic = MessageModel(
+      id: -now.microsecondsSinceEpoch,
+      threadId: threadId,                  // NEW
+      sender: _myActorId,
+      senderEmail: _guessMyEmail(),
+      content: text,
+      timestamp: now,
+      isRead: true,
+      localId: tempLocalId,
+      status: MessageStatus.sending,
+    );
+    messages.insert(0, optimistic);
 
-  messages.insert(0, optimistic);
-
-  try {
-    sending.value = true;
-
-    final body = {'content': text};
-
-    if (isOwner) {
-      await NetworkCaller().postRequest(
-        AppUrls.replyInThread(threadId),
-        body: body,
-        token: AuthService.accessToken,
-      );
-    } else {
-      await NetworkCaller().postRequest(
-        AppUrls.sendToShop(shopId),
-        body: body,
-        token: AuthService.accessToken,
-      );
-    }
-
-    // 2) Wait for the WebSocket echo. When it arrives, we replace the optimistic one.
-    //    In case it doesn't come (rare), mark as sent after a short delay to avoid stuck "sending".
-    Future.delayed(const Duration(seconds: 3), () {
+    try {
+      sending.value = true;
+      final body = {'content': text};
+      if (isOwner) {
+        await NetworkCaller().postRequest(AppUrls.replyInThread(threadId), body: body, token: AuthService.accessToken);
+      } else {
+        await NetworkCaller().postRequest(AppUrls.sendToShop(shopId), body: body, token: AuthService.accessToken);
+      }
+      Future.delayed(const Duration(seconds: 3), () {
+        final idx = messages.indexWhere((m) => m.localId == tempLocalId);
+        if (idx != -1 && messages[idx].status == MessageStatus.sending) {
+          messages[idx] = messages[idx].copyWith(status: MessageStatus.sent);
+        }
+      });
+    } catch (_) {
       final idx = messages.indexWhere((m) => m.localId == tempLocalId);
-      if (idx != -1 && messages[idx].status == MessageStatus.sending) {
-        messages[idx] = messages[idx].copyWith(status: MessageStatus.sent);
-      }
-    });
-  } catch (_) {
-    // 3) Mark as failed (shows retry UI)
-    final idx = messages.indexWhere((m) => m.localId == tempLocalId);
-    if (idx != -1) {
-      messages[idx] = messages[idx].copyWith(status: MessageStatus.failed);
+      if (idx != -1) messages[idx] = messages[idx].copyWith(status: MessageStatus.failed);
+    } finally {
+      sending.value = false;
     }
-  } finally {
-    sending.value = false;
   }
-}
-String _guessMyEmail() {
-  if (!Get.isRegistered<ProfileController>()) return '';
-  return Get.find<ProfileController>().profileDetails.value.data?.email ?? '';
-}
 
-Future<void> resend(MessageModel failed) async {
-  if (failed.status != MessageStatus.failed) return;
-  // Turn it back to "sending"
-  final idx = messages.indexWhere((m) => m.localId == failed.localId);
-  if (idx == -1) return;
-  messages[idx] = failed.copyWith(status: MessageStatus.sending);
+  String _guessMyEmail() {
+    if (!Get.isRegistered<ProfileController>()) return '';
+    return Get.find<ProfileController>().profileDetails.value.data?.email ?? '';
+  }
 
-  try {
-    final body = {'content': failed.content};
-    if (isOwner) {
-      await NetworkCaller().postRequest(
-        AppUrls.replyInThread(threadId),
-        body: body,
-        token: AuthService.accessToken,
-      );
-    } else {
-      await NetworkCaller().postRequest(
-        AppUrls.sendToShop(shopId),
-        body: body,
-        token: AuthService.accessToken,
-      );
-    }
-    // WS will replace/confirm; fallback timer:
-    Future.delayed(const Duration(seconds: 3), () {
+  Future<void> resend(MessageModel failed) async {
+    if (failed.status != MessageStatus.failed) return;
+    final idx = messages.indexWhere((m) => m.localId == failed.localId);
+    if (idx == -1) return;
+    messages[idx] = failed.copyWith(status: MessageStatus.sending);
+
+    try {
+      final body = {'content': failed.content};
+      if (isOwner) {
+        await NetworkCaller().postRequest(AppUrls.replyInThread(threadId), body: body, token: AuthService.accessToken);
+      } else {
+        await NetworkCaller().postRequest(AppUrls.sendToShop(shopId), body: body, token: AuthService.accessToken);
+      }
+      Future.delayed(const Duration(seconds: 3), () {
+        final j = messages.indexWhere((m) => m.localId == failed.localId);
+        if (j != -1 && messages[j].status == MessageStatus.sending) {
+          messages[j] = messages[j].copyWith(status: MessageStatus.sent);
+        }
+      });
+    } catch (_) {
       final j = messages.indexWhere((m) => m.localId == failed.localId);
-      if (j != -1 && messages[j].status == MessageStatus.sending) {
-        messages[j] = messages[j].copyWith(status: MessageStatus.sent);
-      }
-    });
-  } catch (_) {
-    // Still failed; flip back
-    final j = messages.indexWhere((m) => m.localId == failed.localId);
-    if (j != -1) {
-      messages[j] = messages[j].copyWith(status: MessageStatus.failed);
+      if (j != -1) messages[j] = messages[j].copyWith(status: MessageStatus.failed);
     }
   }
-}
 
-
-/// Replace optimistic message when server WS message arrives
-void _replaceOptimisticIfMatch(MessageModel incoming) {
-  // Only try to match my outgoing messages
-  if (incoming.sender != _myActorId) return;
-
-  // Find optimistic message with same content within 10s window
-  final i = messages.indexWhere((m) =>
-      m.status != MessageStatus.sent &&
-      m.sender == _myActorId &&
-      m.content == incoming.content &&
-      (m.timestamp.difference(incoming.timestamp).inSeconds).abs() <= 10);
-
-  if (i != -1) {
-    // Replace optimistic with the server message (real id, status=sent)
-    messages[i] = incoming.copyWith(status: MessageStatus.sent, localId: null);
-  } else {
-    // If not found, just insert if not duplicated by id
-    final already = messages.any((m) => m.id == incoming.id);
-    if (!already) messages.insert(0, incoming);
+  /// Replace optimistic with server echo
+  void _replaceOptimisticIfMatch(MessageModel incoming) {
+    if (incoming.sender != _myActorId) return;
+    final i = messages.indexWhere((m) =>
+        m.status != MessageStatus.sent &&
+        m.sender == _myActorId &&
+        m.content == incoming.content &&
+        (m.timestamp.difference(incoming.timestamp).inSeconds).abs() <= 10);
+    if (i != -1) {
+      messages[i] = incoming.copyWith(status: MessageStatus.sent, localId: null);
+    } else {
+      if (!messages.any((m) => m.id == incoming.id)) messages.insert(0, incoming);
+    }
+    _touchInbox(incoming);
   }
-}
-
 
   void _touchInbox(MessageModel m) {
     if (!Get.isRegistered<InboxController>()) return;
-    final inbox = Get.find<InboxController>();
-    inbox.patchLastMessage(threadId, m);
+    Get.find<InboxController>().patchLastMessage(threadId, m);
   }
 
   @override

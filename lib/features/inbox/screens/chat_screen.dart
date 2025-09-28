@@ -1,5 +1,6 @@
 // lib/features/inbox/screens/chat_screen.dart
 import 'package:fidden/features/inbox/data/message_model.dart';
+import 'package:fidden/features/inbox/widgets/chat_shimmer.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -30,9 +31,33 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   late final ChatController c;
   final _inputController = TextEditingController();
+  final _scroll = ScrollController(); 
 
   late final int _myUserId;
   late final String _myEmail;
+
+
+  // call after first page & after each paging
+  Future<void> _autoFillIfShort({int maxLoops = 3}) async {
+    for (var i = 0; i < maxLoops; i++) {
+      await Future.delayed(const Duration(milliseconds: 16)); // wait a frame
+      if (!_scroll.hasClients) break;
+
+      final canScroll = _scroll.position.maxScrollExtent > 0;
+      if (canScroll) break;                // viewport already filled
+      if (!c.hasMore || c.isPaging.value) break;
+
+      final before = _scroll.position.maxScrollExtent;
+      await c.loadMore();
+      // keep viewport stable
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_scroll.hasClients) return;
+        final delta = _scroll.position.maxScrollExtent - before;
+        if (delta > 0) _scroll.jumpTo(_scroll.position.pixels + delta);
+      });
+    }
+  }
+
 
   @override
   void initState() {
@@ -52,12 +77,45 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       tag: 'chat_${widget.threadId}',
     );
-
+    _scroll.addListener(_onScrollLoadMore);
+// When first page lands, try to auto-fill.
+    ever(c.isInitialLoading, (bool loading) {
+      if (!loading) WidgetsBinding.instance.addPostFrameCallback((_) => _autoFillIfShort());
+    });
+    // Also run after each pagination completes.
+    ever(c.isPaging, (bool paging) async {
+      if (!paging) WidgetsBinding.instance.addPostFrameCallback((_) => _autoFillIfShort());
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => c.markThreadRead());
   }
 
+
+void _onScrollLoadMore() async {
+    if (!mounted) return;
+    const threshold = 120.0;
+
+    // With reverse:true, older messages sit toward maxScrollExtent.
+    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - threshold) {
+      // Keep viewport stable after load by compensating the delta.
+      final beforeMax = _scroll.position.maxScrollExtent;
+      await c.loadMore();
+      // If older messages appended, max extent grows; keep the same visual spot:
+      final afterMax = _scroll.position.maxScrollExtent;
+      final delta = afterMax - beforeMax;
+      if (delta > 0) {
+        // Avoid jump by shifting current offset by delta.
+        final target = _scroll.position.pixels + delta;
+        if (target <= _scroll.position.maxScrollExtent) {
+          _scroll.jumpTo(target);
+        }
+      }
+    }
+  }
+
+
   @override
   void dispose() {
+    _scroll.dispose();
     _inputController.dispose();
     Get.delete<ChatController>(tag: 'chat_${widget.threadId}', force: true);
     super.dispose();
@@ -93,51 +151,83 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
         ),
-        body: Column(
-          children: [
-            Expanded(
-              child: Obx(() {
-                final items = c.messages;
-                if (items.isEmpty) {
-                  return const Center(child: Text('Start the conversation!'));
-                }
-                return ListView.builder(
-                  reverse: true,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 20,
-                  ),
-                  itemCount: items.length,
-                  itemBuilder: (_, i) {
-                    final message = items[i];
-                    final myActorId = widget.isOwner ? widget.shopId : _myUserId;
-                    final isMe = (message.sender == myActorId) ||
-                        (!widget.isOwner &&
-                            _myEmail.isNotEmpty &&
-                            message.senderEmail == _myEmail);
+         body: Column(
+        children: [
+          Expanded(
+            child: Obx(() {
+              final items = c.messages;
 
-                    return _ChatMessageBubble(
-                      message: message,
-                      isMe: isMe,
-                      onResend: () => c.resend(message),
+              if (c.isInitialLoading.value) {
+                return const ChatShimmer();
+              }
+              if (items.isEmpty) {
+                return const Center(child: Text('Start the conversation!'));
+              }
+
+              // +1 to show a tiny loader “at top” when paging (remember reversed)
+              final showTopLoader = c.isPaging.value;
+              final total = items.length + (showTopLoader ? 1 : 0);
+
+              return ListView.builder(
+                controller: _scroll,          // NEW
+                reverse: true,
+                physics: const AlwaysScrollableScrollPhysics(), // <- allows pull even if short
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                itemCount: total,
+                itemBuilder: (_, i) {
+                  // When reversed, index 0 is the newest bubble.
+                  if (showTopLoader && i == items.length) {
+                    // This renders at the “top” visually (older side)
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
                     );
-                  },
+                  }
+
+                  final message = items[i];
+                  final myActorId = widget.isOwner ? widget.shopId : _myUserId;
+                  final isMe = (message.sender == myActorId) ||
+                      (!widget.isOwner && _myEmail.isNotEmpty && message.senderEmail == _myEmail);
+
+                  return _ChatMessageBubble(
+                    message: message,
+                    isMe: isMe,
+                    onResend: () => c.resend(message),
+                  );
+                },
+              );
+            }),
+          ),
+          _MessageInputArea(
+            controller: _inputController,
+            chatController: c,
+            onSend: () async {
+              final text = _inputController.text.trim();
+              if (text.isEmpty) return;
+              await c.send(text);
+              _inputController.clear();
+              // Optional: scroll to bottom (newest) after sending
+              if (_scroll.hasClients) {
+                _scroll.animateTo(
+                  0, // with reverse:true, 0 is the latest
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
                 );
-              }),
-            ),
-            _MessageInputArea(
-              controller: _inputController,
-              chatController: c,
-              onSend: () async {
-                final text = _inputController.text.trim();
-                if (text.isEmpty) return;
-                await c.send(text);
-                _inputController.clear();
-              },
-            ),
-          ],
-        ),
+              }
+            },
+          ),
+        ],
       ),
+    )
     );
   }
 }
