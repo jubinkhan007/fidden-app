@@ -4,6 +4,15 @@
 <dict>
 	<key>CLIENT_ID</key>
 	<string>772435903240-7ovv8og4jem35j5v1ofu8gmikqj6mrgh.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>myapp</string>
+    </array>
+  </dict>
+</array>
 	<key>REVERSED_CLIENT_ID</key>
 	<string>com.googleusercontent.apps.772435903240-7ovv8og4jem35j5v1ofu8gmikqj6mrgh</string>
 	<key>ANDROID_CLIENT_ID</key>

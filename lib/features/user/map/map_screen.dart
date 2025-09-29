@@ -284,23 +284,79 @@ class _PermissionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3CD),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFE08A)),
+    return Material(
+      elevation: 8, color: Colors.white, borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Location is off', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            const Text('Enable location to center the map on you and find nearby places.'),
+            const SizedBox(height: 10),
+            FilledButton(onPressed: onEnable, child: const Text('Enable location')),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.location_off, color: Colors.black87),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text('Turn on location to see shops near you.'),
-          ),
-          TextButton(onPressed: onEnable, child: const Text('Enable')),
-        ],
+    );
+  }
+}
+
+class _AddressCard extends StatelessWidget {
+  const _AddressCard({required this.text, required this.loading, this.onUse});
+  final String? text;
+  final bool loading;
+  final VoidCallback? onUse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 12, borderRadius: BorderRadius.circular(14), color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  decoration: BoxDecoration(color: const Color(0xFFEFF1F5), borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(Icons.place_outlined),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: loading
+                      ? Row(
+                          key: const ValueKey('addr-loading'),
+                          children: const [
+                            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.2)),
+                            SizedBox(width: 8),
+                            Flexible(child: Text('Resolving address...', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                          ],
+                        )
+                      : Text(
+                          text ?? 'Tap on map to choose a location',
+                          key: ValueKey('addr-${text ?? "<none>"}'),
+                          style: const TextStyle(fontWeight: FontWeight.w600, height: 1.35),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity, height: 52,
+              child: ElevatedButton(onPressed: onUse, child: const Text('Use this location')),
+            ),
+          ],
+        ),
       ),
     );
   }

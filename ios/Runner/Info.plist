@@ -32,7 +32,17 @@
 				<string>com.googleusercontent.apps.772435903240-7ovv8og4jem35j5v1ofu8gmikqj6mrgh</string>
 			</array>
 		</dict>
-	</array>
+	  <dict>
+    <key>CFBundleTypeRole</key>
+    <string>Editor</string>
+    <key>CFBundleURLName</key>
+    <string>app.fidden.stripe</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>myapp</string>
+    </array>
+  </dict>
+</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>

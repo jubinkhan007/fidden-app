@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:fidden/core/commom/widgets/custom_app_bar.dart';
 import 'package:fidden/core/commom/widgets/custom_button.dart';
 import 'package:fidden/core/utils/constants/app_sizes.dart';
-import 'package:fidden/features/auth/controller/forget_email_and_otp_controler.dart';
+// CORRECTED: Only import the SignUpController
 import 'package:fidden/features/auth/controller/sign_up_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,7 +20,6 @@ class SignUpVerifyOtpScreen extends StatefulWidget {
 }
 
 class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
-  // ⛳ Make this 6 if your OTP is 6-digits.
   static const int _otpLength = 6;
 
   final _formKey = GlobalKey<FormState>();
@@ -28,9 +27,11 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
   final _enableResendCodeButton = false.obs;
 
   late Timer _timer;
-  late ForgetPasswordAndOtpController otpController;
+  // CORRECTED: Use the SignUpController for all logic
+  late SignUpController _signUpController;
+  // CORRECTED: Use a local controller for the text field
+  final TextEditingController _otpTEController = TextEditingController();
 
-  // 🎨 tokens (tuned to screenshot)
   static const _bg = Color(0xFFF6F8FB);
   static const _title = Color(0xFF111827);
   static const _subtle = Color(0xFF6B7280);
@@ -41,23 +42,20 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
   @override
   void initState() {
     super.initState();
-    otpController = Get.put(ForgetPasswordAndOtpController());
-    // Send the code once when entering this screen (no rebuild spam).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.put(SignUpController()).forgetEmail(widget.email);
-    });
+    // CORRECTED: Find the existing SignUpController instance
+    _signUpController = Get.find<SignUpController>();
 
-    final c = otpController.otpTEController;
-    c.text = ''; // clear leftovers from previous screen sessions
-    c.addListener(() {
-      // Only digits, clamp length
-      final digitsOnly = c.text.replaceAll(RegExp(r'\D'), '');
-      if (digitsOnly != c.text || digitsOnly.length > _otpLength) {
+    // BUG FIX: The line that was sending the second email has been removed.
+
+    // This listener is helpful for formatting and can be kept
+    _otpTEController.addListener(() {
+      final digitsOnly = _otpTEController.text.replaceAll(RegExp(r'\D'), '');
+      if (digitsOnly != _otpTEController.text || digitsOnly.length > _otpLength) {
         final clamped = digitsOnly.substring(
           0,
           digitsOnly.length.clamp(0, _otpLength),
         );
-        c.value = c.value.copyWith(
+        _otpTEController.value = _otpTEController.value.copyWith(
           text: clamped,
           selection: TextSelection.collapsed(offset: clamped.length),
           composing: TextRange.empty,
@@ -71,6 +69,7 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
   @override
   void dispose() {
     _timer.cancel();
+    _otpTEController.dispose();
     super.dispose();
   }
 
@@ -95,7 +94,7 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final maxW = 520.0; // neat on tablets
+    final maxW = 520.0;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -114,15 +113,14 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
                     const CustomAppBar(
                       firstText: 'Verification code',
                       secondText:
-                          'Please check your email. We have to sent the code verification to your mail.',
+                      'Please check your email. We have to sent the code verification to your mail.',
                     ),
                     SizedBox(height: getHeight(36)),
-
-                    // PIN – 4 rounded white boxes with subtle border
                     PinCodeTextField(
                       appContext: context,
                       length: _otpLength,
-                      controller: otpController.otpTEController,
+                      // CORRECTED: Use the local controller
+                      controller: _otpTEController,
                       keyboardType: TextInputType.number,
                       cursorColor: Colors.black,
                       animationType: AnimationType.fade,
@@ -155,7 +153,6 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
 
                     SizedBox(height: getHeight(24)),
 
-                    // Countdown / Resend
                     Align(
                       alignment: Alignment.center,
                       child: Obx(() {
@@ -180,14 +177,16 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
                           );
                         }
                         return TextButton(
-                          onPressed: otpController.isResending.value
+                          // CORRECTED: Check the correct controller's loading state
+                          onPressed: _signUpController.isLoading.value
                               ? null
                               : () async {
-                                  final ok = await otpController.resendOtp(
-                                    widget.email,
-                                  );
-                                  if (ok) _startResendCodeTimer();
-                                },
+                            // CORRECTED: Call the method that resends a sign-up OTP
+                            await _signUpController.forgetEmail(
+                              widget.email,
+                            );
+                            _startResendCodeTimer();
+                          },
                           child: const Text(
                             'Resend Code',
                             style: TextStyle(
@@ -201,32 +200,33 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
 
                     SizedBox(height: getHeight(48)),
 
-                    // CTA – big pill button
                     Obx(
-                      () => otpController.isLoading.value
+                      // CORRECTED: Check the correct controller's loading state
+                          () => _signUpController.isLoading.value
                           ? const Center(
-                              child: SpinKitWave(color: _primary, size: 30.0),
-                            )
+                        child: SpinKitWave(color: _primary, size: 30.0),
+                      )
                           : SizedBox(
-                              height: getHeight(56),
-                              width: double.infinity,
-                              child: CustomButton(
-                                onPressed: () {
-                                  otpController.verifyOtp3(
-                                    widget.email,
-                                    otpController.otpTEController.text.trim(),
-                                  );
-                                },
-                                child: Text(
-                                  'Verify',
-                                  style: TextStyle(
-                                    fontSize: getWidth(18),
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
+                        height: getHeight(56),
+                        width: double.infinity,
+                        child: CustomButton(
+                          onPressed: () {
+                            // CORRECTED: Call the new verify method
+                            _signUpController.verifySignUpOtp(
+                              widget.email,
+                              _otpTEController.text.trim(),
+                            );
+                          },
+                          child: Text(
+                            'Verify',
+                            style: TextStyle(
+                              fontSize: getWidth(18),
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
                             ),
+                          ),
+                        ),
+                      ),
                     ),
 
                     SizedBox(height: getHeight(16)),

@@ -87,8 +87,8 @@ class LoginController extends GetxController {
           : jsonDecode(res.data as String) as Map<String, dynamic>;
 
       if (res.statusCode == 200) {
-        final accessToken = data["accessToken"] as String?;
-        final refreshToken = data["refreshToken"] as String?;
+        final accessToken = data["accessToken"] .toString();
+        final refreshToken = data["refreshToken"] .toString();
         final role = (data["role"] ?? data["user"]?["role"])?.toString();
 
         if (accessToken == null) {

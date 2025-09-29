@@ -236,7 +236,7 @@ class BusinessOwnerProfileController extends GetxController {
     }
   }
 
-  var profileDetails = GetBusinesModel().obs;
+  var profileDetails = GetBusinesModel(data: null).obs;
 
   Future<void> fetchProfileDetails({bool silentAuthErrors = false}) async {
     isLoading.value = true;

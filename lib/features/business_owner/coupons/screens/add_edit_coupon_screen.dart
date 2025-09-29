@@ -303,10 +303,11 @@ void dispose() {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
-      appBar: CustomAppBar(
-        firstText: _isEdit ? 'Edit Coupon' : 'Add Coupon',
-        secondText: '',
-        trailing: _isEdit
+      appBar: AppBar(
+        title: Text(_isEdit ? 'Edit Coupon' : 'Add Coupon'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        actions: [?_isEdit
             ? PopupMenuButton<String>(
           onSelected: _onMore,
           itemBuilder: (context) => [
@@ -321,7 +322,7 @@ void dispose() {
             child: Icon(Icons.more_horiz_rounded),
           ),
         )
-            : null,
+            : null,]
       ),
       body: SafeArea(
         child: Form(

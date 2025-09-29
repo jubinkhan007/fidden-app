@@ -142,7 +142,7 @@ class ReviewController extends GetxController {
       replyText = replies.first['message']?.toString();
     }
 
-    final authorName = (j['user_name'] as String?)?.trim();
+    final authorName = (j['user_name'] .toString())?.trim();
     final userId = j['user_id']?.toString();
     final fallbackAuthor = (authorName?.isNotEmpty == true)
         ? authorName!
@@ -151,13 +151,13 @@ class ReviewController extends GetxController {
     return Review(
       id: (j['id'] ?? '').toString(),
       author: fallbackAuthor,
-      avatarUrl: (j['user_img'] as String?)?.trim(),
+      avatarUrl: (j['user_img'] .toString())?.trim(),
       rating: ((j['rating'] as num?) ?? 0).toDouble(),
-      comment: (j['review'] as String?)?.trim() ?? '',
+      comment: (j['review'] .toString())?.trim() ?? '',
       date:
           DateTime.tryParse(j['created_at']?.toString() ?? '') ??
           DateTime.now(),
-      serviceName: (j['service_name'] as String?)?.trim() ?? '',
+      serviceName: (j['service_name'] .toString())?.trim() ?? '',
       reply: replyText,
     );
   }

@@ -113,18 +113,37 @@ class ShopApi {
     required int shopId,
     required String token,
   }) async {
-    final res = await _networkCaller.getRequest(
-      AppUrls.stripeOnborading(shopId),
+
+    // V-- THIS IS THE FINAL CORRECTED CODE --V
+
+    // 1. These URLs must EXACTLY match what you put in your Stripe Dashboard.
+    const String returnUrl  = 'https://fidden-service-provider-1.onrender.com/payments/stripe/return/';
+    const String refreshUrl = 'https://fidden-service-provider-1.onrender.com/payments/stripe/refresh/';
+
+
+    // 2. Manually build the final URL with the required query parameters.
+    final String urlWithParams =
+        '${AppUrls.stripeOnborading(shopId)}?return_url=$returnUrl&refresh_url=$refreshUrl';
+
+    // 3. Make sure you are using your .getRequest() method.
+    final ResponseData res = await _networkCaller.getRequest(
+      urlWithParams,
       token: token,
     );
-    if (!res.isSuccess) {
+
+    // ^-- THIS IS THE FINAL CORRECTED CODE --^
+
+    if (res.isSuccess) {
+      final data = (res.responseData is Map<String, dynamic>)
+          ? res.responseData
+          : json.decode(res.responseData as String);
+      return StripeOnboardingLink.fromJson(data as Map<String, dynamic>);
+    } else {
+      // Throw an exception so the controller can catch it and show an error.
       throw Exception(res.errorMessage ?? 'Failed to get onboarding link');
     }
-    final data = (res.responseData is Map<String, dynamic>)
-        ? res.responseData
-        : json.decode(res.responseData as String);
-    return StripeOnboardingLink.fromJson(data as Map<String, dynamic>);
   }
+
 
   // ✅ Now an instance method
   Future<StripeVerifyResponse> verifyStripeOnboarding({

@@ -183,8 +183,8 @@ class HomeController extends GetxController {
       list = raw;
     } else if (raw is Map && raw['results'] is List) {
       list = raw['results'] as List;
-      next = raw['next'] as String?;
-      previous = raw['previous'] as String?;
+      next = raw['next'] .toString();
+      previous = raw['previous'] .toString();
     } else {
       throw Exception('Unexpected popular shops format: ${raw.runtimeType}');
     }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:fidden/core/deeplinks/deep_link_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -19,6 +20,32 @@ Future<void> _bg(RemoteMessage m) => firebaseMessagingBackgroundHandler(m);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 1) Framework errors (build/layout/paint etc.)
+  FlutterError.onError = (FlutterErrorDetails details) {
+    // Forward to Flutter's default (prints red screen in debug),
+    // but ALSO print the stack so you see the exact file:line.
+    FlutterError.presentError(details);
+    debugPrint('⚠️ FlutterError: ${details.exceptionAsString()}');
+    if (details.stack != null) {
+      debugPrint('STACK:\n${details.stack}');
+    }
+  };
+
+  // 2) Uncaught async errors on the engine/platform side
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    debugPrint('⚠️ Platform/Zone error: $error');
+    debugPrint('STACK:\n$stack');
+    // return true if you consider it "handled" and want to prevent crash
+    return false; // let it propagate in debug
+  };
+
+  // 3) Catch everything else in the zone (timers/streams/futures)
+  runZonedGuarded(() {
+    runApp(const MyApp());
+  }, (Object error, StackTrace stack) {
+    debugPrint('⚠️ Uncaught in zone: $error');
+    debugPrint('STACK:\n$stack');
+  });
   Stripe.publishableKey = 'pk_test_51S56r33eKAUTJHyfzxn8z3GbxLpdNdl2ynBLGoLwEOx4bR2qoJdWwt6CWYoFzu3lPlHfBikm5gt0DqhA49w3Nj4700TIDOqiGr';
 
   // Only the absolute minimum before UI:
@@ -29,26 +56,19 @@ FlutterError.onError = (details) {
     // print a full stack to console
     Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
   };
-  // Show the app immediately
-  runApp(const MyApp());
 
   // Then do the rest without blocking startup
   // (log each step + add timeouts so nothing hangs forever)
   unawaited(_postBootInit());
 }
 
+
+
 Future<void> _postBootInit() async {
   try {
     debugPrint('[boot] NotificationService.init');
     await NotificationService.I.init().timeout(const Duration(seconds: 10));
   } catch (e, st) { debugPrint('[boot] NotificationService failed: $e\n$st'); }
-
-  // try {
-  //   debugPrint('[boot] Request notification permission');
-  //   final permissionController = Get.put(PermissionController());
-  //   // don't await if it may show a dialog
-  //   permissionController.requestNotificationPermission();
-  // } catch (e, st) { debugPrint('[boot] permission failed: $e\n$st'); }
 
   try {
     debugPrint('[boot] initPush');
@@ -58,7 +78,7 @@ Future<void> _postBootInit() async {
   try {
     debugPrint('[boot] GoogleSignIn.initialize');
     await GoogleSignIn.instance.initialize(
-      serverClientId: '772435903240-ggmvqdtveoq8i717jgiksor33v00s153.apps.googleusercontent.com',
+      serverClientId: '7724...153.apps.googleusercontent.com',
     ).timeout(const Duration(seconds: 10));
   } catch (e, st) { debugPrint('[boot] Google init failed: $e\n$st'); }
 
@@ -67,9 +87,15 @@ Future<void> _postBootInit() async {
     await AuthService.init().timeout(const Duration(seconds: 10));
   } catch (e, st) { debugPrint('[boot] AuthService failed: $e\n$st'); }
 
+  // 🔗 Deep links (after DI/auth is ready so controllers exist)
+  try {
+    debugPrint('[boot] DeepLinkService.init');
+    await Get.put(DeepLinkService(), permanent: true).init();
+  } catch (e, st) { debugPrint('[boot] DeepLinkService failed: $e\n$st'); }
+
   try {
     debugPrint('[boot] WsService.ensureConnected');
-    Get.put(WsService(), permanent: true).ensureConnected(); // not awaited
+    Get.put(WsService(), permanent: true).ensureConnected();
   } catch (e, st) { debugPrint('[boot] WS failed: $e\n$st'); }
 
   debugPrint('[boot] complete');

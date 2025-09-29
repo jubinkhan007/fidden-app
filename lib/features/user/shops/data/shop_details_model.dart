@@ -115,7 +115,7 @@ class ReviewReply {
   factory ReviewReply.fromJson(Map<String, dynamic> json) {
     return ReviewReply(
       id: json['id'] as int,
-      message: json['message'] as String?,
+      message: json['message'] .toString(),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),

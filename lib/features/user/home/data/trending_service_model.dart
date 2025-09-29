@@ -24,8 +24,8 @@ class TrendingServiceModel {
             ))
         .toList();
     return TrendingServiceModel(
-      next: j['next'] as String?,
-      previous: j['previous'] as String?,
+      next: j['next'] .toString(),
+      previous: j['previous'] .toString(),
       results: list,
     );
   }

@@ -96,11 +96,11 @@ class FavoriteService {
       FavoriteService(
         id: json["id"] as int?,
         serviceNo: _toInt(json["service_no"] ?? json["service_id"]),
-        title: json["title"] as String?,
+        title: json["title"] .toString(),
         // ensure it's a string even if backend sends number
         price: json["price"]?.toString(),
-        serviceImg: json["service_img"] as String?,
-        shopAddress: json["shop_address"] as String?,
+        serviceImg: json["service_img"] .toString(),
+        shopAddress: json["shop_address"] .toString(),
       );
 }
 

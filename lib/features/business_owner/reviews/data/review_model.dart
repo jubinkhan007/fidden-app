@@ -34,9 +34,9 @@ class Review {
     return Review(
       id: j['id']?.toString() ?? '',
       author: author,
-      avatarUrl: (j['user_img'] as String?)?.trim().isEmpty == true
+      avatarUrl: (j['user_img'] .toString())?.trim().isEmpty == true
           ? null
-          : j['user_img'] as String?,
+          : j['user_img'] .toString(),
       rating: (j['rating'] as num?)?.toDouble() ?? 0,
       comment: (j['review'] ?? '').toString(),
       date:

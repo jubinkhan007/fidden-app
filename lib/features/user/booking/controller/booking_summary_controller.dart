@@ -46,9 +46,9 @@ class BookingSummaryController extends GetxController {
 
       final data = res.responseData as Map<String, dynamic>;
       final bookingId = data['booking_id'] as int?;
-      final clientSecret = data['client_secret'] as String?;
-      final ephemeralKey = data['ephemeral_key'] as String?;
-      final customerId = data['customer_id'] as String?;
+      final clientSecret = data['client_secret'] .toString();
+      final ephemeralKey = data['ephemeral_key'] .toString();
+      final customerId = data['customer_id'] .toString();
 
       // Save the REAL booking id for later (cancel/back)
       if (bookingId != null) {

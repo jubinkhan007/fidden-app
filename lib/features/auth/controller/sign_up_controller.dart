@@ -9,6 +9,7 @@ import '../../../core/services/Auth_service.dart';
 import '../../../core/services/network_caller.dart';
 import '../../../core/utils/constants/api_constants.dart';
 import '../../../core/utils/logging/logger.dart';
+import '../presentation/screens/sign_up/verification_successfull_screen.dart';
 
 class SignUpController extends GetxController {
   final TextEditingController userNameTEController = TextEditingController();
@@ -57,6 +58,27 @@ class SignUpController extends GetxController {
     } catch (e) {
       AppLoggerHelper.error('Error: $e');
       AppSnackBar.showError('Something went wrong. Please try again.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> verifySignUpOtp(String email, String otp) async {
+    isLoading.value = true;
+    try {
+      final response = await NetworkCaller().postRequest(
+        AppUrls.verifyOtp, // Use the general verify-otp endpoint
+        body: {'email': email, 'otp': otp},
+      );
+
+      if (response.isSuccess) {
+        AppSnackBar.showSuccess("Account created successfully!");
+        Get.offAll(() => const VerificationSuccessFullScreen());
+      } else {
+        AppSnackBar.showError(response.errorMessage ?? 'OTP verification failed.');
+      }
+    } catch (e) {
+      AppSnackBar.showError('An error occurred: $e');
     } finally {
       isLoading.value = false;
     }

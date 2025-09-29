@@ -16,6 +16,7 @@ class MapScreenProfile extends StatefulWidget {
   final LatLng? initialPosition;
   final String?
   initialAddress; // ← optional, if you have a saved address string
+  
 
   const MapScreenProfile({
     super.key,
@@ -43,11 +44,14 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
 
   // session token for a single autocomplete flow
   String? _sessionToken;
+  bool _permissionChecked = false;  // ⬅️ new
+
 
   @override
   void initState() {
     super.initState();
     _initialCenter = widget.initialPosition ?? const LatLng(23.8041, 90.4152);
+    _checkPermissionOnly(); 
 
     // Priority:
     // 1) If a saved address string is provided, attempt to geocode & center on it
@@ -63,6 +67,17 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
     _places.close();
     super.dispose();
   }
+
+  Future<void> _checkPermissionOnly() async {
+  final servicesOn = await Geolocator.isLocationServiceEnabled();
+  var p = await Geolocator.checkPermission();
+  final granted = servicesOn &&
+      (p == LocationPermission.always || p == LocationPermission.whileInUse);
+  _hasLocationPermission = granted;
+  _permissionChecked = true;
+  if (mounted) setState(() {});
+}
+
 
   Future<void> _bootstrapDefaultView() async {
     if (widget.initialAddress != null &&
@@ -80,6 +95,7 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
         /* fall through */
       }
     }
+
 
     if (widget.initialPosition != null) {
       _setSelected(widget.initialPosition!, animate: true);
@@ -101,6 +117,8 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
     _setSelected(here, animate: true);
     await _updateAddressFor(here);
   }
+
+
 
   Future<void> _goMyLocation() async {
     try {
@@ -378,33 +396,17 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
             onTap: _onTap,
             markers: _markers,
           ),
-          if (!_hasLocationPermission)
-            Positioned(
-              left: 12, right: 12, bottom: 110,
-              child: Material(
-                elevation: 8, color: Colors.white, borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Location is off', style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 6),
-                      const Text('Enable location to center the map on you and find nearby places.'),
-                      const SizedBox(height: 10),
-                      FilledButton(
-                        onPressed: () async {
-                          final ok = await _ensureLocationPermission(context);
-                          if (mounted) setState(() {});
-                          if (ok) _goMyLocation();
-                        },
-                        child: const Text('Enable location'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          if (_permissionChecked && !_hasLocationPermission) // ⬅️ see section 2
+  Positioned(
+    top: 16, left: 12, right: 12,            // ⬅️ moved to top
+    child: _PermissionBanner(onEnable: () async {
+      final ok = await _ensureLocationPermission(context);
+      _hasLocationPermission = ok;
+      if (mounted) setState(() {});
+      if (ok) _goMyLocation();
+    }),
+  ),
+
 
           // Floating search pill (tap to open autocomplete)
           Positioned(
@@ -490,31 +492,38 @@ class _MapScreenProfileState extends State<MapScreenProfile> {
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 250),
                             child: _resolvingAddress
-                                ? Row(
-                                    key: const ValueKey('loading'),
-                                    children: const [
-                                      SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.2,
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text('Resolving address...'),
-                                    ],
-                                  )
-                                : Text(
-                                    _address ??
-                                        'Tap on map to choose a location',
-                                    key: const ValueKey('addr'),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      height: 1.35,
-                                    ),
-                                  ),
-                          ),
-                        ),
+        ? Row(
+            key: const ValueKey('addr-loading'),
+            children: const [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2.2),
+              ),
+              SizedBox(width: 8),
+              Flexible( // prevent overflow
+                child: Text(
+                  'Resolving address...',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          )
+        : Text(
+            _address ?? 'Tap on map to choose a location',
+            // Make the key depend on the content so AnimatedSwitcher
+            // treats changes as different children.
+            key: ValueKey('addr-${_address ?? "<none>"}'),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+  ),
+),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -568,6 +577,31 @@ class _RoundFab extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           // use the icon parameter (no `const` here)
           child: Icon(icon, color: Colors.black87),
+        ),
+      ),
+    );
+  }
+}
+
+class _PermissionBanner extends StatelessWidget {
+  const _PermissionBanner({required this.onEnable});
+  final VoidCallback onEnable;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 8, color: Colors.white, borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Location is off', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            const Text('Enable location to center the map on you and find nearby places.'),
+            const SizedBox(height: 10),
+            FilledButton(onPressed: onEnable, child: const Text('Enable location')),
+          ],
         ),
       ),
     );

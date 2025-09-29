@@ -36,35 +36,30 @@ class _AddBusinessOwnerProfileScreenState
   final capacityTEController = TextEditingController();
   final locationTEController = TextEditingController();
 
+  String _clean(String? s) =>
+      (s == null || s.trim().isEmpty || s.trim().toLowerCase() == 'null') ? '' : s;
+
   @override
   void initState() {
-  super.initState();
-  final profileData = controller1.profileDetails.value.data;
+    super.initState();
+    final p = controller1.profileDetails.value.data;
 
-  if (profileData != null) {
-    // This part is for editing an existing profile (no changes needed here)
-    nameTEController.text = profileData.businessName ?? '';
-    locationTEController.text = profileData.businessAddress ?? '';
-    capacityTEController.text = profileData.capacity?.toString() ?? '';
-    aboutUsTEController.text = profileData.details ?? '';
-    
-    // Also populate times and days from the existing profile
-    controller1.startTime.value = profileData.startTime ?? '';
-    controller1.endTime.value = profileData.endTime ?? '';
-    if (profileData.openDays != null) {
-      controller1.openDays.assignAll(profileData.openDays!);
+    if (p != null) {
+      nameTEController.text     = _clean(p.businessName);
+      locationTEController.text = _clean(p.businessAddress);
+      capacityTEController.text = (p.capacity ?? 0) == 0 ? '' : p.capacity.toString();
+      aboutUsTEController.text  = _clean(p.details);
+
+      controller1.startTime.value = _clean(p.startTime) == '' ? '09:00 AM' : p.startTime!;
+      controller1.endTime.value   = _clean(p.endTime)   == '' ? '08:00 PM' : p.endTime!;
+      if (p.openDays != null) controller1.openDays.assignAll(p.openDays!);
+    } else {
+      controller1.startTime.value = '09:00 AM';
+      controller1.endTime.value   = '08:00 PM';
+      controller1.openDays.assignAll(['Monday','Tuesday','Wednesday','Thursday','Friday']);
     }
-
-  } else {
-    // THIS IS THE NEW PART: Initialize the controller's state for a new profile.
-    // This ensures the validation passes even if the user doesn't change the defaults.
-    controller1.startTime.value = '09:00 AM';
-    controller1.endTime.value = '08:00 PM';
-    // Also, let's provide some sensible default open days
-    controller1.openDays.assignAll(
-        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
   }
-}
+
 
   @override
   void dispose() {

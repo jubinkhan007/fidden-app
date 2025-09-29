@@ -37,12 +37,14 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: Obx(() {
-        final _ = controller1.profileDetails.value;
-        if (controller.isLoading.value) {
-          return BusinessOwnerProfileShimmer();
-        }
+  // use the BO profile controller’s loader, not ProfileController
+  if (controller1.isLoading.value) {
+    return const BusinessOwnerProfileShimmer();
+  }
 
-        final hasBusiness = controller1.profileDetails.value.data != null;
+  final business = controller1.profileDetails.value.data;
+  final shopId = business?.id?.toString();
+  final hasBusiness = shopId != null && shopId.isNotEmpty;
         return SingleChildScrollView(
           child: Column(
             children: [

@@ -14,7 +14,7 @@
 //   "close_days": ["monday","tuesday"],
 //   "owner_id": 1
 // }
-
+// lib/features/business_owner/profile/data/business_profile_model.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
@@ -36,7 +36,7 @@ class GetBusinesModel {
     return GetBusinesModel(
       success: json['success'] as bool?,
       statusCode: json['statusCode'] as int?,
-      message: json['message'] as String?,
+      message: json['message'] .toString(),
       data: json['data'] == null
           ? Data.fromJson(json) // sometimes API returns the object directly
           : Data.fromJson(json['data'] as Map<String, dynamic>),
@@ -201,22 +201,22 @@ class Data {
     // Parse base fields
     final id = json['id']?.toString();
     final ownerId = json['owner_id']?.toString();
-    final name = json['name'] as String?;
-    final address = json['address'] as String?;
-    final details = json['about_us'] as String?;
-    final img = json['shop_img'] as String?;
+    final name = json['name'] .toString();
+    final address = json['address'] .toString();
+    final details = json['about_us'] .toString();
+    final img = json['shop_img'] .toString();
     final capacity = (json['capacity'] is int)
         ? json['capacity'] as int
         : int.tryParse('${json['capacity']}');
 
     // Times
-    final rawStartAt = json['start_at'] as String?;
-    final rawCloseAt = json['close_at'] as String?;
+    final rawStartAt = json['start_at'] .toString();
+    final rawCloseAt = json['close_at'] .toString();
     final uiStart = _toUiTime(rawStartAt);
     final uiClose = _toUiTime(rawCloseAt);
 
     // Location
-    final (lat, lon) = _parseLocation(json['location'] as String?);
+    final (lat, lon) = _parseLocation(json['location'] .toString());
 
     // close_days (array of strings, usually lowercase)
     final List<String> closeDays =
@@ -274,7 +274,7 @@ class Data {
       createdAt: createdAt,
       updatedAt: updatedAt,
       isVarified: json['is_varified'] as bool?,
-      status: json['status'] as String?,
+      status: json['status'] .toString(),
       verificationFiles: json['uploaded_files'] != null
           ? (json['uploaded_files'] as List)
                 .map((fileJson) => UploadedFile.fromJson(fileJson))
