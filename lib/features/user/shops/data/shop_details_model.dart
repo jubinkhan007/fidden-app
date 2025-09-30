@@ -21,6 +21,9 @@ class ShopDetailsModel {
   int? reviewCount;
   List<Service>? services;
   List<Review>? reviews;
+  int? freeCancellationHours;
+  int? cancellationFeePercentage;
+  int? noRefundHours;
 
   ShopDetailsModel({
     this.id,
@@ -38,6 +41,9 @@ class ShopDetailsModel {
     this.reviewCount,
     this.services,
     this.reviews,
+    this.freeCancellationHours,
+    this.cancellationFeePercentage,
+    this.noRefundHours,
   });
 
   factory ShopDetailsModel.fromJson(
@@ -64,6 +70,9 @@ class ShopDetailsModel {
     reviews: json["reviews"] == null
         ? []
         : List<Review>.from(json["reviews"]!.map((x) => Review.fromJson(x))),
+    freeCancellationHours: json['free_cancellation_hours'] as int?,
+    cancellationFeePercentage: json['cancellation_fee_percentage'] as int?,
+    noRefundHours: json['no_refund_hours'] as int?,
   );
 }
 

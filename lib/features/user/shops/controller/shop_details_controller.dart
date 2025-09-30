@@ -6,7 +6,7 @@ import 'package:fidden/features/user/home/data/category_model.dart';
 import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:get/get.dart';
 
-import 'home_controller.dart';
+import '../../home/controller/home_controller.dart';
 
 class ShopDetailsController extends GetxController {
   var isLoading = false.obs;

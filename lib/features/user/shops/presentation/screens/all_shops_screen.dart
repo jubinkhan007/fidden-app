@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
-import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
+import 'package:fidden/features/user/shops/presentation/screens/shop_details_screen.dart';
 import 'package:fidden/features/user/shops/controller/all_shops_controller.dart';
 import 'package:fidden/features/user/shops/widgets/fav_button.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';

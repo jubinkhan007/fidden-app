@@ -3,7 +3,7 @@ import 'package:fidden/core/commom/widgets/show_progress_indicator.dart';
 import 'package:fidden/core/utils/constants/app_sizes.dart';
 import 'package:fidden/core/utils/constants/icon_path.dart';
 import 'package:fidden/core/utils/constants/image_path.dart';
-import 'package:fidden/features/user/home/controller/shop_details_controller.dart';
+import 'package:fidden/features/user/shops/controller/shop_details_controller.dart';
 import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';

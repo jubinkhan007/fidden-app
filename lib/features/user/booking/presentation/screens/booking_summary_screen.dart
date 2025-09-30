@@ -60,6 +60,9 @@ Future<void> _chooseCoupon() async {
     return;
   }
 
+
+
+
   final res = await Get.toNamed('/select-coupon', arguments: {
     'shopId': shopId,
     'serviceId': serviceId,
@@ -93,6 +96,14 @@ Future<void> _chooseCoupon() async {
 
     // Safely get the bookingId
     bookingId = args['bookingId'] as int? ?? 0;
+
+    // Extract shopId like you already do elsewhere
+    final booking = (args['booking'] as Map<String, dynamic>?) ?? {};
+    final int shopId = booking['shop_id'] as int? ?? args['shopId'] as int? ?? 0;
+
+    if (shopId > 0) {
+      controller.fetchPolicy(shopId); // <-- fetch immediately
+    }
 
     // Log an error if the bookingId is missing, for easier debugging
     if (bookingId == 0) {
@@ -228,10 +239,35 @@ SizedBox(
                 color: primaryTextColor,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Appointments can be canceled or rescheduled up to 24 hours in advance with no fee.',
-                style: TextStyle(color: secondaryTextColor, fontSize: 14),
-              ),
+              Obx(() {
+                final p = controller.policy.value;
+                if (p == null) {
+                  return const Text(
+                    'Loading policy…',
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                  );
+                }
+
+                // Optional: show the exact free-cancel deadline relative to selected time
+                DateTime? start;
+                try { start = _slotFmt.parse(selectedSlot).toLocal(); } catch (_) {}
+                String extra = '';
+                if (start != null) {
+                  final freeDeadline = start.subtract(Duration(hours: p.freeH));
+                  extra = ' (until ${DateFormat('MMM d, h:mm a').format(freeDeadline)})';
+                }
+
+                final parts = <String>[
+                  'Free cancellation up to ${p.freeH}h$extra.',
+                  if (p.feePct > 0) 'A ${p.feePct}% fee may apply within ${p.freeH}h.',
+                  if (p.noRefundH > 0) 'No refunds within the last ${p.noRefundH}h.',
+                ];
+
+                return Text(
+                  parts.join(' '),
+                  style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14, height: 1.4),
+                );
+              }),
               const SizedBox(height: 24),
               Obx(
                 () => Row(

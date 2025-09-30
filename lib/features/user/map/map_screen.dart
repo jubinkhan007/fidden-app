@@ -2,7 +2,7 @@ import 'dart:math';
 // lib/features/user/map/map_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
-import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
+import 'package:fidden/features/user/shops/presentation/screens/shop_details_screen.dart';
 import 'package:fidden/features/user/map/map_controller.dart';
 import 'package:fidden/features/user/shops/data/all_shops_model.dart';
 import 'package:flutter/material.dart';

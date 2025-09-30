@@ -7,7 +7,7 @@ import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:fidden/features/user/booking/presentation/screens/booking_details_screen.dart';
 import 'package:fidden/features/user/booking/presentation/screens/booking_summary_screen.dart';
-import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
+import 'package:fidden/features/user/shops/presentation/screens/shop_details_screen.dart';
 import 'package:fidden/features/user/shops/services/controller/service_details_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

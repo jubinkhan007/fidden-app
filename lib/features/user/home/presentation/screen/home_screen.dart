@@ -17,7 +17,7 @@ import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dar
 import 'package:fidden/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'shop_details_screen.dart';
+import '../../../shops/presentation/screens/shop_details_screen.dart';
 
 /// Quick responsive helpers
 class R {

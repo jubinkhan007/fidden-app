@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 
 import 'package:fidden/core/commom/widgets/fallBack_image.dart'; // NetThumb
-import 'package:fidden/features/user/home/presentation/screen/shop_details_screen.dart';
+import 'package:fidden/features/user/shops/presentation/screens/shop_details_screen.dart';
 import 'package:fidden/features/user/search/controller/global_search_controller.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 

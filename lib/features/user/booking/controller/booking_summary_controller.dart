@@ -9,14 +9,47 @@ import 'package:fidden/core/utils/constants/api_constants.dart';
 
 // booking_summary_controller.dart
 
+class ShopPolicy {
+  final int freeH;
+  final int feePct;
+  final int noRefundH;
+  const ShopPolicy({required this.freeH, required this.feePct, required this.noRefundH});
+}
+
+
 class BookingSummaryController extends GetxController {
   final isTermsAgreed = false.obs;
   final isPaying = false.obs;
 
   // NEW: holds the server booking id once we get it from paymentIntent
   final RxInt paymentBookingId = 0.obs;
+  final Rxn<ShopPolicy> policy = Rxn<ShopPolicy>();
 
   void toggleTermsAgreement(bool? v) => isTermsAgreed.value = v ?? false;
+
+
+  Future<void> fetchPolicy(int shopId) async {
+    if (shopId <= 0) return;
+    try {
+      final res = await NetworkCaller().getRequest(
+        AppUrls.shopDetails(shopId.toString()),
+        token: AuthService.accessToken,
+      );
+      if (!res.isSuccess || res.responseData is! Map<String, dynamic>) return;
+
+      final m = res.responseData as Map<String, dynamic>;
+
+      // keys must be present in your ShopDetailSerializer (backend):
+      // free_cancellation_hours, cancellation_fee_percentage, no_refund_hours
+      final freeH   = (m['free_cancellation_hours'] as num?)?.toInt() ?? 24;
+      final feePct  = (m['cancellation_fee_percentage'] as num?)?.toInt() ?? 0;
+      final noRefH  = (m['no_refund_hours'] as num?)?.toInt() ?? 0;
+
+      policy.value = ShopPolicy(freeH: freeH, feePct: feePct, noRefundH: noRefH);
+    } catch (_) {
+      // swallow or log
+    }
+  }
 
   Future<void> payForBooking({
     required int slotId,
