@@ -1,3 +1,4 @@
+// lib/features/business_owner/home/screens/edit_service_screen.dart
 import 'dart:io';
 import 'package:fidden/core/commom/styles/get_text_style.dart';
 import 'package:fidden/core/commom/widgets/custom_button.dart';
@@ -13,6 +14,11 @@ import '../../../../core/utils/constants/app_sizes.dart';
 import '../../../../core/utils/constants/app_spacers.dart';
 import '../../../../core/utils/constants/icon_path.dart';
 
+// ✅ Import only the top-level myShopId
+import '../controller/business_owner_controller.dart' show myShopId;
+import '../controller/owner_service_slot_controller.dart';
+import 'widgets/manage_slots_card.dart';
+
 class EditServiceScreen extends StatefulWidget {
   const EditServiceScreen({super.key, required this.id});
 
@@ -26,28 +32,59 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
   final controller = Get.put(AddServiceController());
   final addServiceForm = GlobalKey<FormState>();
 
+  String? _slotsTag; // tag we use to register the slots controller
+
   @override
   void initState() {
     super.initState();
-    // Fetch service details and then populate the controllers
+
     controller.fetchService(widget.id).then((_) {
-      // Use addPostFrameCallback to ensure the widget is built before setting controller text
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          final serviceDetails = controller.singleServiceDetails.value;
-          controller.titleTEController.text = serviceDetails.title ?? '';
-          controller.priceTEController.text = serviceDetails.price ?? '';
-          controller.discountPriceTEController.text =
-              serviceDetails.discountPrice ?? '';
-          controller.descriptionTEController.text =
-              serviceDetails.description ?? '';
-          controller.durationTEController.text =
-              serviceDetails.duration?.toString() ?? '';
-          controller.capacityTEController.text =
-              serviceDetails.capacity?.toString() ?? '';
+        if (!mounted) return;
+
+        final s = controller.singleServiceDetails.value;
+
+        controller.titleTEController.text = s.title ?? '';
+        controller.priceTEController.text = s.price ?? '';
+        controller.discountPriceTEController.text = s.discountPrice ?? '';
+        controller.descriptionTEController.text = s.description ?? '';
+        controller.durationTEController.text = s.duration?.toString() ?? '';
+        controller.capacityTEController.text = s.capacity?.toString() ?? '';
+
+        // Create/init the slots controller once we know service id & shop id
+        final sid = s.id;
+        final shopId = myShopId.value; // read global RxnInt
+
+        // inside initState -> after you compute sid/shopId
+        if (sid != null && shopId != null) {
+          final tag = 'svc_$sid';
+
+          if (!Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
+            Get.put(
+              OwnerServiceSlotsController(shopId: shopId, serviceId: sid),
+              tag: tag,
+            );
+          } else {
+            Get.find<OwnerServiceSlotsController>(tag: tag).refresh();
+          }
+
+          // 👇 make the UI rebuild so the slots section becomes visible
+          setState(() {
+            _slotsTag = tag;
+          });
         }
+
       });
     });
+  }
+
+  @override
+  void dispose() {
+    if (_slotsTag != null &&
+        Get.isRegistered<OwnerServiceSlotsController>(tag: _slotsTag)) {
+      Get.delete<OwnerServiceSlotsController>(tag: _slotsTag!, force: true);
+    }
+    super.dispose();
   }
 
   @override
@@ -58,9 +95,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         backgroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_outlined),
-          onPressed: () {
-            Get.back();
-          },
+          onPressed: () => Get.back(),
         ),
         title: const Text('Edit Service'),
         centerTitle: true,
@@ -93,22 +128,20 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: addServiceForm,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // I've removed the Obx wrapper from here as it was causing the error.
-                Column(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Form(
+                key: addServiceForm,
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildLabel("Title"),
                     _buildTextField(
                       controller.titleTEController,
                       hint: "Type title",
-                      validator: (val) => val == null || val.isEmpty
-                          ? 'Title is required'
-                          : null,
+                      validator: (val) =>
+                      val == null || val.isEmpty ? 'Title is required' : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Price"),
@@ -116,9 +149,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                       controller.priceTEController,
                       hint: "Type Price",
                       isPhone: true,
-                      validator: (val) => val == null || val.isEmpty
-                          ? 'Price is required'
-                          : null,
+                      validator: (val) =>
+                      val == null || val.isEmpty ? 'Price is required' : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Discounted Price"),
@@ -126,9 +158,6 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                       controller.discountPriceTEController,
                       hint: "0",
                       isPhone: true,
-                      // validator: (val) => val == null || val.isEmpty
-                      //     ? 'Price is required'
-                      //     : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Service Duration (minutes)"),
@@ -136,9 +165,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                       controller.durationTEController,
                       hint: "e.g., 30",
                       isPhone: true,
-                      validator: (val) => val == null || val.isEmpty
-                          ? 'Duration is required'
-                          : null,
+                      validator: (val) =>
+                      val == null || val.isEmpty ? 'Duration is required' : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Capacity"),
@@ -146,9 +174,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                       controller.capacityTEController,
                       hint: "e.g., 1",
                       isPhone: true,
-                      validator: (val) => val == null || val.isEmpty
-                          ? 'Capacity is required'
-                          : null,
+                      validator: (val) =>
+                      val == null || val.isEmpty ? 'Capacity is required' : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Description"),
@@ -160,49 +187,61 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                           ? 'Description is required'
                           : null,
                     ),
-                  ],
-                ),
-                VerticalSpace(height: getHeight(20)),
-                _buildLabel("Upload image"),
-                SizedBox(height: getHeight(10)),
-                Obx(() {
-                  final selectedPath = controller.selectedImagePath.value;
-                  final networkImage =
-                      controller.singleServiceDetails.value.serviceImg;
+                    VerticalSpace(height: getHeight(20)),
+                    _buildLabel("Upload image"),
+                    SizedBox(height: getHeight(10)),
+                    Obx(() {
+                      final selectedPath = controller.selectedImagePath.value;
+                      final networkImage =
+                          controller.singleServiceDetails.value.serviceImg;
 
-                  if (selectedPath.isNotEmpty) {
-                    return _buildFileImage(selectedPath, controller);
-                  } else if (networkImage != null && networkImage.isNotEmpty) {
-                    return _buildNetworkImage(networkImage, controller);
-                  } else {
-                    return _buildImageUploadBox(controller);
-                  }
-                }),
-                SizedBox(height: getHeight(32)),
-                Obx(
-                  () => controller.inProgress.value
-                      ? SpinKitWave(color: AppColors.primaryColor, size: 30.0)
-                      : Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: CustomButton(
-                            onPressed: () {
-                              if (addServiceForm.currentState?.validate() ??
-                                  false) {
-                                controller.updateService(id: widget.id);
-                              }
-                            },
-                            child: Text(
-                              "Update service",
-                              style: getTextStyleMsrt(
-                                fontSize: getWidth(18),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                      if (selectedPath.isNotEmpty) {
+                        return _buildFileImage(selectedPath, controller);
+                      } else if (networkImage != null &&
+                          networkImage.isNotEmpty) {
+                        return _buildNetworkImage(networkImage, controller);
+                      } else {
+                        return _buildImageUploadBox(controller);
+                      }
+                    }),
+                    const SizedBox(height: 8),
+                    if (_slotsTag == null)
+                      const SizedBox.shrink()
+                    else if (!Get.isRegistered<OwnerServiceSlotsController>(tag: _slotsTag))
+                      const SizedBox.shrink()
+                    else
+                      Builder(
+                        builder: (_) =>
+                            ManageSlotsCard(ctrl: Get.find<OwnerServiceSlotsController>(tag: _slotsTag!)),
+                      ),
+                    SizedBox(height: getHeight(12)),
+                    Obx(() => controller.inProgress.value
+                        ? SpinKitWave(
+                        color: AppColors.primaryColor, size: 30.0)
+                        : Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: CustomButton(
+                        onPressed: () {
+                          if (addServiceForm.currentState?.validate() ?? false) {
+                            controller.updateService(id: widget.id);
+                          }
+                        },
+
+                        child: Text(
+                          "Update service",
+                          style: getTextStyleMsrt(
+                            fontSize: getWidth(18),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
+                      ),
+                    )),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+
+            ],
           ),
         ),
       ),
@@ -222,22 +261,20 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
     );
   }
 
-  Widget _buildLabel(String text) {
-    return CustomText(
-      text: text,
-      color: const Color(0xff141414),
-      fontSize: getWidth(15),
-      fontWeight: FontWeight.w600,
-    );
-  }
+  Widget _buildLabel(String text) => CustomText(
+    text: text,
+    color: const Color(0xff141414),
+    fontSize: getWidth(15),
+    fontWeight: FontWeight.w600,
+  );
 
   Widget _buildTextField(
-    TextEditingController controller, {
-    required String hint,
-    String? Function(String?)? validator,
-    bool isPhone = false,
-    int maxLines = 1,
-  }) {
+      TextEditingController controller, {
+        required String hint,
+        String? Function(String?)? validator,
+        bool isPhone = false,
+        int maxLines = 1,
+      }) {
     return Column(
       children: [
         SizedBox(height: getHeight(10)),
@@ -290,7 +327,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey),
           borderRadius: BorderRadius.circular(10),
-          image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
+          image:
+          DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
         ),
       ),
     );

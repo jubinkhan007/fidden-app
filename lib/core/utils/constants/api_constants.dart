@@ -128,6 +128,9 @@ class AppUrls {
       '$_baseUrl/api/slot-booking/$bookingId/cancel/';
   static String getSlotsForShop(int shopId) =>
       '/api/shop-details/$shopId/slots/';
+
+  static String ownerSlots({required int shopId, required int serviceId, required String date})
+  => '${_baseUrl}/api/shops/$shopId/slots/?service=$serviceId&date=$date';
   // payment
   static String paymentIntent(int bookingId) =>
       '$_baseUrl/payments/payment-intent/$bookingId/';

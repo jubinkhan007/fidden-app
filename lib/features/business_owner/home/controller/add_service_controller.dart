@@ -13,6 +13,7 @@ import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../model/get_single_service_model.dart';
 import 'business_owner_controller.dart';
+import 'owner_service_slot_controller.dart';
 
 class AddServiceController extends GetxController {
   TextEditingController titleTEController = TextEditingController();
@@ -68,6 +69,7 @@ class AddServiceController extends GetxController {
           singleServiceDetails.value = GetSingleServiceModel.fromJson(
             response.responseData,
           );
+          selectedCategoryId.value = singleServiceDetails.value.category;
         } else {
           throw Exception('Unexpected response data format');
         }
@@ -180,44 +182,61 @@ class AddServiceController extends GetxController {
 
   Future<void> updateService({required String id}) async {
     inProgress.value = true;
-
-    // ---  CHANGE IS HERE ---
-    final price = priceTEController.text;
-    final discountPriceText = discountPriceTEController.text;
-    final currentStatus = singleServiceDetails.value.isActive ?? true;
-
-    // Use price if discount is empty or zero
-    final effectiveDiscountPrice =
-        (discountPriceText.isEmpty || double.tryParse(discountPriceText) == 0)
-        ? price
-        : discountPriceText;
-    // --- END CHANGE ---
-
-    final Map<String, String> requestBody = {
-      "title": titleTEController.text,
-      "price": price,
-      "discount_price": effectiveDiscountPrice, // Use the new value
-      "description": descriptionTEController.text,
-      "category": singleServiceDetails.value.category?.toString() ?? '1',
-      "duration": durationTEController.text,
-      "capacity": capacityTEController.text,
-      "is_active": currentStatus.toString(),
-    };
-
     try {
-      await _sendPutRequestWithHeadersAndImagesOnly(
+      final s = singleServiceDetails.value;
+
+      // choose selected category or fallback to the service's current category
+      final int? categoryId = selectedCategoryId.value ?? s.category;
+      if (categoryId == null) {
+        AppSnackBar.showError('Please select a category.');
+        inProgress.value = false;
+        return;
+      }
+
+      // build base body
+      final Map<String, dynamic> body = {
+        'title'       : titleTEController.text.trim(),
+        'price'       : priceTEController.text.trim(),
+        'description' : descriptionTEController.text.trim(),
+        'duration'    : int.tryParse(durationTEController.text.trim()) ?? s.duration ?? 0,
+        'capacity'    : int.tryParse(capacityTEController.text.trim()) ?? s.capacity ?? 1,
+        'category'    : categoryId, // ← never null now
+      };
+
+      // only send discount_price if user entered one
+      final dp = discountPriceTEController.text.trim();
+      if (dp.isNotEmpty) body['discount_price'] = dp;
+
+      // include disabled times chosen in the Manage Slots card
+      final tag = s.id != null ? 'svc_${s.id}' : null;
+      if (tag != null && Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
+        final slotsCtrl = Get.find<OwnerServiceSlotsController>(tag: tag);
+        body['disabled_start_times'] = slotsCtrl.disabledStartTimesForSave;
+      }
+
+      final resp = await NetworkCaller().putRequest(
         AppUrls.updateService(id),
-        selectedImagePath.value,
-        AuthService.accessToken,
-        requestBody,
+        token: AuthService.accessToken,
+        body: body,
       );
-    } catch (e) {
-      log('Error updating service: $e');
-      AppSnackBar.showError('Failed to update service. Please try again.');
+
+      if (!resp.isSuccess) {
+        AppSnackBar.showError(resp.errorMessage ?? 'Update failed');
+        return;
+      }
+
+      // reset the “unsaved” state for slots if present
+      if (tag != null && Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
+        Get.find<OwnerServiceSlotsController>(tag: tag).markSaved();
+      }
+
+      AppSnackBar.showSuccess('Service updated');
+      await fetchService(id); // refresh local model
     } finally {
       inProgress.value = false;
     }
   }
+
 
   Future<void> toggleServiceStatus(String id) async {
     inProgress.value = true;

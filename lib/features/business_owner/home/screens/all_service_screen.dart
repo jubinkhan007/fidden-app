@@ -155,6 +155,7 @@ class AllServiceScreen extends StatelessWidget {
                               Get.to(
                                 () => EditServiceScreen(
                                   id: service.id.toString(),
+
                                 ),
                               );
                             },
