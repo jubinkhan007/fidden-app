@@ -104,6 +104,10 @@ class Data {
   bool? isVarified;
   String? status;
   List<UploadedFile>? verificationFiles;
+  // NEW: cancellation policy
+  int? freeCancellationHours;      // "free_cancellation_hours"
+  int? cancellationFeePercentage;  // "cancellation_fee_percentage"
+  int? noRefundHours;              // "no_refund_hours"
 
   Data({
     this.id,
@@ -128,6 +132,9 @@ class Data {
     this.isVarified,
     this.status,
     this.verificationFiles,
+    this.freeCancellationHours,
+    this.cancellationFeePercentage,
+    this.noRefundHours,
   });
 
   /// All 7 days for computing openDays
@@ -280,6 +287,9 @@ class Data {
                 .map((fileJson) => UploadedFile.fromJson(fileJson))
                 .toList()
           : null,
+      freeCancellationHours: _asInt(json['free_cancellation_hours']),
+      cancellationFeePercentage: _asInt(json['cancellation_fee_percentage']),
+      noRefundHours: _asInt(json['no_refund_hours']),
     );
   }
 
@@ -316,7 +326,15 @@ class Data {
       'is_varified': false,
       'status': status,
       'verification_files': verificationFiles,
+      'free_cancellation_hours': freeCancellationHours,
+      'cancellation_fee_percentage': cancellationFeePercentage,
+      'no_refund_hours': noRefundHours,
     };
+  }
+  static int? _asInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
   }
 }
 
@@ -364,6 +382,9 @@ class BusinessProfileModel {
   final List<String> closeDays; // e.g., ["monday", "tuesday"]
   final (double, double)? location; // (latitude, longitude)
   final List<VerificationFile> verificationFiles;
+  final int? freeCancellationHours;
+  final int? cancellationFeePercentage;
+  final int? noRefundHours;
 
   // Computed properties for easier UI access
   List<String> get openDays {
@@ -393,6 +414,9 @@ class BusinessProfileModel {
     this.closeDays = const [],
     this.location,
     this.verificationFiles = const [],
+    this.freeCancellationHours,
+    this.cancellationFeePercentage,
+    this.noRefundHours,
   });
 
   factory BusinessProfileModel.fromJson(Map<String, dynamic> json) {
@@ -422,6 +446,10 @@ class BusinessProfileModel {
               )
               .toList() ??
           [],
+freeCancellationHours: Data._asInt(json['free_cancellation_hours']),
+cancellationFeePercentage: Data._asInt(json['cancellation_fee_percentage']),
+noRefundHours: Data._asInt(json['no_refund_hours']),
+
     );
   }
 

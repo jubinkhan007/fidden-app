@@ -35,6 +35,9 @@ class BusinessOwnerProfileController extends GetxController {
   var profileImage = Rxn<File>();
   var imagePath = ''.obs;
   var documents = <File>[].obs;
+  final freeCancellationHours = ''.obs;     // e.g. "24"
+  final cancellationFeePercentage = ''.obs; // e.g. "50"
+  final noRefundHours = ''.obs;             // e.g. "4"
 
   Future<void> pickDocuments() async {
     try {
@@ -181,6 +184,18 @@ class BusinessOwnerProfileController extends GetxController {
     if (fromApi != null && fromApi.isNotEmpty) openDays.addAll(fromApi);
     startTime.value = profileDetails.value.data?.startTime ?? startTime.value;
     endTime.value   = profileDetails.value.data?.endTime   ?? endTime.value;
+    final p = profileDetails.value.data;
+    if (p != null) {
+      freeCancellationHours.value =
+          (p.freeCancellationHours ?? 24).toString();
+      cancellationFeePercentage.value =
+          (p.cancellationFeePercentage ?? 0).toString();
+      noRefundHours.value = (p.noRefundHours ?? 0).toString();
+    } else {
+      freeCancellationHours.value = '24';
+      cancellationFeePercentage.value = '0';
+      noRefundHours.value = '0';
+    }
     await checkStripeStatusIfPossible();
   }
 
@@ -281,7 +296,14 @@ class BusinessOwnerProfileController extends GetxController {
       isLoading.value = false;
     }
   }
-
+  int? _intOrNull(String s) => int.tryParse(s.trim());
+  bool _validPolicy(int freeH, int feePct, int noRefundH) {
+    if (freeH < 0 || noRefundH < 0) return false;
+    if (feePct < 0 || feePct > 100) return false;
+    // within X hours (noRefundH) there is no refund, so it should be < free window
+    if (noRefundH >= freeH) return false;
+    return true;
+  }
 
   Future<void> createBusinessProfile({
     required String businessName,
@@ -291,6 +313,19 @@ class BusinessOwnerProfileController extends GetxController {
   }) async {
     isLoading.value = true;
     clearErrors();
+          final freeH = _intOrNull(freeCancellationHours.value) ?? 24;
+      final feePct = _intOrNull(cancellationFeePercentage.value) ?? 0;
+      final noRefH = _intOrNull(noRefundHours.value) ?? 0;
+
+      if (!_validPolicy(freeH, feePct, noRefH)) {
+        AppSnackBar.showError(
+          'Invalid cancellation policy. '
+          'Make sure 0 ≤ fee ≤ 100 and No-refund hours < Free-cancel hours.',
+        );
+        isLoading.value = false;
+        return;
+      }
+
     try {
       final uiStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
       final uiClose = endTime.value.isNotEmpty ? endTime.value : '06:00 PM';
@@ -309,6 +344,9 @@ class BusinessOwnerProfileController extends GetxController {
         longitude: long.value.isEmpty ? null : long.value,
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
         documents: documents,
+                freeCancellationHours: freeH,
+        cancellationFeePercentage: feePct,
+        noRefundHours: noRefH,
         token: AuthService.accessToken ?? '',
       );
 
@@ -400,81 +438,94 @@ class BusinessOwnerProfileController extends GetxController {
   }
 
   Future<void> updateBusinessProfile({
-    required businessName,
-    required businessAddress,
-    required String aboutUs,
-    required String id,
-    required String capacity,
-    List<String>? openDays, // UI passes these; we only send close_days
-    List<String>? closeDays, // if null, we derive
-    String? startAt, // "09:00 AM"
-    String? closeAt, // "06:00 PM"
-  }) async {
-    try {
-      isLoading.value = true;
+  required businessName,
+  required businessAddress,
+  required String aboutUs,
+  required String id,
+  required String capacity,
+  List<String>? openDays,
+  List<String>? closeDays,
+  String? startAt,
+  String? closeAt,
+}) async {
+  try {
+    isLoading.value = true;
 
-      // Times with fallback to observables / model
-      final uiStart = (startAt?.isNotEmpty ?? false)
-          ? startAt!
-          : (startTime.value.isNotEmpty
-                ? startTime.value
-                : (profileDetails.value.data?.startTime ?? '09:00 AM'));
+    // --- derive UI times (must be AM/PM) ---
+    final uiStart = (startAt?.isNotEmpty ?? false)
+        ? startAt!
+        : (startTime.value.isNotEmpty
+            ? startTime.value
+            : (profileDetails.value.data?.startTime ?? '09:00 AM'));
 
-      final uiClose = (closeAt?.isNotEmpty ?? false)
-          ? closeAt!
-          : (endTime.value.isNotEmpty
-                ? endTime.value
-                : (profileDetails.value.data?.endTime ?? '06:00 PM'));
+    final uiClose = (closeAt?.isNotEmpty ?? false)
+        ? closeAt!
+        : (endTime.value.isNotEmpty
+            ? endTime.value
+            : (profileDetails.value.data?.endTime ?? '06:00 PM'));
 
-      // Closed days (if UI didn’t pass, derive from controller.openDays)
-      const allDays = [
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-        'Sunday',
-      ];
-      final open = (openDays != null && openDays.isNotEmpty)
-          ? openDays
-          : this.openDays.toList();
-      final closed = (closeDays != null && closeDays.isNotEmpty)
-          ? closeDays
-          : allDays.where((d) => !open.contains(d)).toList();
+    // If someone fed in a.m./p.m., normalize to AM/PM
+    String _normalizeAmPm(String s) =>
+        s.replaceAll('.', '').toUpperCase().replaceAll('AM', 'AM').replaceAll('PM', 'PM');
+    final normStart = _normalizeAmPm(uiStart);
+    final normClose = _normalizeAmPm(uiClose);
 
-      final resp = await ShopApi().updateShopWithImage(
-        id: id,
-        name: businessName,
-        address: businessAddress,
-        aboutUs: aboutUs,
-        capacity: int.tryParse(capacity) ?? 0,
-        startAtUi: uiStart,
-        closeAtUi: uiClose,
-        closeDays: closed.map((e) => e.toLowerCase()).toList(),
-        latitude: lat.value.isEmpty ? null : lat.value,
-        longitude: long.value.isEmpty ? null : long.value,
-        imagePath: imagePath.value.isEmpty ? null : imagePath.value,
-        documents: documents,
-        token: AuthService.accessToken ?? '',
+    // --- days ---
+    const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    final open = (openDays != null && openDays.isNotEmpty) ? openDays : this.openDays.toList();
+    final closed = (closeDays != null && closeDays.isNotEmpty)
+        ? closeDays
+        : allDays.where((d) => !open.contains(d)).toList();
+
+    // --- cancellation policy (reuse same rules as create) ---
+    final freeH = int.tryParse(freeCancellationHours.value.trim()) ?? 24;
+    final feePct = int.tryParse(cancellationFeePercentage.value.trim()) ?? 0;
+    final noRefH = int.tryParse(noRefundHours.value.trim()) ?? 0;
+
+    if (!_validPolicy(freeH, feePct, noRefH)) {
+      AppSnackBar.showError(
+        'Invalid cancellation policy. '
+        'Make sure 0 ≤ fee ≤ 100 and No-refund hours < Free-cancel hours.',
       );
-
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        AppSnackBar.showSuccess("Business Profile updated successfully!");
-        await fetchProfileDetails();
-        // ✅ forward navigation – replace current screen in the stack
-        Get.offNamed('/all-services'); // or Get.off(() => AllServiceScreen());
-        return;
-      } else {
-        AppSnackBar.showError('Update failed');
-      }
-    } catch (e) {
-      log('Update error: $e');
-      AppSnackBar.showError('Failed to update business profile.');
-    } finally {
-      isLoading.value = false;
+      return;
     }
+
+    final resp = await ShopApi().updateShopWithImage(
+      id: id,
+      name: businessName,
+      address: businessAddress,
+      aboutUs: aboutUs,
+      capacity: int.tryParse(capacity) ?? 0,
+      startAtUi: normStart,
+      closeAtUi: normClose,
+      closeDays: closed.map((e) => e.toLowerCase()).toList(),
+      latitude: lat.value.isEmpty ? null : lat.value,
+      longitude: long.value.isEmpty ? null : long.value,
+      imagePath: imagePath.value.isEmpty ? null : imagePath.value,
+      documents: documents,
+      token: AuthService.accessToken ?? '',
+
+      // ✅ include new fields on UPDATE:
+      freeCancellationHours: freeH,
+      cancellationFeePercentage: feePct,
+      noRefundHours: noRefH,
+    );
+
+    if (resp.statusCode == 200 || resp.statusCode == 201) {
+      AppSnackBar.showSuccess("Business Profile updated successfully!");
+      await fetchProfileDetails();
+      Get.offNamed('/all-services');
+    } else {
+      AppSnackBar.showError('Update failed');
+    }
+  } catch (e) {
+    log('Update error: $e');
+    AppSnackBar.showError('Failed to update business profile.');
+  } finally {
+    isLoading.value = false;
   }
+}
+
 
   Future<void> _sendPutRequestWithHeadersAndImagesOnly(
     String url,

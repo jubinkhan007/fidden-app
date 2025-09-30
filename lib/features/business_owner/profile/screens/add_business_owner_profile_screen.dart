@@ -3,6 +3,7 @@
 import 'package:fidden/core/commom/widgets/custom_button.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/custom_text_form_field.dart';
+import 'package:fidden/features/business_owner/profile/screens/widgets/cancellationPolicy_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:geocoding/geocoding.dart';
@@ -35,6 +36,9 @@ class _AddBusinessOwnerProfileScreenState
   final aboutUsTEController = TextEditingController();
   final capacityTEController = TextEditingController();
   final locationTEController = TextEditingController();
+    final _freeHCtrl = TextEditingController();
+  final _feePctCtrl = TextEditingController();
+  final _noRefHCtrl = TextEditingController();
 
   String _clean(String? s) =>
       (s == null || s.trim().isEmpty || s.trim().toLowerCase() == 'null') ? '' : s;
@@ -49,6 +53,16 @@ class _AddBusinessOwnerProfileScreenState
       locationTEController.text = _clean(p.businessAddress);
       capacityTEController.text = (p.capacity ?? 0) == 0 ? '' : p.capacity.toString();
       aboutUsTEController.text  = _clean(p.details);
+          _freeHCtrl.text  = controller1.freeCancellationHours.value.isNotEmpty
+        ? controller1.freeCancellationHours.value
+        : '24';
+    _feePctCtrl.text = controller1.cancellationFeePercentage.value.isNotEmpty
+        ? controller1.cancellationFeePercentage.value
+        : '0';
+    _noRefHCtrl.text = controller1.noRefundHours.value.isNotEmpty
+        ? controller1.noRefundHours.value
+        : '0';
+
 
       controller1.startTime.value = _clean(p.startTime) == '' ? '09:00 AM' : p.startTime!;
       controller1.endTime.value   = _clean(p.endTime)   == '' ? '08:00 PM' : p.endTime!;
@@ -67,6 +81,10 @@ class _AddBusinessOwnerProfileScreenState
     aboutUsTEController.dispose();
     capacityTEController.dispose();
     locationTEController.dispose();
+      _freeHCtrl.dispose();
+  _feePctCtrl.dispose();
+  _noRefHCtrl.dispose();
+
     super.dispose();
   }
 
@@ -478,6 +496,11 @@ class _AddBusinessOwnerProfileScreenState
                 );
               }),
               SizedBox(height: getHeight(24)),
+              CancellationPolicyCard(
+                freeHController: _freeHCtrl,
+                feePctController: _feePctCtrl,
+                noRefHController: _noRefHCtrl,
+              ),
               _buildFilePicker(),
               Obx(
                 () => controller1.isLoading.value
@@ -515,6 +538,13 @@ class _AddBusinessOwnerProfileScreenState
                             );
                             return;
                           }
+                                                    controller1.freeCancellationHours.value =
+                              _freeHCtrl.text.trim();
+                          controller1.cancellationFeePercentage.value =
+                              _feePctCtrl.text.trim();
+                          controller1.noRefundHours.value =
+                              _noRefHCtrl.text.trim();
+
 
                           controller1.createBusinessProfile(
                             businessName: nameTEController.text,

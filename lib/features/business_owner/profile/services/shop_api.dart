@@ -25,7 +25,17 @@ class ShopApi {
     return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
   }
 
-  // ✅ REFACTORED to use NetworkCaller
+  // small helpers
+  static int? _asInt(dynamic v) =>
+      v == null ? null : (v is int ? v : int.tryParse(v.toString()));
+
+  static int? _clamp(int? v, {int min = 0, int max = 100000}) {
+    if (v == null) return null;
+    if (v < min) return min;
+    if (v > max) return max;
+    return v;
+  }
+
   Future<ResponseData> createShopWithImage({
     required String name,
     required String address,
@@ -39,6 +49,11 @@ class ShopApi {
     String? imagePath,
     required List<File> documents,
     required String token,
+
+    // NEW (optional – pass from your controller/UI)
+    int? freeCancellationHours,
+    int? cancellationFeePercentage,
+    int? noRefundHours,
   }) async {
     final body = <String, String>{
       'name': name,
@@ -47,7 +62,9 @@ class ShopApi {
       'capacity': capacity.toString(),
       'start_at': toApiTime(startAtUi),
       'close_at': toApiTime(closeAtUi),
-      'close_days': jsonEncode(closeDays.map((e) => e.toLowerCase()).toList()),
+      'close_days': jsonEncode(
+        closeDays.map((e) => e.toLowerCase()).toList(),
+      ),
     };
 
     final lat = double.tryParse(latitude ?? '');
@@ -55,6 +72,14 @@ class ShopApi {
     if (lat != null && lon != null) {
       body['location'] = '$lat,$lon';
     }
+
+    // include only if provided
+    final fch = _clamp(_asInt(freeCancellationHours));
+    final cfp = _clamp(_asInt(cancellationFeePercentage), min: 0, max: 100);
+    final nrf = _clamp(_asInt(noRefundHours));
+    if (fch != null) body['free_cancellation_hours'] = '$fch';
+    if (cfp != null) body['cancellation_fee_percentage'] = '$cfp';
+    if (nrf != null) body['no_refund_hours'] = '$nrf';
 
     return await _networkCaller.multipartRequest(
       AppUrls.getMBusinessProfile,
@@ -66,7 +91,6 @@ class ShopApi {
     );
   }
 
-  // ✅ REFACTORED to use NetworkCaller
   Future<ResponseData> updateShopWithImage({
     required String id,
     required String name,
@@ -81,6 +105,11 @@ class ShopApi {
     String? imagePath,
     required List<File> documents,
     required String token,
+
+    // NEW (optional – pass from your controller/UI)
+    int? freeCancellationHours,
+    int? cancellationFeePercentage,
+    int? noRefundHours,
   }) async {
     final body = <String, String>{
       'name': name,
@@ -89,7 +118,9 @@ class ShopApi {
       'capacity': capacity.toString(),
       'start_at': toApiTime(startAtUi),
       'close_at': toApiTime(closeAtUi),
-      'close_days': jsonEncode(closeDays.map((e) => e.toLowerCase()).toList()),
+      'close_days': jsonEncode(
+        closeDays.map((e) => e.toLowerCase()).toList(),
+      ),
     };
 
     final lat = double.tryParse(latitude ?? '');
@@ -98,15 +129,24 @@ class ShopApi {
       body['location'] = '$lat,$lon';
     }
 
+    // include only if provided
+    final fch = _clamp(_asInt(freeCancellationHours));
+    final cfp = _clamp(_asInt(cancellationFeePercentage), min: 0, max: 100);
+    final nrf = _clamp(_asInt(noRefundHours));
+    if (fch != null) body['free_cancellation_hours'] = '$fch';
+    if (cfp != null) body['cancellation_fee_percentage'] = '$cfp';
+    if (nrf != null) body['no_refund_hours'] = '$nrf';
+
     return await _networkCaller.multipartRequest(
       AppUrls.editBusinessProfile(id),
-      method: 'PATCH', // Using PATCH as in your original code
+      method: 'PATCH',
       body: body,
       token: token,
       photo: imagePath != null ? File(imagePath) : null,
       documents: documents,
     );
   }
+
 
   // ✅ Now an instance method
   Future<StripeOnboardingLink> getStripeOnboardingLink({

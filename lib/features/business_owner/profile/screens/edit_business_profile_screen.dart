@@ -1,6 +1,7 @@
 import 'package:fidden/core/commom/widgets/custom_button.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/custom_text_form_field.dart';
+import 'package:fidden/features/business_owner/profile/screens/widgets/cancellationPolicy_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:geocoding/geocoding.dart';
@@ -13,6 +14,7 @@ import '../../../../core/utils/constants/app_spacers.dart';
 import '../../../../core/utils/constants/icon_path.dart';
 import '../../../../core/utils/constants/image_path.dart';
 import '../controller/busines_owner_profile_controller.dart';
+import '../data/business_profile_model.dart';
 import 'map_screen.dart';
 import 'package:fidden/core/services/location_service.dart';
 
@@ -32,6 +34,11 @@ class _EditBusinessOwnerProfileScreenState
   final aboutUsTEController = TextEditingController();
   final capacityTEController = TextEditingController();
   final locationTEController = TextEditingController();
+    final _freeHCtrl = TextEditingController();
+  final _feePctCtrl = TextEditingController();
+  final _noRefHCtrl = TextEditingController();
+  late final Worker _profileSub;
+
 
   @override
   void initState() {
@@ -42,15 +49,41 @@ class _EditBusinessOwnerProfileScreenState
       locationTEController.text = profileData.businessAddress ?? '';
       capacityTEController.text = profileData.capacity?.toString() ?? '';
       aboutUsTEController.text = profileData.details ?? '';
+          _freeHCtrl.text  = (profileData?.freeCancellationHours ?? 24).toString();
+    _feePctCtrl.text = (profileData?.cancellationFeePercentage ?? 0).toString();
+    _noRefHCtrl.text = (profileData?.noRefundHours ?? 0).toString();
     }
+    // <-- ADD THIS SUBSCRIPTION
+    _profileSub = ever<GetBusinesModel>(controller1.profileDetails, (m) {
+      final d = m.data;
+      if (d == null) return;
+
+      void put(TextEditingController c, int? v) {
+        final newText = (v ?? 0).toString();
+        if (c.text != newText) {
+          c.text = newText;
+          c.selection = TextSelection.collapsed(offset: newText.length);
+        }
+      }
+
+      put(_freeHCtrl,  d.freeCancellationHours);
+      put(_feePctCtrl, d.cancellationFeePercentage);
+      put(_noRefHCtrl, d.noRefundHours);
+      setState(() {});
+    });
+
   }
 
   @override
   void dispose() {
+    _profileSub.dispose();
     nameTEController.dispose();
     aboutUsTEController.dispose();
     capacityTEController.dispose();
     locationTEController.dispose();
+      _freeHCtrl.dispose();
+  _feePctCtrl.dispose();
+  _noRefHCtrl.dispose();
     super.dispose();
   }
 
@@ -612,6 +645,13 @@ ButtonStyle _saveBtnStyle() {
                 onPressed: isPending
                     ? null
                     : () {
+                                      controller1.freeCancellationHours.value =
+                    _freeHCtrl.text.trim();
+                controller1.cancellationFeePercentage.value =
+                    _feePctCtrl.text.trim();
+                controller1.noRefundHours.value =
+                    _noRefHCtrl.text.trim();
+
                         controller1.updateBusinessProfile(
                           businessName: nameTEController.text,
                           businessAddress: locationTEController.text,
@@ -827,7 +867,33 @@ ButtonStyle _saveBtnStyle() {
                       );
                     }),
                   ],
+                ),                _sectionCard(
+                  title: 'Cancellation Policy',
+                  subtitle: 'Configure refund windows and fees.',
+                  children: [
+                    AbsorbPointer(
+                      absorbing: isPending, // lock when pending
+                      child: CancellationPolicyCard(
+                        freeHController: _freeHCtrl,
+                        feePctController: _feePctCtrl,
+                        noRefHController: _noRefHCtrl,
+                      ),
+                    ),
+                    if (isPending)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Editing is disabled while under review.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
+
+
                 // Attach docs section (kept simple)
                 _sectionCard(
                   title: 'Verification Documents',
