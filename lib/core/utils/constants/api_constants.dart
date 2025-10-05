@@ -129,6 +129,14 @@ class AppUrls {
   static String getSlotsForShop(int shopId) =>
       '/api/shop-details/$shopId/slots/';
 
+  // subscription
+
+  static const String subscriptionPlans = '$_baseUrl/subscriptions/plans/';
+  static const String subscriptionDetails = '$_baseUrl/subscriptions/details/';
+  static const String createCheckoutSession = '$_baseUrl/subscriptions/create-checkout-session/';
+  static const String cancelSubscription = '$_baseUrl/subscriptions/cancel-subscription/';
+
+
   static String ownerSlots({required int shopId, required int serviceId, required String date})
   => '${_baseUrl}/api/shops/$shopId/slots/?service=$serviceId&date=$date';
   // payment

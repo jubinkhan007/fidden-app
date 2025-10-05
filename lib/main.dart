@@ -19,47 +19,43 @@ import 'package:fidden/core/ws/ws_service.dart';
 Future<void> _bg(RemoteMessage m) => firebaseMessagingBackgroundHandler(m);
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  // 1) Framework errors (build/layout/paint etc.)
-  FlutterError.onError = (FlutterErrorDetails details) {
-    // Forward to Flutter's default (prints red screen in debug),
-    // but ALSO print the stack so you see the exact file:line.
-    FlutterError.presentError(details);
-    debugPrint('⚠️ FlutterError: ${details.exceptionAsString()}');
-    if (details.stack != null) {
-      debugPrint('STACK:\n${details.stack}');
-    }
-  };
+  // Use runZonedGuarded to catch all errors in the same zone.
+  runZonedGuarded(() async {
+    // Ensure bindings are initialized inside the zone.
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // 2) Uncaught async errors on the engine/platform side
-  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-    debugPrint('⚠️ Platform/Zone error: $error');
-    debugPrint('STACK:\n$stack');
-    // return true if you consider it "handled" and want to prevent crash
-    return false; // let it propagate in debug
-  };
+    // Set up global error handlers
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('⚠️ FlutterError: ${details.exceptionAsString()}');
+      if (details.stack != null) {
+        debugPrint('STACK:\n${details.stack}');
+      }
+    };
 
-  // 3) Catch everything else in the zone (timers/streams/futures)
-  runZonedGuarded(() {
+    PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+      debugPrint('⚠️ Platform/Zone error: $error');
+      debugPrint('STACK:\n$stack');
+      return false; // Let it propagate in debug
+    };
+
+    // Initialize Firebase and other services before runApp
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_bg);
+
+    Stripe.publishableKey =
+    'pk_test_51S56r33eKAUTJHyfzxn8z3GbxLpdNdl2ynBLGoLwEOx4bR2qoJdWwt6CWYoFzu3lPlHfBikm5gt0DqhA49w3Nj4700TIDOqiGr';
+
+    // Run the app
     runApp(const MyApp());
+
+    // Initialize other services without blocking startup
+    unawaited(_postBootInit());
+
   }, (Object error, StackTrace stack) {
     debugPrint('⚠️ Uncaught in zone: $error');
     debugPrint('STACK:\n$stack');
   });
-  Stripe.publishableKey = 'pk_test_51S56r33eKAUTJHyfzxn8z3GbxLpdNdl2ynBLGoLwEOx4bR2qoJdWwt6CWYoFzu3lPlHfBikm5gt0DqhA49w3Nj4700TIDOqiGr';
-
-  // Only the absolute minimum before UI:
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_bg);
-FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    // print a full stack to console
-    Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
-  };
-
-  // Then do the rest without blocking startup
-  // (log each step + add timeouts so nothing hangs forever)
-  unawaited(_postBootInit());
 }
 
 

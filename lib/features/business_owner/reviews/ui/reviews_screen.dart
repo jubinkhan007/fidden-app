@@ -1,6 +1,7 @@
 // lib/features/business_owner/reviews/presentation/reviews_screen.dart
 import 'package:fidden/features/business_owner/reviews/state/review_controller.dart';
 import 'package:fidden/features/business_owner/reviews/state/reviews_filter_controller.dart';
+import 'package:fidden/features/business_owner/reviews/ui/widgets/reviews_shimmer_list.dart';
 import 'package:fidden/features/business_owner/reviews/utils/review_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -89,21 +90,17 @@ class ReviewsScreen extends StatelessWidget {
 
             // ⬇️ Only the list area reacts to changes
             Obx(() {
-              // thin top progress indicator while fetching, without nuking UI
-              final loadingBar = c.isLoading.value
-                  ? const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 4),
-                        child: LinearProgressIndicator(minHeight: 2),
-                      ),
-                    )
-                  : const SliverToBoxAdapter(child: SizedBox.shrink());
+              // 1) Cold start: no cache yet → shimmer only
+              if (c.reviews.isEmpty && c.isLoading.value) {
+                return const SliverToBoxAdapter(child: ReviewsShimmerList());
+              }
 
+              // 2) No reviews and not loading → empty state
               if (c.reviews.isEmpty && !c.isLoading.value) {
-                return SliverToBoxAdapter(
+                return const SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: const ReviewsEmptyState(
+                    padding: EdgeInsets.all(24.0),
+                    child: ReviewsEmptyState(
                       title: 'No reviews yet',
                       subtitle: "You'll see new reviews from customers here.",
                     ),
@@ -111,31 +108,31 @@ class ReviewsScreen extends StatelessWidget {
                 );
               }
 
+              // 3) We have reviews: apply filters and render
               final filtered = applyReviewFilters(reviews: c.reviews, f: f);
 
               if (!c.isLoading.value && filtered.isEmpty) {
-                return SliverToBoxAdapter(
+                return const SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: const ReviewsEmptyState(
+                    padding: EdgeInsets.all(24.0),
+                    child: ReviewsEmptyState(
                       title: 'No results',
-                      subtitle:
-                          'Try adjusting your search or clearing filters.',
+                      subtitle: 'Try adjusting your search or clearing filters.',
                     ),
                   ),
                 );
               }
 
+              // No spinner here; if a background refresh is happening,
+              // we keep showing the current list without any indicator.
               return SliverList(
-                // include the loading bar as a first item when loading
                 delegate: SliverChildListDelegate([
-                  if (c.isLoading.value) const SizedBox(height: 2),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                     child: Column(
                       children: List.generate(
                         filtered.length,
-                        (i) => Padding(
+                            (i) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: ReviewCard(review: filtered[i]),
                         ),
@@ -145,6 +142,7 @@ class ReviewsScreen extends StatelessWidget {
                 ]),
               );
             }),
+
           ],
         ),
       ),

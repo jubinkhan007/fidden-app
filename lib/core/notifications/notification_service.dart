@@ -60,7 +60,14 @@ class NotificationService {
 
   // Your requestSystemPermissionIfNeeded method remains the same...
   Future<void> requestSystemPermissionIfNeeded() async {
-    // ... no changes needed here ...
+    if (Platform.isAndroid) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    } else if (Platform.isIOS) {
+      // iOS permissions are requested in initPush()
+    }
   }
 
   /// Foreground/Background/Terminated tap handling

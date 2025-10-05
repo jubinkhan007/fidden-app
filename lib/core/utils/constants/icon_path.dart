@@ -38,4 +38,5 @@ class IconPath {
 
   static const String messageIcon = '$_basePath/message.png';
   static const String transactionIcon = '$_basePath/transaction.png';
+  static const String subscriptionIcon = '$_basePath/subscription.png';
 }

@@ -11,7 +11,7 @@ class TransactionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TransactionController controller = Get.put(TransactionController());
+    final TransactionController controller = Get.find<TransactionController>();
 
     // Local UI state
     final RxString statusFilter = 'All'.obs;

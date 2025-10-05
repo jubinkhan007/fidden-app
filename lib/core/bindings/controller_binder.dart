@@ -11,6 +11,7 @@ import 'package:get/get.dart';
 import '../../features/auth/controller/login_controller.dart';
 //import '../../features/business_owner/home/controller/business_owner_controller.dart';
 import '../../features/business_owner/nav_bar/controllers/user_nav_bar_controller.dart';
+import '../../features/business_owner/subscription/controller/subscription_controller.dart';
 import '../../features/splash/controller/splash_controller.dart';
 //import '../../features/user/booking/controller/booking_controller.dart';
 //import '../../features/user/home/controller/home_controller.dart';
@@ -62,6 +63,6 @@ class ControllerBinder extends Bindings {
     Get.lazyPut(() => AllShopsController(), fenix: true);
     Get.lazyPut(() => WishlistController(), fenix: true);
     Get.lazyPut(() => NotificationController(), fenix: true);
-    Get.lazyPut(() => TransactionController());
+    Get.lazyPut<TransactionController>(() => TransactionController(), fenix: true);
   }
 }

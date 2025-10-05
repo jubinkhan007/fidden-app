@@ -240,7 +240,7 @@ class AllServicesController extends GetxController {
   String _withTrailingSlash(String url) => url.endsWith('/') ? url : '$url/';
 
   Future<void> _fetch() async {
-    if (isLoading.value) return;
+    // if (isLoading.value) return;
     isLoading.value = true;
     try {
       final networkCaller = NetworkCaller();

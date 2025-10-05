@@ -79,28 +79,34 @@ class HomeController extends GetxController {
 
     final raw = resp.responseData;
 
-    // Accept either a root array or a wrapped map containing a list.
-    late final List<dynamic> list;
-
+    // Accept both: root array OR any map that contains a list
+    late final List<dynamic> arr;
     if (raw is List) {
-      list = raw;
+      arr = raw;
     } else if (raw is Map && raw['data'] is List) {
-      list = raw['data'] as List;
+      arr = raw['data'] as List;
     } else if (raw is Map && raw['results'] is List) {
-      // (optional) support "results" pagination shape
-      list = raw['results'] as List;
+      arr = raw['results'] as List;
     } else if (raw is Map && raw.values.isNotEmpty && raw.values.first is List) {
-      // (optional) last-resort: first list inside the map
-      list = raw.values.first as List;
+      arr = raw.values.first as List;
     } else {
       throw Exception('Unexpected promotions format: ${raw.runtimeType}');
     }
 
-    promotions.value = list
-        .map((e) => PromotionModel.fromJson(
-              Map<String, dynamic>.from(e as Map),
-            ))
+    final list = arr
+        .whereType<Map>()                            // only maps
+        .map((e) => PromotionModel.fromJson(Map<String, dynamic>.from(e)))
+        .where((p) => p.isActive != false)           // keep active (or null treated as active)
         .toList();
+
+    // ✅ Sort newest first; fall back to id if dates missing
+    list.sort((a, b) {
+      final ca = a.createdAt, cb = b.createdAt;
+      if (ca != null && cb != null) return cb.compareTo(ca);
+      return (b.id ?? 0).compareTo(a.id ?? 0);
+    });
+
+    promotions.value = list;
   } catch (e) {
     AppSnackBar.showError('Could not fetch promotions: $e');
   }

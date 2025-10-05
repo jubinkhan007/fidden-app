@@ -1,4 +1,6 @@
 // lib/features/user/shops/services/presentation/screens/service_filter_screen.dart
+import 'package:fidden/core/commom/widgets/app_snackbar.dart';
+import 'package:fidden/features/user/home/data/category_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
@@ -43,7 +45,7 @@ class ServiceFilterScreen extends StatefulWidget {
 class _ServiceFilterScreenState extends State<ServiceFilterScreen> {
   // --- State ---
   int? selectedCategoryId;
-  List<Map<String, dynamic>> categories = [];
+  List<CategoryModel> categories = [];
   bool loadingCategories = true;
 
   late RangeValues priceRange;
@@ -73,31 +75,30 @@ class _ServiceFilterScreenState extends State<ServiceFilterScreen> {
     fetchCategories();
   }
 
-  Future<void> fetchCategories() async {
-    try {
-      final res = await NetworkCaller().getRequest(
-        AppUrls.getCategories,
-        token: AuthService.accessToken,
-      );
-      if (mounted && res.isSuccess && res.responseData is List) {
-        final data = res.responseData as List;
-        setState(() {
-          categories = data
-              .map(
-                (e) => {
-                  "id": e["id"],
-                  "name": (e["name"] as String).capitalizeFirst,
-                },
-              )
-              .toList();
-        });
-      }
-    } catch (_) {
-      // ignore error silently
-    } finally {
-      if (mounted) setState(() => loadingCategories = false);
+Future<void> fetchCategories() async {
+  setState(() => loadingCategories = true);
+  try {
+    final resp = await NetworkCaller().getRequest(
+      AppUrls.categories,
+      token: AuthService.accessToken,
+    );
+    if (!resp.isSuccess) {
+      setState(() => loadingCategories = false);
+      return;
     }
+
+    final list = categoryListFromAny(resp.responseData); // List<CategoryModel>
+    setState(() {
+      categories = list;
+      loadingCategories = false;
+    });
+  } catch (e) {
+    setState(() => loadingCategories = false);
+    AppSnackBar.showError('Could not fetch categories: $e');
   }
+}
+
+
 
   void _applyFilters() {
     // Build query params to send back
@@ -156,21 +157,21 @@ class _ServiceFilterScreenState extends State<ServiceFilterScreen> {
             const Text("No categories found")
           else
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: categories.map((c) {
-                final isSelected = selectedCategoryId == c["id"];
-                return ChoiceChip(
-                  label: Text(c["name"]),
-                  selected: isSelected,
-                  onSelected: (_) {
-                    setState(() {
-                      selectedCategoryId = isSelected ? null : c["id"] as int?;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
+  spacing: 8,
+  runSpacing: 8,
+  children: categories.map((c) {
+    final isSelected = selectedCategoryId == c.id;
+    return ChoiceChip(
+      label: Text(c.name ?? ''),
+      selected: isSelected,
+      onSelected: (_) {
+        setState(() {
+          selectedCategoryId = isSelected ? null : c.id;
+        });
+      },
+    );
+  }).toList(),
+),
 
           const SizedBox(height: 24),
 

@@ -455,6 +455,16 @@ class _PromoCarousel extends GetView<HomeController> {
   }
 }
 
+String _pct(String? s) {
+  if (s == null) return '0';
+  final cleaned = s.replaceAll(RegExp(r'[^0-9.]'), '');
+  final v = double.tryParse(cleaned) ?? 0;
+  return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+}
+
+String _nonEmpty(String? s, String fallback) =>
+    (s != null && s.trim().isNotEmpty) ? s : fallback;
+
 class _PromoCard extends StatelessWidget {
   const _PromoCard({required this.r, required this.promo});
   final R r;
@@ -481,7 +491,7 @@ class _PromoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  promo.title ?? "Special Offer",
+                  _nonEmpty(promo.title, "Special Offer"),
                   style: TextStyle(
                     color: Colors.white,
                     height: 1.05,
@@ -507,7 +517,7 @@ class _PromoCard extends StatelessWidget {
           ),
           SizedBox(width: r.w(8)),
           Text(
-            '${promo.amount?.split('.').first}%',
+            '${_pct(promo.amount)}%',   // ← no more "null%"
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -519,6 +529,7 @@ class _PromoCard extends StatelessWidget {
     );
   }
 }
+
 
 class _Categories extends GetView<HomeController> {
   const _Categories({required this.r});

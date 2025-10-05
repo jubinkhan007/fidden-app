@@ -1,4 +1,3 @@
-// lib/features/business_owner/reviews/state/review_controller.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:get/get.dart';
@@ -7,20 +6,42 @@ import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../data/review_model.dart';
+import '../data/reviews_repository.dart';
 
 class ReviewController extends GetxController {
   final reviews = <Review>[].obs;
-  final isLoading = false.obs;
-
-  // keep "replying" feature as-is
+  final isLoading = false.obs; // spinner only on true cold start
   final _replyingIds = <String>{}.obs;
   bool isReplying(String id) => _replyingIds.contains(id);
 
-  // --- NEW: remember the last query + debounce ---
+  // cache
+  final _repo = ReviewsRepository();
+  String? _shopId; // remember last shop for refreshCurrent
+  DateTime _lastCacheTs = DateTime.fromMillisecondsSinceEpoch(0);
+
+  // debounce search
   String _lastQuery = '';
   Timer? _debounce;
 
-  /// Call on every keystroke from the search bar
+  /// Call once from screen with the active shopId
+  Future<void> initForShop(String shopId) async {
+    _shopId = shopId;
+
+    // 1) Seed from cache (instant UI)
+    final snap = await _repo.readCache(shopId);
+    _lastCacheTs = snap.ts;
+    if (snap.list.isNotEmpty) {
+      reviews.assignAll(snap.list);
+      isLoading(false);
+    }
+
+    // 2) If no cache or stale → background refresh
+    if (snap.list.isEmpty || _repo.isStale(snap.ts)) {
+      unawaited(fetchReviews(shopId)); // will flip spinner only if still empty
+    }
+  }
+
+  /// User types in the search bar
   void search(String shopId, String q) {
     _lastQuery = q;
     _debounce?.cancel();
@@ -30,7 +51,9 @@ class ReviewController extends GetxController {
   }
 
   Future<void> fetchReviews(String shopId, {String? query}) async {
-    isLoading.value = true;
+    // show spinner only if we have nothing to show yet
+    if (reviews.isEmpty) isLoading.value = true;
+
     try {
       final url = (query == null || query.isEmpty)
           ? AppUrls.shopReviews(shopId)
@@ -42,47 +65,40 @@ class ReviewController extends GetxController {
       );
 
       if (!res.isSuccess || res.responseData == null) {
-        reviews.clear();
+        // no remote updates; keep whatever is on screen
         return;
       }
 
-      // 🔧 NEW: accept either Map or JSON string
       dynamic data = res.responseData;
       if (data is String) {
-        try {
-          data = jsonDecode(data);
-        } catch (_) {
-          reviews.clear();
-          return;
-        }
+        try { data = jsonDecode(data); } catch (_) { return; }
       }
-      if (data is! Map<String, dynamic>) {
-        reviews.clear();
-        return;
-      }
+      if (data is! Map<String, dynamic>) return;
 
-      final Map<String, dynamic> root = data as Map<String, dynamic>;
-
-      // supports both: {results:{...}} and flat {...}
+      final Map<String, dynamic> root = data;
       final Map<String, dynamic> payload =
-          (root['results'] is Map<String, dynamic>)
+      (root['results'] is Map<String, dynamic>)
           ? root['results'] as Map<String, dynamic>
           : root;
 
       final List<Review> list = (payload['reviews'] as List? ?? const [])
           .whereType<Map<String, dynamic>>()
-          .map(_mapApiReview)
+          .map(Review.fromApi)
           .toList();
 
       reviews.assignAll(list);
-    } catch (e) {
-      reviews.clear();
+
+      // persist ONLY for the base list (no search), so returning to screen is instant
+      if (query == null || query.isEmpty) {
+        await _repo.writeCache(shopId, list);
+        _lastCacheTs = DateTime.now();
+      }
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Pull-to-refresh should keep current search text
+  // Pull-to-refresh should keep current query
   Future<void> refreshCurrent(String shopId) =>
       fetchReviews(shopId, query: _lastQuery.isEmpty ? null : _lastQuery);
 
@@ -106,6 +122,12 @@ class ReviewController extends GetxController {
       if (res.isSuccess) {
         review.reply = message.trim(); // optimistic update
         reviews.refresh();
+
+        // also persist updated list (keeps cache fresh when coming back)
+        if (_shopId != null) {
+          await _repo.writeCache(_shopId!, reviews.toList());
+        }
+
         Get.snackbar('Reply sent', 'Your reply has been posted.');
       } else {
         final detail = res.responseData is Map
@@ -120,45 +142,5 @@ class ReviewController extends GetxController {
       _replyingIds.remove(id);
       _replyingIds.refresh();
     }
-  }
-
-  // ---- mapping helper (unchanged except id toString) ----
-  Review _mapApiReview(Map<String, dynamic> j) {
-    // take newest reply if present
-    String? replyText;
-    final replies = (j['reply'] as List? ?? j['replies'] as List? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .toList();
-    if (replies.isNotEmpty) {
-      replies.sort((a, b) {
-        final ad =
-            DateTime.tryParse(a['created_at']?.toString() ?? '') ??
-            DateTime.fromMillisecondsSinceEpoch(0);
-        final bd =
-            DateTime.tryParse(b['created_at']?.toString() ?? '') ??
-            DateTime.fromMillisecondsSinceEpoch(0);
-        return bd.compareTo(ad);
-      });
-      replyText = replies.first['message']?.toString();
-    }
-
-    final authorName = (j['user_name'] .toString())?.trim();
-    final userId = j['user_id']?.toString();
-    final fallbackAuthor = (authorName?.isNotEmpty == true)
-        ? authorName!
-        : (userId != null ? 'User #$userId' : 'User');
-
-    return Review(
-      id: (j['id'] ?? '').toString(),
-      author: fallbackAuthor,
-      avatarUrl: (j['user_img'] .toString())?.trim(),
-      rating: ((j['rating'] as num?) ?? 0).toDouble(),
-      comment: (j['review'] .toString())?.trim() ?? '',
-      date:
-          DateTime.tryParse(j['created_at']?.toString() ?? '') ??
-          DateTime.now(),
-      serviceName: (j['service_name'] .toString())?.trim() ?? '',
-      reply: replyText,
-    );
   }
 }

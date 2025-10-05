@@ -11,8 +11,10 @@ import 'package:get/get.dart';
 
 import '../../../../../core/utils/constants/icon_path.dart';
 import '../../../../core/services/Auth_service.dart';
+import '../../../../core/utils/constants/app_colors.dart';
 import '../../../../core/utils/constants/image_path.dart';
 import '../../../user/profile/controller/profile_controller.dart';
+import '../../subscription/presentation/screens/subscription_screen.dart';
 import '../controller/busines_owner_profile_controller.dart';
 import 'add_business_owner_profile_screen.dart';
 import 'edit_business_profile_screen.dart';
@@ -152,6 +154,14 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                         Get.to(() => AddBusinessOwnerProfileScreen());
                       },
                     ),
+              SizedBox(height: getHeight(16)),
+              CustomProfileButton(
+                title: 'Manage Subscription',
+                firstImageString: IconPath.subscriptionIcon,
+                onTap: () {
+                  Get.to(() => SubscriptionScreen());
+                },
+              ),
               SizedBox(height: getHeight(16)),
               CustomProfileButton(
                 title: 'Shop Reviews',
