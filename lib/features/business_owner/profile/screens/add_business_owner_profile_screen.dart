@@ -495,12 +495,23 @@ class _AddBusinessOwnerProfileScreenState
                   ],
                 );
               }),
-              SizedBox(height: getHeight(24)),
-              CancellationPolicyCard(
-                freeHController: _freeHCtrl,
-                feePctController: _feePctCtrl,
-                noRefHController: _noRefHCtrl,
+              SizedBox(height: getHeight(12)),
+              const Text('Cancellation Policy',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Default policy will be applied when creating your shop. '
+                      'You can customize it later from Edit (Icon plan).',
+                  style: TextStyle(fontSize: 12.5),
+                ),
               ),
+              SizedBox(height: getHeight(12)),
               _buildFilePicker(),
               Obx(
                 () => controller1.isLoading.value

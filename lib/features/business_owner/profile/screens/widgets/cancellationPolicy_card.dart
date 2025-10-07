@@ -4,17 +4,21 @@ class CancellationPolicyCard extends StatelessWidget {
   final TextEditingController freeHController;
   final TextEditingController feePctController;
   final TextEditingController noRefHController;
+  final bool enabled;
 
   const CancellationPolicyCard({
     super.key,
     required this.freeHController,
     required this.feePctController,
     required this.noRefHController,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AbsorbPointer(
+      absorbing: !enabled,
+        child: Card(
       color: Colors.grey.shade100,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -64,7 +68,7 @@ class CancellationPolicyCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),);
   }
 
   Widget _numField({

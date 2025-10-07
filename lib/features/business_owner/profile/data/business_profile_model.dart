@@ -1,20 +1,6 @@
-// business_profile_model.dart
-//
-// Handles the business-owner profile JSON:
-// {
-//   "id": 1,
-//   "name": "Beauty Salon-nafiz",
-//   "address": "123 Main St",
-//   "location": "12.345,67.890",
-//   "capacity": 10,
-//   "start_at": "09:00:00",
-//   "close_at": "18:00:00",
-//   "about_us": "Best salon in town",
-//   "shop_img": null,
-//   "close_days": ["monday","tuesday"],
-//   "owner_id": 1
-// }
 // lib/features/business_owner/profile/data/business_profile_model.dart
+//
+// Handles the business-owner profile JSON.
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
@@ -36,7 +22,7 @@ class GetBusinesModel {
     return GetBusinesModel(
       success: json['success'] as bool?,
       statusCode: json['statusCode'] as int?,
-      message: json['message'] .toString(),
+      message: json['message']?.toString(),
       data: json['data'] == null
           ? Data.fromJson(json) // sometimes API returns the object directly
           : Data.fromJson(json['data'] as Map<String, dynamic>),
@@ -62,9 +48,8 @@ class UploadedFile {
     return UploadedFile(
       id: json['id'],
       file: json['file'],
-      uploadedAt: json['uploaded_at'] != null
-          ? DateTime.parse(json['uploaded_at'])
-          : null,
+      uploadedAt:
+      json['uploaded_at'] != null ? DateTime.parse(json['uploaded_at']) : null,
     );
   }
 }
@@ -76,22 +61,29 @@ class Data {
   String? businessName; // "name"
   String? businessAddress; // "address"
   String? details; // "about_us"
-  String? image; // "shop_img" (can be null or absolute/relative)
+  String? image; // "shop_img"
   int? capacity; // "capacity"
+
+  // Deposit & policy
+  bool? isDepositRequired;          // "is_deposit_required"
+  String? depositAmount;            // "deposit_amount" (string in API)
+  int? freeCancellationHours;       // "free_cancellation_hours"
+  int? cancellationFeePercentage;   // "cancellation_fee_percentage"
+  int? noRefundHours;               // "no_refund_hours"
 
   // Times
   String? rawStartAt; // "start_at" (e.g. "09:00:00")
   String? rawCloseAt; // "close_at" (e.g. "18:00:00")
-  String? startTime; // UI-friendly "09:00 AM"
-  String? endTime; // UI-friendly "06:00 PM"
+  String? startTime;  // UI-friendly "09:00 AM"
+  String? endTime;    // UI-friendly "06:00 PM"
 
   // Legacy single-range day fields (optional for UI compatibility)
   String? startDay; // first of closeDays if you want to show a range
-  String? endDay; // second of closeDays if you want to show a range
+  String? endDay;   // second of closeDays if you want to show a range
 
   // Days
   List<String>? closeDays; // from API: ["monday","tuesday"]
-  List<String>? openDays; // computed: allDays - closeDays (title-cased)
+  List<String>? openDays;  // computed: allDays - closeDays (title-cased)
 
   // Location
   double? latitude;
@@ -104,10 +96,6 @@ class Data {
   bool? isVarified;
   String? status;
   List<UploadedFile>? verificationFiles;
-  // NEW: cancellation policy
-  int? freeCancellationHours;      // "free_cancellation_hours"
-  int? cancellationFeePercentage;  // "cancellation_fee_percentage"
-  int? noRefundHours;              // "no_refund_hours"
 
   Data({
     this.id,
@@ -117,6 +105,11 @@ class Data {
     this.details,
     this.image,
     this.capacity,
+    this.isDepositRequired,
+    this.depositAmount,
+    this.freeCancellationHours,
+    this.cancellationFeePercentage,
+    this.noRefundHours,
     this.rawStartAt,
     this.rawCloseAt,
     this.startTime,
@@ -132,9 +125,6 @@ class Data {
     this.isVarified,
     this.status,
     this.verificationFiles,
-    this.freeCancellationHours,
-    this.cancellationFeePercentage,
-    this.noRefundHours,
   });
 
   /// All 7 days for computing openDays
@@ -158,7 +148,6 @@ class Data {
   /// Convert "HH:mm:ss" -> "hh:mm AM/PM"
   static String? _toUiTime(String? hhmmss) {
     if (hhmmss == null || hhmmss.isEmpty) return null;
-    // Expecting e.g. "09:00:00" or "18:05:30"
     final parts = hhmmss.split(':');
     if (parts.length < 2) return hhmmss; // fallback as-is
     final h = int.tryParse(parts[0]) ?? 0;
@@ -204,44 +193,54 @@ class Data {
     return (lat, lon);
   }
 
+  static int? _asInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
+  }
+
   factory Data.fromJson(Map<String, dynamic> json) {
     // Parse base fields
     final id = json['id']?.toString();
     final ownerId = json['owner_id']?.toString();
-    final name = json['name'] .toString();
-    final address = json['address'] .toString();
-    final details = json['about_us'] .toString();
-    final img = json['shop_img'] .toString();
+    final name = json['name']?.toString();
+    final address = json['address']?.toString();
+    final details = json['about_us']?.toString();
+    final img = json['shop_img']?.toString();
     final capacity = (json['capacity'] is int)
         ? json['capacity'] as int
         : int.tryParse('${json['capacity']}');
 
+    // Deposit & policy
+    final isDepositRequired =
+        json['is_deposit_required'] == true || json['is_deposit_required'] == 'true';
+    final depositAmount = (json['deposit_amount'] ?? '0').toString();
+    final freeCancellationHours = _asInt(json['free_cancellation_hours']);
+    final cancellationFeePercentage = _asInt(json['cancellation_fee_percentage']);
+    final noRefundHours = _asInt(json['no_refund_hours']);
+
     // Times
-    final rawStartAt = json['start_at'] .toString();
-    final rawCloseAt = json['close_at'] .toString();
+    final rawStartAt = json['start_at']?.toString();
+    final rawCloseAt = json['close_at']?.toString();
     final uiStart = _toUiTime(rawStartAt);
     final uiClose = _toUiTime(rawCloseAt);
 
     // Location
-    final (lat, lon) = _parseLocation(json['location'] .toString());
+    final (lat, lon) = _parseLocation(json['location']?.toString());
 
     // close_days (array of strings, usually lowercase)
     final List<String> closeDays =
         (json['close_days'] as List?)
             ?.map((e) => e.toString().toLowerCase())
             .toList() ??
-        <String>[];
+            <String>[];
 
     // Compute openDays as the complement of closeDays
-    final Set<String> openSet = _allDays
-        .where((d) => !closeDays.contains(d))
-        .toSet();
+    final Set<String> openSet = _allDays.where((d) => !closeDays.contains(d)).toSet();
     final List<String> openDays = openSet.toList();
 
     // Optional legacy single-range (if you still show start/end day somewhere)
-    final startDay = closeDays.isNotEmpty
-        ? _titleCaseDay(closeDays.first)
-        : null;
+    final startDay = closeDays.isNotEmpty ? _titleCaseDay(closeDays.first) : null;
     final endDay = closeDays.length > 1 ? _titleCaseDay(closeDays[1]) : null;
 
     // Parse optional timestamps if ever sent
@@ -266,30 +265,30 @@ class Data {
       details: details,
       image: img,
       capacity: capacity,
+      isDepositRequired: isDepositRequired,
+      depositAmount: depositAmount,
+      freeCancellationHours: freeCancellationHours,
+      cancellationFeePercentage: cancellationFeePercentage,
+      noRefundHours: noRefundHours,
       rawStartAt: rawStartAt,
       rawCloseAt: rawCloseAt,
       startTime: uiStart, // UI-friendly
-      endTime: uiClose, // UI-friendly
+      endTime: uiClose,   // UI-friendly
       startDay: startDay,
       endDay: endDay,
-      closeDays: closeDays
-          .map(_titleCaseDay)
-          .toList(), // e.g. ["Monday","Tuesday"]
-      openDays: openDays.map(_titleCaseDay).toList(), // computed complement
+      closeDays: closeDays.map(_titleCaseDay).toList(),
+      openDays: openDays.map(_titleCaseDay).toList(),
       latitude: lat,
       longitude: lon,
       createdAt: createdAt,
       updatedAt: updatedAt,
       isVarified: json['is_varified'] as bool?,
-      status: json['status'] .toString(),
+      status: json['status']?.toString(),
       verificationFiles: json['uploaded_files'] != null
           ? (json['uploaded_files'] as List)
-                .map((fileJson) => UploadedFile.fromJson(fileJson))
-                .toList()
+          .map((fileJson) => UploadedFile.fromJson(fileJson))
+          .toList()
           : null,
-      freeCancellationHours: _asInt(json['free_cancellation_hours']),
-      cancellationFeePercentage: _asInt(json['cancellation_fee_percentage']),
-      noRefundHours: _asInt(json['no_refund_hours']),
     );
   }
 
@@ -299,14 +298,12 @@ class Data {
     final closeAtToSend = rawCloseAt ?? _toApiTime(endTime);
 
     // Format location back to "lat,long" if both are present
-    final loc = (latitude != null && longitude != null)
-        ? '${latitude!},${longitude!}'
-        : null;
+    final loc =
+    (latitude != null && longitude != null) ? '${latitude!},${longitude!}' : null;
 
     // Convert TitleCase days back to lowercase for API
-    final closeDaysApi = (closeDays ?? [])
-        .map((d) => d.toString().toLowerCase())
-        .toList();
+    final closeDaysApi =
+    (closeDays ?? []).map((d) => d.toString().toLowerCase()).toList();
 
     return {
       'id': id,
@@ -320,21 +317,18 @@ class Data {
       'start_at': startAtToSend,
       'close_at': closeAtToSend,
       'close_days': closeDaysApi,
-      // NOTE: API doesn’t accept open_days; it infers from close_days.
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'is_varified': false,
       'status': status,
       'verification_files': verificationFiles,
+      // deposit & policy back to API
+      'is_deposit_required': isDepositRequired ?? false,
+      'deposit_amount': depositAmount ?? '0',
       'free_cancellation_hours': freeCancellationHours,
       'cancellation_fee_percentage': cancellationFeePercentage,
       'no_refund_hours': noRefundHours,
     };
-  }
-  static int? _asInt(dynamic v) {
-    if (v == null) return null;
-    if (v is int) return v;
-    return int.tryParse(v.toString());
   }
 }
 
@@ -353,10 +347,8 @@ class BusinessProfileResponse {
   });
 
   factory BusinessProfileResponse.fromJson(Map<String, dynamic> json) {
-    // Handles cases where the 'data' key might be missing and the profile is at the root.
-    final dataJson = json['data'] != null
-        ? json['data'] as Map<String, dynamic>
-        : json;
+    final dataJson =
+    json['data'] != null ? json['data'] as Map<String, dynamic> : json;
 
     return BusinessProfileResponse(
       success: json['success'] ?? false,
@@ -367,7 +359,6 @@ class BusinessProfileResponse {
   }
 }
 
-/// Represents the core business profile data.
 @immutable
 class BusinessProfileModel {
   final int id;
@@ -377,6 +368,8 @@ class BusinessProfileModel {
   final String aboutUs;
   final String? shopImg;
   final int capacity;
+  final String depositAmount;
+  final bool isDepositRequired;
   final TimeOfDay startAt;
   final TimeOfDay closeAt;
   final List<String> closeDays; // e.g., ["monday", "tuesday"]
@@ -386,7 +379,6 @@ class BusinessProfileModel {
   final int? cancellationFeePercentage;
   final int? noRefundHours;
 
-  // Computed properties for easier UI access
   List<String> get openDays {
     const allDays = [
       'monday',
@@ -408,6 +400,8 @@ class BusinessProfileModel {
     required this.address,
     required this.aboutUs,
     this.shopImg,
+    required this.depositAmount,
+    this.isDepositRequired = false,
     required this.capacity,
     required this.startAt,
     required this.closeAt,
@@ -424,43 +418,37 @@ class BusinessProfileModel {
       id: _parseInt(json['id']),
       ownerId: _parseInt(json['owner_id']),
       name: json['name'] ?? '',
+      depositAmount: (json['deposit_amount'] ?? '0').toString(),
+      isDepositRequired: (json['is_deposit_required'] ?? false) == true,
       address: json['address'] ?? '',
       aboutUs: json['about_us'] ?? '',
       shopImg: json['shop_img'],
       capacity: _parseInt(json['capacity']),
       startAt:
-          _parseTime(json['start_at']) ?? const TimeOfDay(hour: 9, minute: 0),
+      _parseTime(json['start_at']) ?? const TimeOfDay(hour: 9, minute: 0),
       closeAt:
-          _parseTime(json['close_at']) ?? const TimeOfDay(hour: 17, minute: 0),
-      closeDays:
-          (json['close_days'] as List?)
-              ?.map((day) => day.toString().toLowerCase())
-              .toList() ??
+      _parseTime(json['close_at']) ?? const TimeOfDay(hour: 17, minute: 0),
+      closeDays: (json['close_days'] as List?)
+          ?.map((day) => day.toString().toLowerCase())
+          .toList() ??
           [],
       location: _parseLocation(json['location']),
-      verificationFiles:
-          (json['uploaded_files'] as List?)
-              ?.map(
-                (file) =>
-                    VerificationFile.fromJson(file as Map<String, dynamic>),
-              )
-              .toList() ??
+      verificationFiles: (json['uploaded_files'] as List?)
+          ?.map((file) => VerificationFile.fromJson(file as Map<String, dynamic>))
+          .toList() ??
           [],
-freeCancellationHours: Data._asInt(json['free_cancellation_hours']),
-cancellationFeePercentage: Data._asInt(json['cancellation_fee_percentage']),
-noRefundHours: Data._asInt(json['no_refund_hours']),
-
+      freeCancellationHours: Data._asInt(json['free_cancellation_hours']),
+      cancellationFeePercentage: Data._asInt(json['cancellation_fee_percentage']),
+      noRefundHours: Data._asInt(json['no_refund_hours']),
     );
   }
 
-  // Helper to safely parse an integer from various types
   static int _parseInt(dynamic value, {int fallback = 0}) {
     if (value is int) return value;
     if (value is String) return int.tryParse(value) ?? fallback;
     return fallback;
   }
 
-  // Helper to parse "HH:mm:ss" into a TimeOfDay object
   static TimeOfDay? _parseTime(String? timeStr) {
     if (timeStr == null) return null;
     final parts = timeStr.split(':');
@@ -473,7 +461,6 @@ noRefundHours: Data._asInt(json['no_refund_hours']),
     return null;
   }
 
-  // Helper to parse "lat,lon" into a tuple
   static (double, double)? _parseLocation(String? locStr) {
     if (locStr == null) return null;
     final parts = locStr.split(',');
@@ -488,7 +475,6 @@ noRefundHours: Data._asInt(json['no_refund_hours']),
   }
 }
 
-/// Represents a file uploaded for verification.
 @immutable
 class VerificationFile {
   final int id;
@@ -505,9 +491,8 @@ class VerificationFile {
     return VerificationFile(
       id: json['id'] ?? 0,
       fileUrl: json['file'] ?? '',
-      uploadedAt: json['uploaded_at'] != null
-          ? DateTime.tryParse(json['uploaded_at'])
-          : null,
+      uploadedAt:
+      json['uploaded_at'] != null ? DateTime.tryParse(json['uploaded_at']) : null,
     );
   }
 }

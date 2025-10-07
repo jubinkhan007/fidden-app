@@ -1,5 +1,4 @@
 // lib/features/business_owner/profile/services/shop_api.dart
-
 import 'dart:convert';
 import 'dart:io';
 import 'package:fidden/core/models/response_data.dart';
@@ -8,7 +7,6 @@ import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:fidden/features/business_owner/profile/data/stripe_models.dart';
 
 class ShopApi {
-  // ✅ Instantiate the NetworkCaller to use its methods
   final _networkCaller = NetworkCaller();
 
   static String toApiTime(String ui) {
@@ -25,7 +23,6 @@ class ShopApi {
     return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
   }
 
-  // small helpers
   static int? _asInt(dynamic v) =>
       v == null ? null : (v is int ? v : int.tryParse(v.toString()));
 
@@ -50,10 +47,12 @@ class ShopApi {
     required List<File> documents,
     required String token,
 
-    // NEW (optional – pass from your controller/UI)
+    // Optional (controller enforces plan-gating)
     int? freeCancellationHours,
     int? cancellationFeePercentage,
     int? noRefundHours,
+    bool? isDepositRequired,
+    String? depositAmount,
   }) async {
     final body = <String, String>{
       'name': name,
@@ -73,13 +72,24 @@ class ShopApi {
       body['location'] = '$lat,$lon';
     }
 
-    // include only if provided
+    // Policy
     final fch = _clamp(_asInt(freeCancellationHours));
     final cfp = _clamp(_asInt(cancellationFeePercentage), min: 0, max: 100);
     final nrf = _clamp(_asInt(noRefundHours));
     if (fch != null) body['free_cancellation_hours'] = '$fch';
     if (cfp != null) body['cancellation_fee_percentage'] = '$cfp';
     if (nrf != null) body['no_refund_hours'] = '$nrf';
+
+    // Deposit (now also supported on CREATE)
+    if (isDepositRequired != null) {
+      body['is_deposit_required'] = isDepositRequired ? 'true' : 'false';
+    }
+    if (depositAmount != null) {
+      final amt = double.tryParse(depositAmount.trim());
+      if (amt != null && amt >= 0) {
+        body['deposit_amount'] = amt.toStringAsFixed(2);
+      }
+    }
 
     return await _networkCaller.multipartRequest(
       AppUrls.getMBusinessProfile,
@@ -106,10 +116,11 @@ class ShopApi {
     required List<File> documents,
     required String token,
 
-    // NEW (optional – pass from your controller/UI)
     int? freeCancellationHours,
     int? cancellationFeePercentage,
     int? noRefundHours,
+    bool? isDepositRequired,
+    String? depositAmount,
   }) async {
     final body = <String, String>{
       'name': name,
@@ -129,13 +140,24 @@ class ShopApi {
       body['location'] = '$lat,$lon';
     }
 
-    // include only if provided
+    // Policy
     final fch = _clamp(_asInt(freeCancellationHours));
     final cfp = _clamp(_asInt(cancellationFeePercentage), min: 0, max: 100);
     final nrf = _clamp(_asInt(noRefundHours));
     if (fch != null) body['free_cancellation_hours'] = '$fch';
     if (cfp != null) body['cancellation_fee_percentage'] = '$cfp';
     if (nrf != null) body['no_refund_hours'] = '$nrf';
+
+    // Deposit
+    if (isDepositRequired != null) {
+      body['is_deposit_required'] = isDepositRequired ? 'true' : 'false';
+    }
+    if (depositAmount != null) {
+      final amt = double.tryParse(depositAmount.trim());
+      if (amt != null && amt >= 0) {
+        body['deposit_amount'] = amt.toStringAsFixed(2);
+      }
+    }
 
     return await _networkCaller.multipartRequest(
       AppUrls.editBusinessProfile(id),
@@ -147,31 +169,23 @@ class ShopApi {
     );
   }
 
-
-  // ✅ Now an instance method
   Future<StripeOnboardingLink> getStripeOnboardingLink({
     required int shopId,
     required String token,
   }) async {
+    // Must match backend-allowed URLs
+    const String returnUrl =
+        'https://fidden-service-provider-1.onrender.com/payments/stripe/return/';
+    const String refreshUrl =
+        'https://fidden-service-provider-1.onrender.com/payments/stripe/refresh/';
 
-    // V-- THIS IS THE FINAL CORRECTED CODE --V
-
-    // 1. These URLs must EXACTLY match what you put in your Stripe Dashboard.
-    const String returnUrl  = 'https://fidden-service-provider-1.onrender.com/payments/stripe/return/';
-    const String refreshUrl = 'https://fidden-service-provider-1.onrender.com/payments/stripe/refresh/';
-
-
-    // 2. Manually build the final URL with the required query parameters.
     final String urlWithParams =
         '${AppUrls.stripeOnborading(shopId)}?return_url=$returnUrl&refresh_url=$refreshUrl';
 
-    // 3. Make sure you are using your .getRequest() method.
     final ResponseData res = await _networkCaller.getRequest(
       urlWithParams,
       token: token,
     );
-
-    // ^-- THIS IS THE FINAL CORRECTED CODE --^
 
     if (res.isSuccess) {
       final data = (res.responseData is Map<String, dynamic>)
@@ -179,13 +193,10 @@ class ShopApi {
           : json.decode(res.responseData as String);
       return StripeOnboardingLink.fromJson(data as Map<String, dynamic>);
     } else {
-      // Throw an exception so the controller can catch it and show an error.
       throw Exception(res.errorMessage ?? 'Failed to get onboarding link');
     }
   }
 
-
-  // ✅ Now an instance method
   Future<StripeVerifyResponse> verifyStripeOnboarding({
     required int shopId,
     required String token,

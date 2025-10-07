@@ -13,6 +13,12 @@ class SubscriptionController extends GetxController {
   final RxList<SubscriptionPlan> availablePlans = <SubscriptionPlan>[].obs;
 
   String? get _token => AuthService.accessToken; // ⬅️ convenience getter
+  String get planName =>
+      (currentSubscription.value?.plan.name ?? '').trim();
+
+  bool get isFoundation => planName.toLowerCase() == 'foundation';
+  bool get isMomentum   => planName.toLowerCase() == 'momentum';
+  bool get isIcon       => planName.toLowerCase() == 'icon';
 
   @override
   void onInit() {
@@ -46,6 +52,7 @@ class SubscriptionController extends GetxController {
         AppSnackBar.showError('Failed to load your current subscription.');
       }
 
+
       if (allPlansResponse.isSuccess) {
         availablePlans.value = (allPlansResponse.responseData as List)
             .map((planJson) => SubscriptionPlan.fromJson(planJson))
@@ -61,7 +68,7 @@ class SubscriptionController extends GetxController {
   Future<void> createCheckoutSession(int planId) async {
     final response = await NetworkCaller().postRequest(
       AppUrls.createCheckoutSession,
-      token: _token, // ⬅️ add token
+      token: _token,
       body: {'plan_id': planId},
     );
 
@@ -75,10 +82,38 @@ class SubscriptionController extends GetxController {
           AppSnackBar.showError('Could not launch payment page.');
         }
       }
-    } else {
-      AppSnackBar.showError('Could not create payment session.');
+      return;
     }
+
+    // ✨ better errors
+    final code = response.responseData is Map<String, dynamic>
+        ? (response.responseData['code'] as String?)?.toUpperCase()
+        : null;
+
+    final sc = response.statusCode ?? 0;
+    final msg = (response.errorMessage ?? '').toLowerCase();
+
+    if (code == 'NO_SHOP' || (sc == 404 && msg.contains('shop'))) {
+      AppSnackBar.showError('Please create your shop first to purchase a subscription.');
+      // Optionally deep-link them:
+      // Get.toNamed('/add-business-profile');
+      return;
+    }
+
+    if (sc == 401) {
+      AppSnackBar.showError('You need to sign in again.');
+      // trigger re-auth flow…
+      return;
+    }
+
+    if (code == 'PLAN_NOT_FOUND') {
+      AppSnackBar.showError('Selected plan is unavailable.');
+      return;
+    }
+
+    AppSnackBar.showError('Could not create payment session.');
   }
+
 
   Future<void> cancelSubscription() async {
     Get.defaultDialog(
