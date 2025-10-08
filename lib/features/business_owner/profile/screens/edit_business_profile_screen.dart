@@ -37,13 +37,18 @@ class _EditBusinessOwnerProfileScreenState
     final _freeHCtrl = TextEditingController();
   final _feePctCtrl = TextEditingController();
   final _noRefHCtrl = TextEditingController();
+  final _depositAmountCtrl = TextEditingController();
+  final _depositError = ''.obs;
+
   late final Worker _profileSub;
+
 
 
   @override
   void initState() {
     super.initState();
     final profileData = controller1.profileDetails.value.data;
+
     if (profileData != null) {
       nameTEController.text = profileData.businessName ?? '';
       locationTEController.text = profileData.businessAddress ?? '';
@@ -52,23 +57,36 @@ class _EditBusinessOwnerProfileScreenState
           _freeHCtrl.text  = (profileData?.freeCancellationHours ?? 24).toString();
     _feePctCtrl.text = (profileData?.cancellationFeePercentage ?? 0).toString();
     _noRefHCtrl.text = (profileData?.noRefundHours ?? 0).toString();
+      _depositAmountCtrl.text = profileData?.depositAmount ?? '0.00';
+      controller1.depositAmount.value = _depositAmountCtrl.text;
+      controller1.isDepositRequired.value = profileData?.isDepositRequired ?? false;
     }
     // <-- ADD THIS SUBSCRIPTION
     _profileSub = ever<GetBusinesModel>(controller1.profileDetails, (m) {
       final d = m.data;
       if (d == null) return;
 
-      void put(TextEditingController c, int? v) {
-        final newText = (v ?? 0).toString();
-        if (c.text != newText) {
-          c.text = newText;
-          c.selection = TextSelection.collapsed(offset: newText.length);
+      void putInt(TextEditingController c, int? v) {
+        final t = (v ?? 0).toString();
+        if (c.text != t) {
+          c.text = t;
+          c.selection = TextSelection.collapsed(offset: t.length);
         }
       }
 
-      put(_freeHCtrl,  d.freeCancellationHours);
-      put(_feePctCtrl, d.cancellationFeePercentage);
-      put(_noRefHCtrl, d.noRefundHours);
+      putInt(_freeHCtrl,  d.freeCancellationHours);
+      putInt(_feePctCtrl, d.cancellationFeePercentage);
+      putInt(_noRefHCtrl, d.noRefundHours);
+
+      // NEW: deposit
+      final dep = d.depositAmount ?? '0.00';
+      if (_depositAmountCtrl.text != dep) {
+        _depositAmountCtrl.text = dep;
+        _depositAmountCtrl.selection = TextSelection.collapsed(offset: dep.length);
+      }
+      controller1.isDepositRequired.value = d.isDepositRequired ?? false;
+      controller1.depositAmount.value     = dep;
+
       setState(() {});
     });
 
@@ -580,6 +598,9 @@ ButtonStyle _saveBtnStyle() {
       'Saturday',
       'Sunday',
     ];
+    final canEditDeposit = controller1.canEditDeposit; // Momentum or Icon
+    final canEditPolicy  = controller1.canEditPolicy;  // Icon only
+
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -642,28 +663,34 @@ ButtonStyle _saveBtnStyle() {
               // If you must keep CustomButton, see NOTE below
               child: FilledButton(
                 style: _saveBtnStyle(),
-                onPressed: isPending
-                    ? null
-                    : () {
-                                      controller1.freeCancellationHours.value =
-                    _freeHCtrl.text.trim();
-                controller1.cancellationFeePercentage.value =
-                    _feePctCtrl.text.trim();
-                controller1.noRefundHours.value =
-                    _noRefHCtrl.text.trim();
+                onPressed: isPending ? null : () {
+                  controller1.freeCancellationHours.value     = _freeHCtrl.text.trim();
+                  controller1.cancellationFeePercentage.value = _feePctCtrl.text.trim();
+                  controller1.noRefundHours.value             = _noRefHCtrl.text.trim();
 
-                        controller1.updateBusinessProfile(
-                          businessName: nameTEController.text,
-                          businessAddress: locationTEController.text,
-                          aboutUs: aboutUsTEController.text,
-                          capacity: capacityTEController.text,
-                          id: widget.id.toString(),
-                          openDays: controller1.openDays.toList(),
-                          closeDays: const [],
-                          startAt: controller1.startTime.value,
-                          closeAt: controller1.endTime.value,
-                        );
-                      },
+                  // deposit validation + normalize
+                  final raw = _depositAmountCtrl.text.trim();
+                  final dep = double.tryParse(raw) ?? 0.0;
+                  final requireDep = controller1.isDepositRequired.value;
+
+                  if (dep < 1.0) {
+                    Get.snackbar('Invalid deposit', 'Minimum deposit is 1.00');
+                    return;
+                  }
+                  controller1.depositAmount.value = dep.toStringAsFixed(2);
+
+                  controller1.updateBusinessProfile(
+                    businessName: nameTEController.text,
+                    businessAddress: locationTEController.text,
+                    aboutUs: aboutUsTEController.text,
+                    capacity: capacityTEController.text,
+                    id: widget.id.toString(),
+                    openDays: controller1.openDays.toList(),
+                    closeDays: const [],
+                    startAt: controller1.startTime.value,
+                    closeAt: controller1.endTime.value,
+                  );
+                },
                 child: const Text('Save & Continue'),
               ),
             ),
@@ -867,27 +894,87 @@ ButtonStyle _saveBtnStyle() {
                       );
                     }),
                   ],
-                ),                _sectionCard(
+                ),
+                _sectionCard(
                   title: 'Cancellation Policy',
-                  subtitle: 'Configure refund windows and fees.',
+                  subtitle: canEditPolicy
+                      ? 'Configure refund windows and fees.'
+                      : 'Available on Icon plan.',
                   children: [
                     AbsorbPointer(
-                      absorbing: isPending, // lock when pending
-                      child: CancellationPolicyCard(
-                        freeHController: _freeHCtrl,
-                        feePctController: _feePctCtrl,
-                        noRefHController: _noRefHCtrl,
+                      absorbing: !canEditPolicy || isPending,
+                      child: Opacity(
+                        opacity: (!canEditPolicy || isPending) ? 0.5 : 1.0,
+                        child: CancellationPolicyCard(
+                          freeHController: _freeHCtrl,
+                          feePctController: _feePctCtrl,
+                          noRefHController: _noRefHCtrl,
+                        ),
                       ),
                     ),
-                    if (isPending)
+                    if (!canEditPolicy && !isPending)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
+                        padding: const EdgeInsets.only(top: 6.0),
                         child: Text(
-                          'Editing is disabled while under review.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
+                          'Upgrade to Icon to edit cancellation policy.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                      ),
+                  ],
+                ),
+
+                _sectionCard(
+                  title: 'Deposit',
+                  subtitle: canEditDeposit
+                      ? 'Require a deposit to reduce no-shows.'
+                      : 'Available on Momentum & Icon.',
+                  children: [
+                    Obx(() {
+                      return AbsorbPointer(
+                        absorbing: !canEditDeposit || isPending,
+                        child: Opacity(
+                          opacity: (!canEditDeposit || isPending) ? 0.5 : 1.0,
+                          child: Column(
+                            children: [
+                              // SwitchListTile(
+                              //   contentPadding: EdgeInsets.zero,
+                              //   title: const Text('Require deposit'),
+                              //   value: controller1.isDepositRequired.value,
+                              //   onChanged: (v) => controller1.isDepositRequired.value = v,
+                              // ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _depositAmountCtrl,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: InputDecoration(
+                                  labelText: 'Deposit amount',
+                                  hintText: '0.00',
+                                  border: const OutlineInputBorder(),
+                                  // --- NEW: live helper/error text ---
+                                  helperText: controller1.isDepositRequired.value && _depositError.value.isNotEmpty
+                                      ? null
+                                      : 'Minimum deposit is 1.00',
+                                  errorText: controller1.isDepositRequired.value && _depositError.value.isNotEmpty
+                                      ? _depositError.value
+                                      : null,
+                                ),
+                                onChanged: (v) {
+  controller1.depositAmount.value = v;
+  final d = double.tryParse(v) ?? 0.0;
+  _depositError.value = (d < 1.0) ? 'Minimum deposit is 1.00' : '';
+},
+                              ),
+                            ],
                           ),
+                        ),
+                      );
+                    }),
+                    if (!canEditDeposit && !isPending)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6.0),
+                        child: Text(
+                          'Upgrade to Momentum or Icon to edit deposit.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                         ),
                       ),
                   ],

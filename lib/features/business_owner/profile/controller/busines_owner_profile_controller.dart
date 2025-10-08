@@ -61,10 +61,10 @@ class BusinessOwnerProfileController extends GetxController {
   bool get canEditPolicy  => _isIcon;
 
   // For upgrade messages
-  void _toastUpgradeForPolicy() =>
-      AppSnackBar.showSuccess('Upgrade to Icon to edit cancellation policy.');
-  void _toastUpgradeForDeposit() =>
-      AppSnackBar.showSuccess('Upgrade your plan to edit deposit settings.');
+  // void _toastUpgradeForPolicy() =>
+  //     AppSnackBar.showSuccess('Upgrade to Icon to edit cancellation policy.');
+  // void _toastUpgradeForDeposit() =>
+  //     AppSnackBar.showSuccess('Upgrade your plan to edit deposit settings.');
 
   // Stripe verify
   final isCheckingStripeStatus = false.obs;
@@ -118,14 +118,8 @@ class BusinessOwnerProfileController extends GetxController {
     noRefundHours.value             = (data?.noRefundHours ?? 0).toString();
 
     // Deposit (best-effort – BusinessProfileModel has depositAmount)
-    if (data is BusinessProfileModel) {
-      depositAmount.value = data!.depositAmount!;
-      // If your API exposes is_deposit_required, map it here too:
-      // isDepositRequired.value = data.isDepositRequired ?? false; // <-- when/if you add it
-    } else {
-      // Fallback default
-      depositAmount.value = depositAmount.value.isNotEmpty ? depositAmount.value : '0';
-    }
+    depositAmount.value      = (data?.depositAmount ?? '0.00');
+    isDepositRequired.value  =  data?.isDepositRequired ?? false;
 
     await checkStripeStatusIfPossible();
   }
@@ -345,7 +339,7 @@ class BusinessOwnerProfileController extends GetxController {
     final willSendPolicy = canEditPolicy; // Foundation/Momentum can't modify policy
     if (!willSendPolicy) {
       // Show info once so user knows why their changes won't apply
-      _toastUpgradeForPolicy();
+      //_toastUpgradeForPolicy();
     }
 
     // Validate only if we’re actually going to send policy
@@ -450,29 +444,37 @@ class BusinessOwnerProfileController extends GetxController {
           ? closeDays
           : allDays.where((d) => !open.contains(d)).toList();
 
-      // --- gather desired policy from inputs ---
+      // --- policy ---
       final freeH = int.tryParse(freeCancellationHours.value.trim()) ?? 24;
       final feePct = int.tryParse(cancellationFeePercentage.value.trim()) ?? 0;
       final noRefH = int.tryParse(noRefundHours.value.trim()) ?? 0;
 
-      // Enforce tier restrictions
       final sendPolicy = canEditPolicy;
-      if (!sendPolicy) {
-        _toastUpgradeForPolicy();
-      } else {
+      if (sendPolicy) {
         if (!_validPolicy(freeH, feePct, noRefH)) {
           AppSnackBar.showError(
-            'Invalid cancellation policy. '
-                'Make sure 0 ≤ fee ≤ 100 and No-refund hours < Free-cancel hours.',
+            'Invalid cancellation policy. Make sure 0 ≤ fee ≤ 100 and No-refund hours < Free-cancel hours.',
           );
           return;
         }
       }
 
-      // If deposit edits are attempted on a non-eligible tier, warn once
-      if (!canEditDeposit) {
-        _toastUpgradeForDeposit();
+      // --- NEW: deposit guard + normalize ---
+      String? depositToSend;
+      //bool? requireDepositToSend;
+      if (canEditDeposit) {
+        final raw = depositAmount.value.trim(); // kept in controller from the field
+        final parsed = double.tryParse(raw) ?? 0.0;
+        // if the switch is ON, enforce minimum 1.00
+        if (parsed < 1.0) {
+          AppSnackBar.showError('Minimum deposit is 1.00');
+          return;
+        }
+        // Always send 2-decimal string to API (even when 0 or switch is off)
+        depositToSend = parsed.toStringAsFixed(2);
+        //requireDepositToSend = true;
       }
+      // If cannot edit deposit on current plan, do not send those fields (server keeps existing)
 
       final resp = await ShopApi().updateShopWithImage(
         id: id,
@@ -488,13 +490,15 @@ class BusinessOwnerProfileController extends GetxController {
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
         documents: documents,
         token: AuthService.accessToken ?? '',
-        // ✅ include new policy fields only when allowed:
+
+        // ✅ send policy only if allowed
         freeCancellationHours: sendPolicy ? freeH : null,
         cancellationFeePercentage: sendPolicy ? feePct : null,
         noRefundHours: sendPolicy ? noRefH : null,
-        // ⬇️ IF ShopApi supports deposit, include it only when allowed:
-        // isDepositRequired: canEditDeposit ? isDepositRequired.value : null,
-        // depositAmount:     canEditDeposit ? depositAmount.value : null,
+
+        // ✅ NEW: send deposit only if allowed
+        //isDepositRequired: canEditDeposit ? requireDepositToSend : null,
+        depositAmount:     canEditDeposit ? depositToSend       : null,
       );
 
       if (resp.statusCode == 200 || resp.statusCode == 201) {

@@ -13,22 +13,36 @@ class NetworkCaller {
   static bool _isRefreshing = false;
   static final List<Completer<ResponseData>> _pendingRequests = [];
 
-  // --- NEW: Configuration for the retry mechanism ---
   final _retryOptions = const RetryOptions(
-    maxAttempts: 3, // Number of retry attempts
-    delayFactor: Duration(seconds: 1), // Delay between retries
-    maxDelay: Duration(seconds: 3), // Maximum delay
+    maxAttempts: 3,
+    delayFactor: Duration(seconds: 1),
+    maxDelay: Duration(seconds: 3),
   );
 
-  // --- MODIFIED: All public methods now use the _makeRequestWithRetry wrapper ---
+  static Completer<bool>? _refreshingCompleter; // gate so only 1 refresh runs
+
+  Future<bool> _ensureTokenRefreshed() async {
+    if (_refreshingCompleter != null) {
+      return _refreshingCompleter!.future;        // wait for the in-flight refresh
+    }
+    final c = Completer<bool>();
+    _refreshingCompleter = c;
+    final ok = await _refreshToken();
+    c.complete(ok);
+    _refreshingCompleter = null;
+    return ok;
+  }
 
   Future<ResponseData> getRequest(String endpoint, {String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
     return _makeRequestWithRetry(() async {
       log('GET Request: $endpoint');
+      // --- MODIFIED: Reliably get token if not provided ---
+      final effectiveToken = token ?? await AuthService.getValidAccessToken();
+
       final response = await http.get(
         Uri.parse(endpoint),
         headers: {
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
           'Content-type': 'application/json',
         },
       );
@@ -39,6 +53,9 @@ class NetworkCaller {
   Future<ResponseData> multipartRequest(String endpoint, {String method = 'POST', required Map<String, String> body, String? token, File? photo, List<File>? documents}) {
     return _makeRequestWithRetry(() async {
       log('Multipart Request: $endpoint');
+      // --- MODIFIED: Reliably get token if not provided ---
+      final effectiveToken = token ?? await AuthService.getValidAccessToken();
+
       final request = http.MultipartRequest(method, Uri.parse(endpoint));
       request.fields.addAll(body);
 
@@ -51,7 +68,7 @@ class NetworkCaller {
         }
       }
       request.headers.addAll({
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
       });
 
       final streamedResponse = await request.send();
@@ -63,9 +80,12 @@ class NetworkCaller {
   Future<ResponseData> getRequestWithBody(String endpoint, {Map<String, dynamic>? body, String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
     return _makeRequestWithRetry(() async {
       log('GET Request with body: $endpoint');
+      // --- MODIFIED: Reliably get token if not provided ---
+      final effectiveToken = token ?? await AuthService.getValidAccessToken();
+
       final request = http.Request('GET', Uri.parse(endpoint));
       request.headers.addAll({
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
         'Content-Type': 'application/json',
       });
       if (body != null) {
@@ -81,10 +101,13 @@ class NetworkCaller {
     return _makeRequestWithRetry(() async {
       log('POST Request: $endpoint');
       log('Request Body: ${jsonEncode(body)}');
+      // --- MODIFIED: Reliably get token if not provided ---
+      final effectiveToken = token ?? await AuthService.getValidAccessToken();
+
       final response = await http.post(
         Uri.parse(endpoint),
         headers: {
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
@@ -97,10 +120,13 @@ class NetworkCaller {
     return _makeRequestWithRetry(() async {
       log('PUT Request: $endpoint');
       log('Request Body: ${jsonEncode(body)}');
+      // --- MODIFIED: Reliably get token if not provided ---
+      final effectiveToken = token ?? await AuthService.getValidAccessToken();
+
       final response = await http.put(
         Uri.parse(endpoint),
         headers: {
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
           'Content-type': 'application/json',
         },
         body: jsonEncode(body),
@@ -113,9 +139,12 @@ class NetworkCaller {
     return _makeRequestWithRetry(() async {
       log('DELETE Request: $endpoint');
       log('Request Body: ${jsonEncode(body)}');
+      // --- MODIFIED: Reliably get token if not provided ---
+      final effectiveToken = token ?? await AuthService.getValidAccessToken();
+
       final req = http.Request('DELETE', Uri.parse(endpoint));
       req.headers.addAll({
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
         'Content-Type': 'application/json',
       });
       if (body != null) req.body = jsonEncode(body);
@@ -125,98 +154,64 @@ class NetworkCaller {
     });
   }
 
-  // --- NEW: Central wrapper for all requests ---
-  Future<ResponseData> _makeRequestWithRetry(Future<ResponseData> Function() request) async {
-    // 1. Check for internet connectivity first
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      log('No internet connection.');
-      return ResponseData(
-        isSuccess: false,
-        statusCode: -1, // Custom status code for no network
-        errorMessage: 'No internet connection. Please check your settings.', responseData: null,
-      );
-    }
+  Future<ResponseData> patchRequest(
+      String endpoint, {
+        Map<String, dynamic>? body,
+        String? token,
+        bool treat404AsEmpty = false,
+        dynamic emptyPayload,
+      }) {
+    return _makeRequestWithRetry(() async {
+      log('PATCH Request: $endpoint');
+      log('Request Body: ${jsonEncode(body)}');
+      // --- MODIFIED: Reliably get token if not provided ---
+      final effectiveToken = token ?? await AuthService.getValidAccessToken();
 
-    // 2. Use the retry package to attempt the request
-    try {
-      return await _retryOptions.retry(
-        request,
-        retryIf: (e) => e is SocketException || e is TimeoutException || e is http.ClientException,
-        onRetry: (e) => log('Retrying request after error: $e'),
+      final response = await http.patch(
+        Uri.parse(endpoint),
+        headers: {
+          if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
       );
-    } on SocketException catch (e) {
-      log('Network error after all retries: $e');
-      return ResponseData(
-        isSuccess: false,
-        statusCode: -1,
-        errorMessage: 'Failed to connect. Please check your internet connection.', responseData: null,
+      return _handleResponse(
+        response,
+        treat404AsEmpty: treat404AsEmpty,
+        emptyPayload: emptyPayload,
       );
-    } on TimeoutException catch (e) {
-      log('Request timed out after all retries: $e');
-      return ResponseData(
-        isSuccess: false,
-        statusCode: 408,
-        errorMessage: 'The connection timed out. Please try again.', responseData: null,
-      );
-    } catch (e) {
-      log('An unexpected error occurred during the request: $e');
-      return ResponseData(
-        isSuccess: false,
-        statusCode: 500,
-        errorMessage: 'An unexpected error occurred: $e', responseData: null,
-      );
-    }
+    });
   }
 
-  // Your existing _handleResponse, _refreshToken, _retryRequest, and other methods remain the same.
-  // ... (paste your existing private methods here)
-  
-  Future<ResponseData> _handleResponse(http.Response response, {
-  bool treat404AsEmpty = false,
-  dynamic emptyPayload,
-}) async {
-    log('Response Status: ${response.statusCode}');
-    log('Response Body: ${response.body}');
+  // --- No changes needed below this line ---
 
-    // ---  NEW: Token Refresh Logic ---
-    // Intercept 401 Unauthorized errors *before* the switch statement.
-    if (response.statusCode == 401) {
-      // If a refresh is already in progress, queue this request and wait for it to complete.
-      if (_isRefreshing) {
-        final completer = Completer<ResponseData>();
-        _pendingRequests.add(completer);
-        return completer.future;
-      }
+  Future<ResponseData> _makeRequestWithRetry(
+  Future<ResponseData> Function() request,
+) async {
+  final connectivityResult = await Connectivity().checkConnectivity();
+  if (connectivityResult == ConnectivityResult.none) {
+    return ResponseData(
+      isSuccess: false,
+      statusCode: -1,
+      errorMessage: 'No internet connection. Please check your settings.',
+      responseData: null,
+    );
+  }
 
-      _isRefreshing = true;
+  try {
+    // First attempt with standard network retry (socket/timeouts)
+    final first = await _retryOptions.retry(
+      request,
+      retryIf: (e) =>
+          e is SocketException || e is TimeoutException || e is http.ClientException,
+      onRetry: (e) => log('Retrying request after error: $e'),
+    );
 
-      // Attempt to get a new access token using the refresh token.
-      final bool refreshedSuccessfully = await _refreshToken();
-
-      _isRefreshing = false; // Mark refreshing as complete
-
-      if (refreshedSuccessfully) {
-        // If refresh succeeded, retry the original failed request with the new token.
-        final newResponse = await _retryRequest(response.request!);
-
-        // Fulfill all pending requests with the new response.
-        for (var completer in _pendingRequests) {
-          completer.complete(newResponse);
-        }
-        _pendingRequests.clear();
-
-        return newResponse; // Return the response from the retried request.
-      } else {
-        // If refresh failed, log out the user.
+    // If token expired, refresh ONCE and then re-run *this caller’s* request.
+    if (first.statusCode == 401) {
+      final ok = await _ensureTokenRefreshed();
+      if (!ok) {
         await AuthService.clearAuthData();
-
-        // Reject all pending requests.
-        for (var completer in _pendingRequests) {
-          completer.completeError('Token refresh failed');
-        }
-        _pendingRequests.clear();
-
         return ResponseData(
           isSuccess: false,
           statusCode: 401,
@@ -224,13 +219,54 @@ class NetworkCaller {
           responseData: null,
         );
       }
+      // re-run same request with the new token (no extra recursion)
+      return await request();
     }
-    // --- End of new logic ---
+
+    return first;
+  } on SocketException {
+    return ResponseData(
+      isSuccess: false, statusCode: -1,
+      errorMessage: 'Failed to connect. Please check your internet connection.',
+      responseData: null,
+    );
+  } on TimeoutException {
+    return ResponseData(
+      isSuccess: false, statusCode: 408,
+      errorMessage: 'The connection timed out. Please try again.',
+      responseData: null,
+    );
+  } catch (e) {
+    return ResponseData(
+      isSuccess: false, statusCode: 500,
+      errorMessage: 'An unexpected error occurred: $e',
+      responseData: null,
+    );
+  }
+}
+
+
+  Future<ResponseData> _handleResponse(http.Response response, {
+    bool treat404AsEmpty = false,
+    dynamic emptyPayload,
+  }) async {
+    log('Response Status: ${response.statusCode}');
+    log('Response Body: ${response.body}');
+
+    if (response.statusCode == 401) {
+  // Just return 401; _makeRequestWithRetry will handle refresh + retry.
+  return ResponseData(
+    isSuccess: false,
+    statusCode: 401,
+    errorMessage: 'Unauthorized',
+    responseData: null,
+  );
+}
+
 
     final code = response.statusCode;
     final raw = response.body;
 
-    // ✅ 204 or empty body: don’t decode
     if (code == 204 || raw.trim().isEmpty) {
       return ResponseData(
         isSuccess: code >= 200 && code < 300,
@@ -241,15 +277,14 @@ class NetworkCaller {
     }
 
     if (code == 404 && treat404AsEmpty) {
-    return ResponseData(
-      isSuccess: true,
-      statusCode: 200,           // normalize so global “error banners” don’t fire
-      responseData: emptyPayload ?? [],
-      errorMessage: '',
-    );
-  }
+      return ResponseData(
+        isSuccess: true,
+        statusCode: 200,
+        responseData: emptyPayload ?? [],
+        errorMessage: '',
+      );
+    }
 
-    // Try to decode JSON only when present
     dynamic decoded = raw;
     try {
       final ct = response.headers['content-type'] ?? '';
@@ -258,7 +293,6 @@ class NetworkCaller {
       // leave decoded as raw string
     }
 
-    // Success range
     if (code >= 200 && code < 300) {
       return ResponseData(
         isSuccess: true,
@@ -268,7 +302,6 @@ class NetworkCaller {
       );
     }
 
-    // Auth / common errors
     switch (code) {
       case 401:
         await AuthService.logoutUser();
@@ -286,23 +319,23 @@ class NetworkCaller {
           responseData: null,
         );
       case 404:
-  {
-    final friendly = extractErrorMessage(raw);
-    final decoded = jsonDecode(raw);
-    return ResponseData(
-      isSuccess: false,
-      statusCode: code,
-      errorMessage: friendly.isNotEmpty
-          ? friendly
-          : 'The resource you are looking for was not found.',
-      responseData: decoded,
-    );
-  }
+        {
+          final friendly = extractErrorMessage(raw);
+          final decoded = jsonDecode(raw);
+          return ResponseData(
+            isSuccess: false,
+            statusCode: code,
+            errorMessage: friendly.isNotEmpty
+                ? friendly
+                : 'The resource you are looking for was not found.',
+            responseData: decoded,
+          );
+        }
       case 409:
         return ResponseData(
           isSuccess: false,
           statusCode: code,
-          errorMessage: extractErrorMessage(raw), // instead of hard-coded text
+          errorMessage: extractErrorMessage(raw),
           responseData: decoded,
         );
       case 400:
@@ -324,7 +357,6 @@ class NetworkCaller {
         );
       default:
         {
-          // Try to extract a helpful message from the body first
           final friendly = extractErrorMessage(raw);
           final msg = (friendly.isNotEmpty)
               ? friendly
@@ -345,14 +377,15 @@ class NetworkCaller {
 
   Future<bool> _refreshToken() async {
     try {
-      final String? refreshToken = AuthService.refreshToken;
+      // Use the reliable async getter here as well
+      final String? refreshToken = await AuthService.getValidRefreshToken();
       if (refreshToken == null) {
         log('No refresh token found.');
         return false;
       }
 
       final http.Response response = await http.post(
-        Uri.parse(AppUrls.refreshToken), // Using the URL you added
+        Uri.parse(AppUrls.refreshToken),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh': refreshToken}),
       );
@@ -362,14 +395,11 @@ class NetworkCaller {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         final newAccessToken = responseData['access'];
-        // Some backends might also return a new refresh token (token rotation)
         final newRefreshToken = responseData['refresh'];
 
-        // Save the new tokens using your AuthService
         await AuthService.saveToken(
           newAccessToken,
-          newRefreshToken ??
-              refreshToken, // Use new refresh token if available, otherwise keep the old one
+          newRefreshToken ?? refreshToken,
           AuthService.role ?? '',
         );
         log('Tokens refreshed successfully.');
@@ -382,18 +412,14 @@ class NetworkCaller {
     }
   }
 
-  // ---  NEW: Method to retry a failed request ---
   Future<ResponseData> _retryRequest(http.BaseRequest request) async {
     final client = http.Client();
-
-    // Create a new request from the original one
     final newRequest = http.Request(request.method, request.url);
     newRequest.headers.addAll(request.headers);
 
-    //  Update the Authorization header with the NEW access token
-    newRequest.headers['Authorization'] = 'Bearer ${AuthService.accessToken}';
+    // Use the reliable getter for the new token
+    newRequest.headers['Authorization'] = 'Bearer ${await AuthService.getValidAccessToken()}';
 
-    // Copy the body if it exists
     if (request is http.Request && request.body.isNotEmpty) {
       newRequest.body = request.body;
     }
@@ -402,107 +428,36 @@ class NetworkCaller {
     final streamedResponse = await client.send(newRequest);
     final response = await http.Response.fromStream(streamedResponse);
 
-    // Handle the response of the retried request (it could still fail)
     return _handleResponse(response);
-  }
-
-  // Handle errors during the request process
-  ResponseData _handleError(dynamic error) {
-    log('Request Error: $error');
-
-    if (error is TimeoutException) {
-      return ResponseData(
-        isSuccess: false,
-        statusCode: 408,
-        errorMessage:
-            'Request timed out. Please check your internet connection and try again.',
-        responseData: null,
-      );
-    } else if (error is http.ClientException) {
-      return ResponseData(
-        isSuccess: false,
-        statusCode: 500,
-        errorMessage:
-            'Network error occurred. Please check your connection and try again.',
-        responseData: null,
-      );
-    } else {
-      return ResponseData(
-        isSuccess: false,
-        statusCode: 500,
-        errorMessage: 'Unexpected error occurred. Please try again later.',
-        responseData: null,
-      );
-    }
   }
 
   String extractErrorMessage(String body) {
     try {
       final decoded = json.decode(body);
-
-      // Django REST Framework common shapes:
-
-      // 1) {"detail": "Something"}  OR {"non_field_errors": ["..."]}
       if (decoded is Map<String, dynamic>) {
         if (decoded['detail'] is String) return decoded['detail'];
-
-        // 2) Field errors: {"email": ["user with this email already exists."]}
         if (decoded.values.any((v) => v is List)) {
           final buf = StringBuffer();
           decoded.forEach((key, value) {
             if (value is List && value.isNotEmpty) {
               final msg = value.first.toString();
-              // prettify key
-              final prettyKey = key == 'non_field_errors'
-                  ? ''
-                  : '${key[0].toUpperCase()}${key.substring(1)}: ';
+              final prettyKey = key == 'non_field_errors' ? '' : '${key[0].toUpperCase()}${key.substring(1)}: ';
               buf.writeln('$prettyKey$msg');
             }
           });
           final text = buf.toString().trim();
           if (text.isNotEmpty) return text;
         }
-
-        // 3) Flat strings map: {"error": "message"}
         final firstString = decoded.values.firstWhere(
-          (v) => v is String,
+              (v) => v is String,
           orElse: () => null,
         );
         if (firstString is String && firstString.isNotEmpty) return firstString;
       }
-
-      // If it's just a string JSON, return it
       if (decoded is String && decoded.isNotEmpty) return decoded;
     } catch (_) {
       // body wasn't JSON; fall through
     }
-    // ultimate fallback
     return 'Something went wrong. Please try again.';
   }
-  Future<ResponseData> patchRequest(
-      String endpoint, {
-        Map<String, dynamic>? body,
-        String? token,
-        bool treat404AsEmpty = false,
-        dynamic emptyPayload,
-      }) {
-    return _makeRequestWithRetry(() async {
-      log('PATCH Request: $endpoint');
-      log('Request Body: ${jsonEncode(body)}');
-      final response = await http.patch(
-        Uri.parse(endpoint),
-        headers: {
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
-      return _handleResponse(
-        response,
-        treat404AsEmpty: treat404AsEmpty,
-        emptyPayload: emptyPayload,
-      );
-    });
-  }
-
 }

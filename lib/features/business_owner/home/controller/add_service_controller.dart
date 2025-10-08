@@ -94,31 +94,37 @@ class AddServiceController extends GetxController {
 
   Future<void> createService() async {
     inProgress.value = true;
-
-    // ---  CHANGE IS HERE ---
-    final price = priceTEController.text;
-    final discountPriceText = discountPriceTEController.text;
-    final currentStatus = singleServiceDetails.value.isActive ?? true;
-
-    // Use price if discount is empty or zero
-    final effectiveDiscountPrice =
-        (discountPriceText.isEmpty || double.tryParse(discountPriceText) == 0)
-        ? price
-        : discountPriceText;
-    // --- END CHANGE ---
-
-    final Map<String, String> requestBody = {
-      "title": titleTEController.text,
-      "price": price,
-      "discount_price": effectiveDiscountPrice, // Use the new value
-      "description": descriptionTEController.text,
-      "category": selectedCategoryId.value.toString(),
-      "duration": durationTEController.text,
-      "capacity": capacityTEController.text,
-      "is_active": "true",
-    };
-
     try {
+      // defensive guard
+      final priceVal    = double.tryParse(priceTEController.text.trim()) ?? 0;
+      final durationVal = int.tryParse(durationTEController.text.trim()) ?? 0;
+      final capacityVal = int.tryParse(capacityTEController.text.trim()) ?? 0;
+
+      if (priceVal <= 0 || durationVal <= 0 || capacityVal <= 0) {
+        AppSnackBar.showError('Price, duration and capacity must all be greater than 0.');
+        inProgress.value = false;
+        return;
+      }
+
+      final price = priceTEController.text;
+      final discountPriceText = discountPriceTEController.text;
+
+      final effectiveDiscountPrice =
+      (discountPriceText.isEmpty || double.tryParse(discountPriceText) == 0)
+          ? price
+          : discountPriceText;
+
+      final Map<String, String> requestBody = {
+        "title": titleTEController.text,
+        "price": price,
+        "discount_price": effectiveDiscountPrice,
+        "description": descriptionTEController.text,
+        "category": selectedCategoryId.value.toString(),
+        "duration": durationTEController.text,
+        "capacity": capacityTEController.text,
+        "is_active": "true",
+      };
+
       await _sendPostRequestWithHeadersAndImagesOnly(
         AppUrls.createService,
         selectedImagePath.value,

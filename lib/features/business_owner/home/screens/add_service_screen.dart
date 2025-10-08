@@ -65,13 +65,18 @@ class AddServiceScreen extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
                 SizedBox(height: getHeight(10)),
+                // Price
                 CustomTexFormField(
                   controller: controller.priceTEController,
                   hintText: "Type Price",
                   isPhoneField: true,
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Price is required'
-                      : null,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'Price is required';
+                    final v = double.tryParse(value.trim());
+                    if (v == null) return 'Enter a valid number';
+                    if (v <= 0) return 'Price must be greater than 0';
+                    return null;
+                  },
                 ),
                 VerticalSpace(height: getHeight(20)),
                 CustomText(
@@ -129,13 +134,18 @@ class AddServiceScreen extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
                 SizedBox(height: getHeight(10)),
+                // Service Duration (minutes)
                 CustomTexFormField(
                   controller: controller.durationTEController,
                   hintText: "e.g., 30",
                   isPhoneField: true,
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Duration is required'
-                      : null,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'Duration is required';
+                    final v = int.tryParse(value.trim());
+                    if (v == null) return 'Enter a valid integer';
+                    if (v < 15) return 'Duration must be greater than or equal to 15';
+                    return null;
+                  },
                 ),
                 VerticalSpace(height: getHeight(20)),
                 CustomText(
@@ -145,13 +155,18 @@ class AddServiceScreen extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
                 SizedBox(height: getHeight(10)),
+                // Capacity
                 CustomTexFormField(
                   controller: controller.capacityTEController,
                   hintText: "e.g., 1",
                   isPhoneField: true,
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Capacity is required'
-                      : null,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'Capacity is required';
+                    final v = int.tryParse(value.trim());
+                    if (v == null) return 'Enter a valid integer';
+                    if (v <= 0) return 'Capacity must be greater than 0';
+                    return null;
+                  },
                 ),
                 VerticalSpace(height: getHeight(20)),
                 CustomText(

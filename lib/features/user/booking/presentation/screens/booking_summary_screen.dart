@@ -395,6 +395,16 @@ Future<void> _openScheduleSheet() async {
   // parse the current selected slot (for preselect after data arrives)
   final initLocal = _parseSelectedSlot();
 
+  if (initLocal != null) {
+    final d = DateTime(initLocal.year, initLocal.month, initLocal.day);
+    c.selectedDate.value = d;
+  }
+
+  // ★ preselect the time chip by id (you already keep the slot id in bookingId)
+  if (bookingId != 0) {
+    c.selectedSlotId.value = bookingId;
+  }
+
   // Seed from preload if present (fast path, no network)
   final preload = (args['preload'] as Map<String, dynamic>?) ?? {};
   if (preload.isNotEmpty) {
@@ -477,24 +487,51 @@ Future<void> _openScheduleSheet() async {
                     return !c.isClosedDay(day);
                   },
                   calendarBuilders: CalendarBuilders(
-                    defaultBuilder: (ctx, day, foc) {
-                      final disabled = !inWindow(day) || c.isClosedDay(day);
-                      return Center(child: Text('${day.day}',
-                        style: TextStyle(fontWeight: FontWeight.w800,
-                          color: disabled ? Colors.grey.shade400 : const Color(0xFF120D1C))));
-                    },
-                    todayBuilder: (ctx, day, foc) => const Center(
-                      child: Text('',
-                        style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF120D1C))),
-                    ),
-                    selectedBuilder: (ctx, day, foc) => Center(
-                      child: Container(width: 36, height: 36,
-                        decoration: BoxDecoration(color: Get.theme.primaryColor, shape: BoxShape.circle),
-                        alignment: Alignment.center,
-                        child: Text('${day.day}',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
-                    ),
-                  ),
+  defaultBuilder: (ctx, day, foc) {
+    final disabled = !inWindow(day) || c.isClosedDay(day);
+    return Center(
+      child: Text(
+        '${day.day}',
+        style: TextStyle(
+          fontWeight: FontWeight.w800,
+          color: disabled ? Colors.grey.shade400 : const Color(0xFF120D1C),
+        ),
+      ),
+    );
+  },
+  // show today's number even if not selected
+  todayBuilder: (ctx, day, foc) => Center(
+    child: Container(
+      width: 36,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border.all(width: 2),          // subtle ring
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        '${day.day}',
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    ),
+  ),
+  selectedBuilder: (ctx, day, foc) => Center(
+    child: Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: Get.theme.primaryColor,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '${day.day}',
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+      ),
+    ),
+  ),
+),
+
                 ),
               ),
 
