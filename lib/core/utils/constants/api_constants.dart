@@ -9,10 +9,10 @@ class AppUrls {
 
   //static const String _baseUrl = 'http://10.0.20.64:5010/api/v1';
   static const String _baseUrl =
-      'https://fidden-backend.onrender.com';
+      'https://fidden-server.onrender.com';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
-    return 'wss://fidden-backend.onrender.com/ws/chat/?token=$accessToken';
+    return 'wss://fidden-server.onrender.com/ws/chat/?token=$accessToken';
   }
 
   static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';

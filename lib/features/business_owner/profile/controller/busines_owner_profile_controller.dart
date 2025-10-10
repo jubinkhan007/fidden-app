@@ -45,7 +45,7 @@ class BusinessOwnerProfileController extends GetxController {
 
   // Deposit UI state
   final isDepositRequired = false.obs;
-  final depositAmount = ''.obs;
+  final defaultDepositPercentage = ''.obs;
 
   // ---- Subscription context ----
   final sub = Get.isRegistered<SubscriptionController>()
@@ -117,8 +117,9 @@ class BusinessOwnerProfileController extends GetxController {
     cancellationFeePercentage.value = (data?.cancellationFeePercentage ?? 0).toString();
     noRefundHours.value             = (data?.noRefundHours ?? 0).toString();
 
-    // Deposit (best-effort – BusinessProfileModel has depositAmount)
-    depositAmount.value      = (data?.depositAmount ?? '0.00');
+    // Deposit (best-effort – BusinessProfileModel has defaultDepositPercentage)
+    defaultDepositPercentage.value = (data?.defaultDepositPercentage ?? 0).toString();
+
     isDepositRequired.value  =  data?.isDepositRequired ?? false;
 
     await checkStripeStatusIfPossible();
@@ -460,19 +461,26 @@ class BusinessOwnerProfileController extends GetxController {
       }
 
       // --- NEW: deposit guard + normalize ---
-      String? depositToSend;
+      int? depositPercentageToSend;
+
       //bool? requireDepositToSend;
       if (canEditDeposit) {
-        final raw = depositAmount.value.trim(); // kept in controller from the field
-        final parsed = double.tryParse(raw) ?? 0.0;
-        // if the switch is ON, enforce minimum 1.00
-        if (parsed < 1.0) {
-          AppSnackBar.showError('Minimum deposit is 1.00');
+        final raw = defaultDepositPercentage.value.trim();
+
+        // Strip everything except digits (and optional dot), e.g. " 68% " -> "68"
+        final sanitized = raw.replaceAll(RegExp(r'[^0-9]'), '');
+        final parsed = int.tryParse(sanitized);
+
+        if (parsed == null) {
+          AppSnackBar.showError('Deposit % must be a whole number (e.g., 10).');
           return;
         }
-        // Always send 2-decimal string to API (even when 0 or switch is off)
-        depositToSend = parsed.toStringAsFixed(2);
-        //requireDepositToSend = true;
+        if (parsed < 1 || parsed > 100) {
+          AppSnackBar.showError('Deposit % must be between 1 and 100.');
+          return;
+        }
+
+        depositPercentageToSend = parsed;
       }
       // If cannot edit deposit on current plan, do not send those fields (server keeps existing)
 
@@ -498,7 +506,7 @@ class BusinessOwnerProfileController extends GetxController {
 
         // ✅ NEW: send deposit only if allowed
         //isDepositRequired: canEditDeposit ? requireDepositToSend : null,
-        depositAmount:     canEditDeposit ? depositToSend       : null,
+        defaultDepositPercentage: canEditDeposit ? depositPercentageToSend : null,
       );
 
       if (resp.statusCode == 200 || resp.statusCode == 201) {

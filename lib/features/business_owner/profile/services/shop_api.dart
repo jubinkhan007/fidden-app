@@ -52,7 +52,7 @@ class ShopApi {
     int? cancellationFeePercentage,
     int? noRefundHours,
     bool? isDepositRequired,
-    String? depositAmount,
+    int? defaultDepositPercentage,
   }) async {
     final body = <String, String>{
       'name': name,
@@ -84,11 +84,8 @@ class ShopApi {
     if (isDepositRequired != null) {
       body['is_deposit_required'] = isDepositRequired ? 'true' : 'false';
     }
-    if (depositAmount != null) {
-      final amt = double.tryParse(depositAmount.trim());
-      if (amt != null && amt >= 0) {
-        body['deposit_amount'] = amt.toStringAsFixed(2);
-      }
+    if (defaultDepositPercentage != null) {
+      body['default_deposit_percentage'] = defaultDepositPercentage.toString();
     }
 
     return await _networkCaller.multipartRequest(
@@ -120,7 +117,7 @@ class ShopApi {
     int? cancellationFeePercentage,
     int? noRefundHours,
     bool? isDepositRequired,
-    String? depositAmount,
+    int? defaultDepositPercentage,
   }) async {
     final body = <String, String>{
       'name': name,
@@ -152,11 +149,8 @@ class ShopApi {
     if (isDepositRequired != null) {
       body['is_deposit_required'] = isDepositRequired ? 'true' : 'false';
     }
-    if (depositAmount != null) {
-      final amt = double.tryParse(depositAmount.trim());
-      if (amt != null && amt >= 0) {
-        body['deposit_amount'] = amt.toStringAsFixed(2);
-      }
+    if (defaultDepositPercentage != null) {
+      body['default_deposit_percentage'] = defaultDepositPercentage.toString();
     }
 
     return await _networkCaller.multipartRequest(

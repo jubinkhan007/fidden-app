@@ -3,6 +3,7 @@ import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/custom_text_form_field.dart';
 import 'package:fidden/features/business_owner/profile/screens/widgets/cancellationPolicy_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
@@ -37,7 +38,7 @@ class _EditBusinessOwnerProfileScreenState
     final _freeHCtrl = TextEditingController();
   final _feePctCtrl = TextEditingController();
   final _noRefHCtrl = TextEditingController();
-  final _depositAmountCtrl = TextEditingController();
+  final _depositPercentageCtrl = TextEditingController();
   final _depositError = ''.obs;
 
   late final Worker _profileSub;
@@ -57,8 +58,9 @@ class _EditBusinessOwnerProfileScreenState
           _freeHCtrl.text  = (profileData?.freeCancellationHours ?? 24).toString();
     _feePctCtrl.text = (profileData?.cancellationFeePercentage ?? 0).toString();
     _noRefHCtrl.text = (profileData?.noRefundHours ?? 0).toString();
-      _depositAmountCtrl.text = profileData?.depositAmount ?? '0.00';
-      controller1.depositAmount.value = _depositAmountCtrl.text;
+      _depositPercentageCtrl.text = profileData.defaultDepositPercentage?.toString() ?? '0';
+      controller1.defaultDepositPercentage.value = _depositPercentageCtrl.text;
+
       controller1.isDepositRequired.value = profileData?.isDepositRequired ?? false;
     }
     // <-- ADD THIS SUBSCRIPTION
@@ -79,13 +81,13 @@ class _EditBusinessOwnerProfileScreenState
       putInt(_noRefHCtrl, d.noRefundHours);
 
       // NEW: deposit
-      final dep = d.depositAmount ?? '0.00';
-      if (_depositAmountCtrl.text != dep) {
-        _depositAmountCtrl.text = dep;
-        _depositAmountCtrl.selection = TextSelection.collapsed(offset: dep.length);
+      final dep = d.defaultDepositPercentage?.toString() ?? '0';
+      if (_depositPercentageCtrl.text != dep) {
+        _depositPercentageCtrl.text = dep;
+        _depositPercentageCtrl.selection = TextSelection.collapsed(offset: dep.length);
       }
       controller1.isDepositRequired.value = d.isDepositRequired ?? false;
-      controller1.depositAmount.value     = dep;
+      controller1.defaultDepositPercentage.value = dep;
 
       setState(() {});
     });
@@ -98,6 +100,7 @@ class _EditBusinessOwnerProfileScreenState
     nameTEController.dispose();
     aboutUsTEController.dispose();
     capacityTEController.dispose();
+    _depositPercentageCtrl.dispose();
     locationTEController.dispose();
       _freeHCtrl.dispose();
   _feePctCtrl.dispose();
@@ -664,33 +667,30 @@ ButtonStyle _saveBtnStyle() {
               child: FilledButton(
                 style: _saveBtnStyle(),
                 onPressed: isPending ? null : () {
-                  controller1.freeCancellationHours.value     = _freeHCtrl.text.trim();
-                  controller1.cancellationFeePercentage.value = _feePctCtrl.text.trim();
-                  controller1.noRefundHours.value             = _noRefHCtrl.text.trim();
+  controller1.freeCancellationHours.value     = _freeHCtrl.text.trim();
+  controller1.cancellationFeePercentage.value = _feePctCtrl.text.trim();
+  controller1.noRefundHours.value             = _noRefHCtrl.text.trim();
 
-                  // deposit validation + normalize
-                  final raw = _depositAmountCtrl.text.trim();
-                  final dep = double.tryParse(raw) ?? 0.0;
-                  final requireDep = controller1.isDepositRequired.value;
+  // Deposit: parse as INT and validate 1–100
+  final p = int.tryParse(_depositPercentageCtrl.text.trim()) ?? 0;
+  if (p < 1 || p > 100) {
+    Get.snackbar('Invalid deposit', 'Deposit % must be between 1 and 100');
+    return;
+  }
+  controller1.defaultDepositPercentage.value = p.toString(); // "68", not "68.0"
 
-                  if (dep < 1.0) {
-                    Get.snackbar('Invalid deposit', 'Minimum deposit is 1.00');
-                    return;
-                  }
-                  controller1.depositAmount.value = dep.toStringAsFixed(2);
-
-                  controller1.updateBusinessProfile(
-                    businessName: nameTEController.text,
-                    businessAddress: locationTEController.text,
-                    aboutUs: aboutUsTEController.text,
-                    capacity: capacityTEController.text,
-                    id: widget.id.toString(),
-                    openDays: controller1.openDays.toList(),
-                    closeDays: const [],
-                    startAt: controller1.startTime.value,
-                    closeAt: controller1.endTime.value,
-                  );
-                },
+  controller1.updateBusinessProfile(
+    businessName: nameTEController.text,
+    businessAddress: locationTEController.text,
+    aboutUs: aboutUsTEController.text,
+    capacity: capacityTEController.text,
+    id: widget.id.toString(),
+    openDays: controller1.openDays.toList(),
+    closeDays: const [],
+    startAt: controller1.startTime.value,
+    closeAt: controller1.endTime.value,
+  );
+},
                 child: const Text('Save & Continue'),
               ),
             ),
@@ -944,26 +944,25 @@ ButtonStyle _saveBtnStyle() {
                               // ),
                               const SizedBox(height: 8),
                               TextFormField(
-                                controller: _depositAmountCtrl,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: InputDecoration(
-                                  labelText: 'Deposit amount',
-                                  hintText: '0.00',
-                                  border: const OutlineInputBorder(),
-                                  // --- NEW: live helper/error text ---
-                                  helperText: controller1.isDepositRequired.value && _depositError.value.isNotEmpty
-                                      ? null
-                                      : 'Minimum deposit is 1.00',
-                                  errorText: controller1.isDepositRequired.value && _depositError.value.isNotEmpty
-                                      ? _depositError.value
-                                      : null,
-                                ),
-                                onChanged: (v) {
-  controller1.depositAmount.value = v;
-  final d = double.tryParse(v) ?? 0.0;
-  _depositError.value = (d < 1.0) ? 'Minimum deposit is 1.00' : '';
-},
-                              ),
+  controller: _depositPercentageCtrl,
+  keyboardType: TextInputType.number,
+  inputFormatters: [
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(3),
+  ],
+  decoration: InputDecoration(
+    labelText: 'Deposit %',
+    hintText: 'e.g., 20',
+    border: const OutlineInputBorder(),
+    helperText: _depositError.value.isEmpty ? 'Enter 1-100 (%)' : null,
+    errorText: _depositError.value.isEmpty ? null : _depositError.value,
+  ),
+  onChanged: (v) {
+    controller1.defaultDepositPercentage.value = v;
+    final p = int.tryParse(v) ?? 0;
+    _depositError.value = (p < 1 || p > 100) ? 'Deposit % must be 1-100' : '';
+  },
+),
                             ],
                           ),
                         ),

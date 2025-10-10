@@ -66,7 +66,7 @@ class Data {
 
   // Deposit & policy
   bool? isDepositRequired;          // "is_deposit_required"
-  String? depositAmount;            // "deposit_amount" (string in API)
+  int? defaultDepositPercentage;          // "deposit_amount" (string in API)
   int? freeCancellationHours;       // "free_cancellation_hours"
   int? cancellationFeePercentage;   // "cancellation_fee_percentage"
   int? noRefundHours;               // "no_refund_hours"
@@ -106,7 +106,7 @@ class Data {
     this.image,
     this.capacity,
     this.isDepositRequired,
-    this.depositAmount,
+    this.defaultDepositPercentage,
     this.freeCancellationHours,
     this.cancellationFeePercentage,
     this.noRefundHours,
@@ -214,7 +214,7 @@ class Data {
     // Deposit & policy
     final isDepositRequired =
         json['is_deposit_required'] == true || json['is_deposit_required'] == 'true';
-    final depositAmount = (json['deposit_amount'] ?? '0').toString();
+    final defaultDepositPercentage = _asInt(json['default_deposit_percentage']);
     final freeCancellationHours = _asInt(json['free_cancellation_hours']);
     final cancellationFeePercentage = _asInt(json['cancellation_fee_percentage']);
     final noRefundHours = _asInt(json['no_refund_hours']);
@@ -266,7 +266,7 @@ class Data {
       image: img,
       capacity: capacity,
       isDepositRequired: isDepositRequired,
-      depositAmount: depositAmount,
+      defaultDepositPercentage: defaultDepositPercentage,
       freeCancellationHours: freeCancellationHours,
       cancellationFeePercentage: cancellationFeePercentage,
       noRefundHours: noRefundHours,
@@ -324,7 +324,7 @@ class Data {
       'verification_files': verificationFiles,
       // deposit & policy back to API
       'is_deposit_required': isDepositRequired ?? false,
-      'deposit_amount': depositAmount ?? '0',
+      'default_deposit_percentage': defaultDepositPercentage,
       'free_cancellation_hours': freeCancellationHours,
       'cancellation_fee_percentage': cancellationFeePercentage,
       'no_refund_hours': noRefundHours,
@@ -368,7 +368,7 @@ class BusinessProfileModel {
   final String aboutUs;
   final String? shopImg;
   final int capacity;
-  final String depositAmount;
+  final int defaultDepositPercentage;
   final bool isDepositRequired;
   final TimeOfDay startAt;
   final TimeOfDay closeAt;
@@ -400,7 +400,7 @@ class BusinessProfileModel {
     required this.address,
     required this.aboutUs,
     this.shopImg,
-    required this.depositAmount,
+    required this.defaultDepositPercentage,
     this.isDepositRequired = false,
     required this.capacity,
     required this.startAt,
@@ -418,7 +418,7 @@ class BusinessProfileModel {
       id: _parseInt(json['id']),
       ownerId: _parseInt(json['owner_id']),
       name: json['name'] ?? '',
-      depositAmount: (json['deposit_amount'] ?? '0').toString(),
+      defaultDepositPercentage: _parseInt(json['default_deposit_percentage'], fallback: 0),
       isDepositRequired: (json['is_deposit_required'] ?? false) == true,
       address: json['address'] ?? '',
       aboutUs: json['about_us'] ?? '',

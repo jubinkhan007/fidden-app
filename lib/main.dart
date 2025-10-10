@@ -14,6 +14,7 @@ import 'package:fidden/core/notifications/push.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/services/permission_handler.dart';
 import 'package:fidden/core/ws/ws_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 @pragma('vm:entry-point')
 Future<void> _bg(RemoteMessage m) => firebaseMessagingBackgroundHandler(m);
@@ -64,6 +65,9 @@ Future<void> _postBootInit() async {
   try {
     debugPrint('[boot] NotificationService.init');
     await NotificationService.I.init().timeout(const Duration(seconds: 10));
+    await NotificationService.I.requestSystemPermissionIfNeeded(); // ← add this
+    final p = await Permission.notification.status;
+    debugPrint('📣 POST_NOTIFICATIONS status: $p');
   } catch (e, st) { debugPrint('[boot] NotificationService failed: $e\n$st'); }
 
   try {
