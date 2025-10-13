@@ -25,6 +25,9 @@ import '../widgets/dashboard_stats_card.dart';
 import '../widgets/revenue_chart.dart';
 import '../widgets/booking_stats.dart';
 import '../widgets/growth_suggestion_card.dart';
+import 'package:fidden/features/business_owner/analytics/performance_analytics_screen.dart';
+
+
 
 class BusinessOwnerHomeScreen extends StatelessWidget {
   const BusinessOwnerHomeScreen({super.key});
@@ -159,7 +162,12 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                       );
                     }),
                     const SizedBox(height: 24),
-                    _buildSectionTitle("Dashboard"),
+                    _buildSectionTitle(
+                      "Dashboard",
+                      actionLabel: "Analytics",
+                      onAction: () => Get.to(() => const PerformanceAnalyticsScreen()),
+                    ),
+
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -232,7 +240,12 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title, {VoidCallback? seeAll}) {
+  Widget _buildSectionTitle(
+      String title, {
+        VoidCallback? seeAll,
+        String? actionLabel,
+        VoidCallback? onAction,
+      }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -240,17 +253,41 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           title,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        if (seeAll != null)
-          InkWell(
-            onTap: seeAll,
-            child: const Text(
-              "See All",
-              style: TextStyle(fontSize: 16, color: Colors.deepPurple),
-            ),
-          ),
+
+        // Right-side actions
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (seeAll != null)
+              InkWell(
+                onTap: seeAll,
+                child: const Text(
+                  "See All",
+                  style: TextStyle(fontSize: 16, color: Colors.deepPurple),
+                ),
+              ),
+            if (seeAll != null && actionLabel != null) const SizedBox(width: 12),
+            if (actionLabel != null)
+              TextButton(
+                onPressed: onAction,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      actionLabel,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right, size: 18),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }
+
 
   Widget _buildRecentBookings(BusinessOwnerController controller) {
   final results = controller.allBusinessOwnerBookingOne.value.results; // NEW

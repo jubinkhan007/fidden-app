@@ -115,6 +115,17 @@ class SubscriptionController extends GetxController {
   }
 
 
+  Future<void> handleReturnFromStripeCheckout(String? sessionId) async {
+    // (Optional) call a backend confirm endpoint with sessionId.
+    // If you don’t need server-side confirm, just refetch current status:
+    await fetchData();
+
+    // Optionally navigate the user back to Subscription screen (or home)
+    // Get.offAllNamed(AppRoute.subscriptionScreen);
+  }
+
+
+
   Future<void> cancelSubscription() async {
     Get.defaultDialog(
       title: "Cancel Subscription",

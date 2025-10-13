@@ -176,4 +176,7 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   //search
   static searchService(String text) => "$_baseUrl/service/search?service=$text";
   static String searchBusinessProfile = "$_baseUrl/business-profile";
+
+  //analytics
+ static const analytics = '$_baseUrl/api/analytics';
 }

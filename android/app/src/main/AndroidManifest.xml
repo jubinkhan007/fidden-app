@@ -54,6 +54,14 @@
     <!-- optional: also accept refresh explicitly -->
     <data android:scheme="myapp" android:host="stripe" android:pathPrefix="/refresh" />
   </intent-filter>
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="myapp" android:host="subscription" android:pathPrefix="/success" />
+                <data android:scheme="myapp" android:host="subscription" android:pathPrefix="/cancel" />
+            </intent-filter>
+
 
         </activity>
 

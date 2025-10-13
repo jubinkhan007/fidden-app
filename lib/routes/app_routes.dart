@@ -21,6 +21,8 @@ import '../features/auth/presentation/screens/login/verify_otp_screen.dart';
 import '../features/auth/presentation/screens/sign_up/sign_up_screen.dart';
 import '../features/auth/presentation/screens/sign_up/sign_up_verify_otp_screen.dart';
 import '../features/auth/presentation/screens/sign_up/verification_successfull_screen.dart';
+import '../features/business_owner/analytics/performance_analytics_screen.dart';
+import '../features/business_owner/subscription/presentation/screens/subscription_screen.dart';
 import '../features/splash/presentation/screens/on_boarding_screen.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
 // import '../features/user/booking/presentation/screens/aggrement_screen.dart';
@@ -59,6 +61,8 @@ class AppRoute {
     static const String allCouponsScreen = '/all-coupons';
   static const String addCouponScreen = '/add-coupon';
   static const String editCouponScreen = '/edit-coupon';
+  static const String performanceAnalytics = '/performance-analytics';
+  static const String subscriptionScreen = '/subscription';
 
 
   static List<GetPage> routes = [
@@ -121,5 +125,16 @@ GetPage(
 ),
     // GetPage(name: searchResultScreen, page: () => SearchResultScreen()),
     // GetPage(name: bookingSuccessFullScreen, page: () => BookingSuccessfulScreen ()),
+
+    GetPage(
+      name: performanceAnalytics,
+      page: () => const PerformanceAnalyticsScreen(),
+    ),
+
+    GetPage(
+      name: subscriptionScreen,
+      page: () => const SubscriptionScreen(),
+    ),
+
   ];
 }
