@@ -13,7 +13,7 @@ class CustomTextButton extends StatelessWidget {
     this.fontSize,
     this.isUnderline,
     this.color,
-    this.overflow, // ✅ added
+    this.overflow, // added
   });
 
   final double? decorationThickness;
@@ -23,7 +23,7 @@ class CustomTextButton extends StatelessWidget {
   final Function() onPressed;
   final String text;
   final Color? color;
-  final TextOverflow? overflow; // ✅ added
+  final TextOverflow? overflow; // added
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,7 @@ class CustomTextButton extends StatelessWidget {
       onTap: onPressed,
       child: Text(
         text,
-        overflow: overflow, // ✅ apply overflow here
+        overflow: overflow, // apply overflow here
         style: TextStyle(
           fontWeight: fontWeight ?? FontWeight.w400,
           fontSize: fontSize ?? getWidth(12),
