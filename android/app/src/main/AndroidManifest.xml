@@ -62,8 +62,30 @@
                 <data android:scheme="myapp" android:host="subscription" android:pathPrefix="/cancel" />
             </intent-filter>
 
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fidden" android:host="book" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="your-app.com" android:pathPrefix="/book" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+
 
         </activity>
+        <meta-data
+            android:name="flutter_deeplinking_enabled"
+            android:value="false" />
 
         <!-- ❌ Remove this old meta-data line (not needed with postSplashScreenTheme) -->
         <!-- <meta-data android:name="io.flutter.embedding.android.NormalTheme"

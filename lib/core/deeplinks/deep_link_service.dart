@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fidden/features/business_owner/profile/controller/busines_owner_profile_controller.dart';
+import 'package:fidden/routes/app_routes.dart'; // <-- make sure this exports AppRoute.bookingSummaryScreen
 
 class DeepLinkService extends GetxService {
   late final AppLinks _appLinks;
@@ -16,7 +17,7 @@ class DeepLinkService extends GetxService {
   Future<DeepLinkService> init() async {
     _appLinks = AppLinks();
 
-    // 1) Handle cold-start deep link (may replay on Android)
+    // 1) Cold start
     try {
       final uri = await _appLinks.getInitialLink();
       if (uri != null) await _handleUri(uri);
@@ -24,7 +25,7 @@ class DeepLinkService extends GetxService {
       debugPrint('[deeplink] getInitialLink error: $e');
     }
 
-    // 2) Handle links while app is running
+    // 2) Warm/foreground
     _sub = _appLinks.uriLinkStream.listen(
           (uri) => _handleUri(uri),
       onError: (err) => debugPrint('[deeplink] stream error: $err'),
@@ -37,37 +38,25 @@ class DeepLinkService extends GetxService {
   Future<void> _handleUri(Uri uri) async {
     debugPrint('[deeplink] $uri');
 
-    // Stripe *subscription* return/cancel (your new flow)
-    final isSubscription =
-        (uri.scheme == 'myapp' || uri.scheme == 'fidden') &&
-            uri.host == 'subscription';
-
+    // ---------- Subscription deep links (unchanged) ----------
+    final isSubscription = (uri.scheme == 'myapp' || uri.scheme == 'fidden') && uri.host == 'subscription';
     if (isSubscription) {
       final path = uri.path; // '/success' or '/cancel'
       final prefs = await SharedPreferences.getInstance();
 
       if (path == '/success') {
         final sid = uri.queryParameters['session_id'] ?? '';
-
-        // Guard: only handle a session once, even if Android replays it
         final lastSid = prefs.getString(_kLastCheckoutSid);
         if (sid.isNotEmpty && sid == lastSid) {
           debugPrint('[deeplink] success already handled for session $sid');
           return;
         }
-        if (sid.isNotEmpty) {
-          await prefs.setString(_kLastCheckoutSid, sid);
-        }
+        if (sid.isNotEmpty) await prefs.setString(_kLastCheckoutSid, sid);
 
-        // Refresh backend state (plan, entitlements, etc)
         if (Get.isRegistered<BusinessOwnerProfileController>()) {
-          await Get.find<BusinessOwnerProfileController>()
-              .checkStripeStatusIfPossible();
+          await Get.find<BusinessOwnerProfileController>().checkStripeStatusIfPossible();
         }
-
-        // OPTIONAL: only show the toast the first time (now guaranteed)
         Get.snackbar('Subscription', 'Purchase completed');
-
         return;
       }
 
@@ -77,10 +66,8 @@ class DeepLinkService extends GetxService {
       }
     }
 
-    // Old onboarding deep links (keep if you still use them)
-    final isStripeOnboarding =
-        (uri.scheme == 'myapp' || uri.scheme == 'fidden') &&
-            uri.host == 'stripe';
+    // ---------- Stripe onboarding (unchanged) ----------
+    final isStripeOnboarding = (uri.scheme == 'myapp' || uri.scheme == 'fidden') && uri.host == 'stripe';
     if (isStripeOnboarding) {
       if (uri.path == '/return') {
         if (Get.isRegistered<BusinessOwnerProfileController>()) {
@@ -90,6 +77,75 @@ class DeepLinkService extends GetxService {
       } else if (uri.path == '/refresh') {
         Get.snackbar('Stripe', 'Onboarding not completed. You can retry.');
       }
+      return;
+    }
+
+    // ---------- NEW: Booking deep links ----------
+    // fidden://book/{slotId}
+    final isBookScheme = uri.scheme == 'fidden' && uri.host == 'book' && uri.pathSegments.isNotEmpty;
+    // https://your-app.com/book/{slotId}
+    final isBookWeb = uri.scheme == 'https' && uri.host == 'your-app.com'
+        && uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'book' && uri.pathSegments.length >= 2;
+
+    String? slotIdStr;
+    if (isBookScheme) {
+      slotIdStr = uri.pathSegments.first;
+    } else if (isBookWeb) {
+      slotIdStr = uri.pathSegments[1];
+    }
+
+    if (slotIdStr != null && slotIdStr.isNotEmpty) {
+      final slotId = int.tryParse(slotIdStr);
+      if (slotId == null) return;
+
+      Get.offAllNamed(
+        AppRoute.bookingSummaryScreen,
+        arguments: {
+          'bookingId': slotId,                 // 👈 what your screen expects
+          'booking': {'shop_id': 0, 'service_id': 0},
+          'preload': const <String, dynamic>{},
+        },
+      );
+      return;
+    }
+
+    // ---------- Legacy offer deep links (if still used) ----------
+    final isOfferScheme = uri.scheme == 'fidden' && uri.host == 'offer';
+    if (isOfferScheme) {
+      final id = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+      if (id != null && id.isNotEmpty) {
+        // If offers should also open the booking summary, map them the same way:
+        final slotId = int.tryParse(id);
+        if (slotId != null) {
+          Get.offAllNamed(AppRoute.bookingSummaryScreen, arguments: {
+            'bookingId': slotId,
+            'booking': {'shop_id': 0, 'service_id': 0},
+            'preload': const <String, dynamic>{},
+          });
+        } else {
+          Get.toNamed('/offer', arguments: {'slotId': id});
+        }
+      }
+      return;
+    }
+
+    final isOfferWeb = uri.scheme == 'https' && uri.host == 'your-app.com'
+        && uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'book';
+    if (isOfferWeb) {
+      final id = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
+      if (id != null && id.isNotEmpty) {
+        final slotId = int.tryParse(id);
+        if (slotId != null) {
+          Get.offAllNamed(AppRoute.bookingSummaryScreen, arguments: {
+            'bookingId': slotId,
+            'booking': {'shop_id': 0, 'service_id': 0},
+            'preload': const <String, dynamic>{},
+          });
+        } else {
+          Get.toNamed('/offer', arguments: {'slotId': id});
+        }
+      }
+      return;
     }
   }
 

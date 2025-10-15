@@ -1,3 +1,4 @@
+//lib/main.dart
 import 'dart:async';
 import 'dart:ui';
 import 'package:fidden/core/deeplinks/deep_link_service.dart';

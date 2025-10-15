@@ -44,12 +44,14 @@ Future<void> initPush() async {
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     // Navigation logic can be handled here or in NotificationService.
     final data = message.data;
+    debugPrint('[push] onMessageOpenedApp: ${message.data}');
     NotificationService.handlePayloadTap(data);
   });
 
   // When app is launched from TERMINATED by tapping a push notification.
   final initial = await FirebaseMessaging.instance.getInitialMessage();
   if (initial != null) {
+    debugPrint('[push] getInitialMessage: ${initial.data}');
     NotificationService.handlePayloadTap(initial.data);
   }
 

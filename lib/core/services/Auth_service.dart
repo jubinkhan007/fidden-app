@@ -28,13 +28,13 @@ class AuthService {
   }
 
   static Future<String?> getValidAccessToken() async {
-    await init();
+    //await init();
     return _accessToken;
   }
 
   // --- NEW: Added the missing method for the refresh token ---
   static Future<String?> getValidRefreshToken() async {
-    await init();
+    //await init();
     return _refreshToken;
   }
 

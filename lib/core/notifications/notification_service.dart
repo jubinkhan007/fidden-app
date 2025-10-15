@@ -4,10 +4,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../features/inbox/screens/chat_screen.dart';
+import '../../routes/app_routes.dart';
 
 class NotificationService {
   NotificationService._();
@@ -72,12 +75,61 @@ class NotificationService {
 
   /// Foreground/Background/Terminated tap handling
   static void handlePayloadTap(Map<String, dynamic> data) {
-    // This is where you will implement navigation when a notification is tapped.
-    // Example:
-    // final threadId = int.tryParse('${data["thread_id"]}') ?? -1;
-    // if (threadId != -1) {
-    //   Get.to(() => ChatScreen(...));
-    // }
+    final type     = (data['type'] ?? '').toString();
+    final action   = (data['action'] ?? '').toString();
+    final slotId   = data['slot_id']?.toString();
+
+    if (type == 'autofill_offer' && action == 'book_offer' && slotId != null && slotId.isNotEmpty) {
+      // Build the label from ISO so your _slotFmt parser isn’t needed here
+      String selectedSlotLabel = '';
+      final iso = data['start_time']?.toString();
+      if (iso != null && iso.isNotEmpty) {
+        final dt = DateTime.tryParse(iso)?.toLocal();
+        if (dt != null) {
+          selectedSlotLabel = DateFormat('MMMM d, yyyy, h.mm a').format(dt);
+        }
+      }
+
+      // Parse numbers safely
+      int? toInt(dynamic v) => int.tryParse('$v');
+      double? toDouble(dynamic v) => double.tryParse('$v');
+
+      // Map to the BookingSummaryScreen’s expected arguments
+      final args = <String, dynamic>{
+        'serviceName': data['serviceName'] ?? '',
+        'service_img': data['service_img'] ?? '',
+        'shopName': data['shopName'] ?? '',
+        'shopAddress': data['shopAddress'] ?? '',
+        'serviceDurationMinutes': toInt(data['serviceDurationMinutes']) ?? 0,
+        'selectedSlotLabel': selectedSlotLabel,
+        'price': toDouble(data['price']) ?? 0.0,
+        'discountPrice': toDouble(data['discountPrice']),
+        // IMPORTANT: your screen uses "bookingId" as *slot id* for paymentIntent(slotId)
+        'bookingId': toInt(slotId) ?? 0,
+        // You also look up shop/service IDs in a nested "booking" object:
+        'booking': {
+          'shop_id'   : toInt(data['shop_id']) ?? 0,
+          'service_id': toInt(data['service_id']) ?? 0,
+        },
+        // optional: preload block (empty for now—can be used to seed slot chips)
+        'preload': const <String, dynamic>{},
+      };
+
+      Get.toNamed(AppRoute.bookingSummaryScreen, arguments: args); // e.g., '/booking-summary'
+      return;
+    }
+
+    // Deep link/web fallbacks (optional)
+    final deeplink = data['deeplink']?.toString();
+    final url      = data['url']?.toString();
+    if (deeplink != null && deeplink.isNotEmpty) {
+      launchUrlString(deeplink, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (url != null && url.isNotEmpty) {
+      launchUrlString(url, mode: LaunchMode.externalApplication);
+      return;
+    }
   }
 
   /// Show a message notification — call from FCM or WS
