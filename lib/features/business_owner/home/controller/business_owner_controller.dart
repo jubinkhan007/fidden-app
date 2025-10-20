@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:fidden/features/business_owner/home/model/growth_suggestion_model.dart';
+import '../../../../core/commom/widgets/app_snackbar.dart';
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
@@ -50,7 +51,107 @@ class BusinessOwnerController extends GetxController {
   _boot();
 }
 
-Future<void> _ensureAuthReady() async {
+  /// track in-flight actions to disable buttons per booking
+  final RxSet<int> _busyBookingIds = <int>{}.obs;
+
+  bool isBusy(int id) => _busyBookingIds.contains(id);
+
+  void _setBusy(int id, bool v) {
+    if (v) {
+      _busyBookingIds.add(id);
+    } else {
+      _busyBookingIds.remove(id);
+    }
+    _busyBookingIds.refresh();
+  }
+
+  /// update one item in the paged list without refetching everything
+  void _patchBookingStatusLocally(int bookingId, String newStatus) {
+    final current = allBusinessOwnerBookingOne.value;
+    final list = [...current.results];
+    final idx = list.indexWhere((e) => e.id == bookingId); // <-- assumes `id` exists
+    if (idx != -1) {
+      final old = list[idx];
+      list[idx] = old.copyWith(status: newStatus); // if you don't have copyWith, just: old.status = newStatus;
+      allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+        next: current.next,
+        previous: current.previous,
+        results: list,
+        stats: current.stats,
+      );
+    }
+  }
+
+  String _extractServerMessage(dynamic body) {
+    try {
+      if (body is Map) {
+        final v = body['error'] ?? body['detail'] ?? body['message'];
+        if (v != null) return v.toString();
+      }
+      return body?.toString() ?? 'Request failed';
+    } catch (_) {
+      return 'Request failed';
+    }
+  }
+
+
+  /// POST /payments/bookings/{booking_id}/mark-no-show/
+  Future<void> markAsNoShow(int bookingId) async {
+    if (isBusy(bookingId)) return;
+    _setBusy(bookingId, true);
+    try {
+      await _ensureAuthReady();
+
+      final res = await NetworkCaller().postRequest(
+        AppUrls.markNoShow(bookingId),
+        token: AuthService.accessToken,
+      );
+
+      if (res.isSuccess) {
+        _patchBookingStatusLocally(bookingId, 'no-show');
+        AppSnackBar.showSuccess('Booking marked as no-show', title: 'Updated');
+      } else {
+        AppSnackBar.showError(
+          _extractServerMessage(res.responseData),
+          title: 'Failed',
+        );
+      }
+    } catch (e) {
+      AppSnackBar.showError(e.toString());
+    } finally {
+      _setBusy(bookingId, false);
+    }
+  }
+
+  // send a valid Stripe reason
+  Future<void> cancelBookingByOwner(int bookingId) async {
+    if (isBusy(bookingId)) return;
+    _setBusy(bookingId, true);
+    try {
+      await _ensureAuthReady();
+
+      final res = await NetworkCaller().postRequest(
+        AppUrls.cancelBooking(bookingId),
+        token: AuthService.accessToken,
+        body: const {"reason": "requested_by_customer"}, // <-- important
+      );
+
+      if (res.isSuccess) {
+        _patchBookingStatusLocally(bookingId, 'cancelled');
+        AppSnackBar.showSuccess('Booking has been cancelled', title: 'Cancelled');
+      } else {
+        AppSnackBar.showError(_extractServerMessage(res.responseData), title: 'Failed');
+      }
+    } catch (e) {
+      AppSnackBar.showError(e.toString());
+    } finally {
+      _setBusy(bookingId, false);
+    }
+  }
+
+
+
+  Future<void> _ensureAuthReady() async {
   // Wait briefly until AuthService.accessToken is non-empty
   for (var i = 0; i < 100; i++) {                   // ~10s max
     final t = AuthService.accessToken;

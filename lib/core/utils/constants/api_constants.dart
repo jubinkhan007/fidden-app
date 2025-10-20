@@ -179,4 +179,15 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
 
   //analytics
  static const analytics = '$_baseUrl/api/analytics';
+
+ // ai
+
+  static const String aiReport = '$_baseUrl/api/ai-report/';
+  static const String checkoutAiAddon = '$_baseUrl/api/subscriptions/create-ai-addon-checkout-session/';
+  static String markNoShow(int bookingId) =>
+      '$_baseUrl/payments/bookings/$bookingId/mark-no-show/';
+
+  static String ownerCancelBooking(int bookingId) =>
+      '${_baseUrl}/payments/bookings/cancel/$bookingId/';
+
 }

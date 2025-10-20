@@ -124,6 +124,40 @@ class OwnerBookingItem {
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
   };
+  OwnerBookingItem copyWith({
+    int? id,
+    int? user,
+    String? userEmail,
+    String? userName,
+    String? profileImage,
+    int? shop,
+    String? shopName,
+    int? slot,
+    DateTime? slotTime,
+    String? serviceTitle,
+    String? serviceDuration,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return OwnerBookingItem(
+      id: id ?? this.id,
+      user: user ?? this.user,
+      userEmail: userEmail ?? this.userEmail,
+      userName: userName ?? this.userName,
+      profileImage: profileImage ?? this.profileImage,
+      shop: shop ?? this.shop,
+      shopName: shopName ?? this.shopName,
+      slot: slot ?? this.slot,
+      slotTime: slotTime ?? this.slotTime,
+      serviceTitle: serviceTitle ?? this.serviceTitle,
+      serviceDuration: serviceDuration ?? this.serviceDuration,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
 }
 
 /// NEW: stats model matching the API payload

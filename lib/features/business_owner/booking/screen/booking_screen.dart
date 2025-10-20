@@ -119,6 +119,7 @@ return RefreshIndicator(
         final date = DateFormat('EEE, d MMM yyyy').format(b.slotTime);
         final time = DateFormat('hh:mm a').format(b.slotTime);
         final bookingStatus = b.status.isNotEmpty ? b.status : 'Pending';
+        final bookingId = b.id;
 
         return _BookingCard(
           cs: cs,
@@ -137,6 +138,7 @@ return RefreshIndicator(
             ),
             builder: (_) => _BookingDetailsSheet(
               cs: cs,
+              bookingId: bookingId,              // <-- NEW
               avatarUrl: b.profileImage,
               name: displayName,
               service: b.serviceTitle,
@@ -154,9 +156,9 @@ return RefreshIndicator(
       }),
     );
   }
+
 }
 
-/// Card UI for each booking item
 /// Card UI for each booking item
 class _BookingCard extends StatelessWidget {
   const _BookingCard({
@@ -284,29 +286,52 @@ class _BookingCard extends StatelessWidget {
 }
 
 /// Details bottom sheet
-/// Details bottom sheet
 class _BookingDetailsSheet extends StatelessWidget {
   const _BookingDetailsSheet({
     required this.cs,
+    required this.bookingId,   // <-- NEW
     required this.avatarUrl,
     required this.name,
     required this.service,
     required this.when,
     required this.shop,
-    required this.status, // ADD this parameter
-    // REMOVED: onReminder
+    required this.status,
   });
 
   final ColorScheme cs;
+  final int bookingId;         // <-- NEW
   final String? avatarUrl;
   final String? name;
   final String? service;
   final String when;
   final String? shop;
-  final String status;   // ADDED
+  final String status;
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<BusinessOwnerController>();
+    final c = Get.find<BusinessOwnerController>();
+    final st = status.toLowerCase();
+
+    final canNoShow  = st == 'active' || st == 'confirmed';
+    final canCancel  = st == 'active' || st == 'confirmed';
+    final isBusy     = c.isBusy(bookingId);
+
+    Widget actionBtn({
+      required String label,
+      required VoidCallback onTap,
+      required bool enabled,
+      required IconData icon,
+    }) {
+      return Expanded(
+        child: FilledButton.icon(
+          onPressed: enabled && !isBusy ? onTap : null,
+          icon: Icon(icon),
+          label: Text(label),
+        ),
+      );
+    }
+
     Widget row(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -334,13 +359,32 @@ class _BookingDetailsSheet extends StatelessWidget {
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
+
           row('Service', service ?? '—'),
           row('When', when),
           row('Shop', shop ?? '—'),
-          // ADD this status row for displaying the booking status
           row('Status', _capitalize(status)),
-          const SizedBox(height: 20),
-          // REMOVED the FilledButton and TextButton for a cleaner, display-only sheet.
+
+          const SizedBox(height: 16),
+
+          // --- Buttons row ---
+          Row(
+            children: [
+              actionBtn(
+                label: 'Mark as no-show',
+                icon: Icons.hourglass_empty_rounded,
+                enabled: canNoShow,
+                onTap: () => c.markAsNoShow(bookingId),
+              ),
+              const SizedBox(width: 12),
+              actionBtn(
+                label: 'Cancel',
+                icon: Icons.cancel_rounded,
+                enabled: canCancel,
+                onTap: () => c.cancelBookingByOwner(bookingId),
+              ),
+            ],
+          ),
         ],
       ),
     );

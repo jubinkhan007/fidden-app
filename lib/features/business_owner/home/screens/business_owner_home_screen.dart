@@ -17,6 +17,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/utils/constants/app_sizes.dart';
 import '../../../../routes/app_routes.dart';
+import '../../../ai_assistant/ai_assistant_screen.dart';
 import '../controller/business_owner_controller.dart';
 import '../simmer/business_owner_home_shimmer.dart';
 import 'all_booking_list_screen.dart';
@@ -236,7 +237,30 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
             ),
           ),
         ),
+
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            builder: (ctx) {
+              final height = MediaQuery.of(ctx).size.height * 0.9; // tall sheet
+              return SizedBox(
+                height: height,
+                child: const AiAssistantScreen(),
+              );
+            },
+          );
+        },
+        tooltip: 'AI Assistant',
+        child: const Icon(Icons.smart_toy_outlined),
+      ),
+
     );
   }
 
