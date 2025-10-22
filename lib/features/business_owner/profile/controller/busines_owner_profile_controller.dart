@@ -21,6 +21,22 @@ import '../../../../core/utils/constants/api_constants.dart';
 import '../../subscription/controller/subscription_controller.dart';
 import '../data/business_profile_model.dart';
 
+
+/// Simple, UI-friendly (start,end) for a day. Stored as "hh:mm AM/PM".
+@immutable
+class Range {
+  final String start; // e.g. "09:00 AM"
+  final String end;   // e.g. "06:00 PM"
+  const Range(this.start, this.end);
+
+  Range copyWith({String? start, String? end}) =>
+      Range(start ?? this.start, end ?? this.end);
+}
+
+typedef BusinessHoursMap = Map<String, List<Range>>; // monday->[Range(),...]
+
+
+
 class BusinessOwnerProfileController extends GetxController {
   // ---- UI state ----
   final RxSet<String> openDays = <String>{}.obs;
@@ -73,6 +89,7 @@ class BusinessOwnerProfileController extends GetxController {
 
   // Loaded profile (handles both wrapped and raw shapes)
   var profileDetails = GetBusinesModel(data: null).obs;
+  final RxMap<String, List<Range>> businessHours = <String, List<Range>>{}.obs;
 
   // ---------------- Lifecycle ----------------
   @override
@@ -106,8 +123,10 @@ class BusinessOwnerProfileController extends GetxController {
     if (fromApiOpenDays != null && fromApiOpenDays.isNotEmpty) {
       openDays
         ..clear()
-        ..addAll(fromApiOpenDays);
+        ..addAll(fromApiOpenDays.map(_normalizeDay));
     }
+
+
 
     startTime.value = data?.startTime ?? startTime.value;
     endTime.value   = data?.endTime   ?? endTime.value;
@@ -121,9 +140,126 @@ class BusinessOwnerProfileController extends GetxController {
     defaultDepositPercentage.value = (data?.defaultDepositPercentage ?? 0).toString();
 
     isDepositRequired.value  =  data?.isDepositRequired ?? false;
-
+    // NEW: Seed per-day hours
+    _seedBusinessHoursFromData(data);
+    ensureBusinessHoursForOpenDays();
     await checkStripeStatusIfPossible();
   }
+
+
+  void _seedBusinessHoursFromData(Data? d) {
+    // Prefer API business_hours
+    if (d?.businessHours != null && d!.businessHours!.isNotEmpty) {
+      businessHours
+        ..clear()
+        ..addAll(d.businessHours!.map((k, v) => MapEntry(
+          k.toLowerCase(),
+          v.map((pair) => Range(pair.$1, pair.$2)).toList(),
+        )));
+      return;
+    }
+
+    // Fallback: openDays + single legacy range
+    const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    final open = (d?.openDays ?? []).map((e) => e.toLowerCase()).toSet();
+
+    final s = (d?.startTime != null && d!.startTime!.isNotEmpty)
+        ? d.startTime!
+        : (startTime.value.isNotEmpty ? startTime.value : '09:00 AM');
+
+    final e = (d?.endTime != null && d!.endTime!.isNotEmpty)
+        ? d.endTime!
+        : (endTime.value.isNotEmpty ? endTime.value : '06:00 PM');
+
+    final Map<String, List<Range>> m = {};
+    for (final day in days) {
+      if (open.contains(day)) {
+        m[day] = [Range(s, e)];
+      } else {
+        m[day] = []; // closed
+      }
+    }
+    businessHours
+      ..clear()
+      ..addAll(m);
+  }
+
+  void onDefaultTimeChanged({required bool isStart, required String value}) {
+    final oldStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
+    final oldEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+
+    if (isStart) {
+      startTime.value = value;
+    } else {
+      endTime.value = value;
+    }
+
+    _propagateDefaultChange(oldStart: oldStart, oldEnd: oldEnd);
+  }
+
+  /// Update businessHours for days that were still using the old defaults,
+  /// and seed any open-but-empty day with the new defaults.
+  void _propagateDefaultChange({required String oldStart, required String oldEnd}) {
+    final defStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
+    final defEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+
+    // compare in lowercase for safety
+    final openLower = openDays.map((d) => d.toLowerCase()).toSet();
+
+    for (final day in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) {
+      final ranges = businessHours[day] ?? const [];
+
+      if (openLower.contains(day)) {
+        if (ranges.isEmpty) {
+          // open day with no custom hours -> seed with new defaults
+          businessHours[day] = [Range(defStart, defEnd)];
+        } else if (ranges.length == 1 &&
+            ranges.first.start == oldStart &&
+            ranges.first.end == oldEnd) {
+          // still using old default -> update to new default
+          businessHours[day] = [Range(defStart, defEnd)];
+        }
+      } else {
+        // closed days stay empty
+        businessHours[day] = const [];
+      }
+    }
+    businessHours.refresh();
+  }
+
+  // Parse "hh:mm AM/PM" -> "HH:mm"
+  String _uiTo24(String ui) {
+    final reg = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$', caseSensitive: false);
+    final m = reg.firstMatch(ui.trim());
+    if (m == null) return ui;
+    int h = int.parse(m.group(1)!);
+    final mm = m.group(2)!;
+    final ap = m.group(3)!.toUpperCase();
+    if (ap == 'PM' && h != 12) h += 12;
+    if (ap == 'AM' && h == 12) h = 0;
+    return '${h.toString().padLeft(2,'0')}:$mm';
+  }
+
+  bool _isValidRange(Range r) {
+    // very light validation: start < end when converted to minutes
+    int _mins(String ui) {
+      final m = RegExp(r'(\d{1,2}):(\d{2})\s*([AP]M)', caseSensitive: false).firstMatch(ui)!;
+      int hh = int.parse(m.group(1)!);
+      final mm = int.parse(m.group(2)!);
+      final ap = m.group(3)!.toUpperCase();
+      if (ap == 'PM' && hh != 12) hh += 12;
+      if (ap == 'AM' && hh == 12) hh = 0;
+      return hh*60 + mm;
+    }
+    try {
+      return _mins(r.start) < _mins(r.end);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _isValidDay(List<Range> ranges) =>
+      ranges.isEmpty || ranges.every(_isValidRange); // empty == closed OK
 
   // ---------------- Stripe onboarding helpers ----------------
   Future<void> checkStripeStatusIfPossible() async {
@@ -321,6 +457,200 @@ class BusinessOwnerProfileController extends GetxController {
     return true;
   }
 
+
+  // ---- Day key maps for API <-> UI ----
+  static const Map<String, String> _uiLowerFull_to_apiShort =
+  {
+    'monday': 'mon',
+    'tuesday': 'tue',
+    'wednesday': 'wed',
+    'thursday': 'thu',
+    'friday': 'fri',
+    'saturday': 'sat',
+    'sunday': 'sun',
+  };
+
+  static const Map<String, String> _apiShort_to_uiLowerFull =
+  {
+    'mon': 'monday',
+    'tue': 'tuesday',
+    'wed': 'wednesday',
+    'thu': 'thursday',
+    'fri': 'friday',
+    'sat': 'saturday',
+    'sun': 'sunday',
+  };
+
+  String _toApiDayKeyShort3(String anyUiKey) {
+    final k = anyUiKey.trim().toLowerCase();     // "monday" etc.
+    return _uiLowerFull_to_apiShort[k] ?? k;     // -> "mon"
+  }
+
+  String _fromApiDayKeyShort3(String apiKey) {
+    final k = apiKey.trim().toLowerCase();       // "mon" etc.
+    return _apiShort_to_uiLowerFull[k] ?? k;     // -> "monday"
+  }
+
+
+  Map<String, dynamic> _serializeBusinessHoursForApi() {
+    final Map<String, dynamic> out = {};
+    businessHours.forEach((uiKeyLower, ranges) {
+      final apiKey = _toApiDayKeyShort3(uiKeyLower);  // <-- "mon"
+      out[apiKey] = ranges.isEmpty
+          ? []
+          : ranges.map((r) => [_uiTo24(r.start), _uiTo24(r.end)]).toList();
+    });
+    return out;
+  }
+
+
+  List<String> _deriveCloseDaysFromBH() {
+    const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    return days.where((d) => (businessHours[d]?.isEmpty ?? true)).toList();
+  }
+
+
+  void ensureBusinessHoursForOpenDays() {
+    final defaultStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
+    final defaultEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+
+    // Canonical title-case names in openDays, but BH map keys are lowercase.
+    final openSet = openDays.map((d) => d.toLowerCase()).toSet();
+
+    for (final d in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) {
+      final isOpen = openSet.contains(d);
+      final cur = businessHours[d];
+
+      if (isOpen) {
+        // if missing or empty -> give one default interval
+        if (cur == null || cur.isEmpty) {
+          businessHours[d] = [Range(defaultStart, defaultEnd)];
+        }
+      } else {
+        // closed -> keep empty list
+        businessHours[d] = const [];
+      }
+    }
+    businessHours.refresh();
+  }
+
+/// Set open days from UI picker (always canonicalize to Monday..Sunday).
+void setOpenDays(Set<String> days) {
+  final norm = days.map(_normalizeDay).where((e) => e.isNotEmpty).toSet();
+
+  // Update openDays
+  openDays
+    ..clear()
+    ..addAll(norm);
+
+  // Also reflect this in per-day businessHours:
+  // - if a day is open but has no ranges yet, give it one default range
+  // - if a day is closed, clear its ranges
+  final defaultStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
+  final defaultEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+
+  for (final dLower in _allDaysLower) {
+    final dTitle = _normalizeDay(dLower);
+    final shouldBeOpen = norm.contains(dTitle);
+    final current = businessHours[dLower] ?? <Range>[];
+
+    if (shouldBeOpen) {
+      if (current.isEmpty) {
+        businessHours[dLower] = [Range(defaultStart, defaultEnd)];
+      } else {
+        businessHours[dLower] = current; // keep user edits
+      }
+    } else {
+      businessHours[dLower] = []; // closed
+    }
+  }
+  businessHours.refresh();
+}
+
+
+  /// Title-case a weekday ("monday" -> "Monday")
+  String _titleCaseDay(String d) =>
+      d.isEmpty ? d : d[0].toUpperCase() + d.substring(1).toLowerCase();
+
+/// Derive openDays from businessHours (used when toggling day switches).
+void syncOpenDaysFromBH() {
+  final Set<String> open = {};
+  for (final dLower in _allDaysLower) {
+    final isOpen = (businessHours[dLower]?.isNotEmpty ?? false);
+    if (isOpen) open.add(_normalizeDay(dLower));
+  }
+  openDays
+    ..clear()
+    ..addAll(open);
+}
+
+  /// Ensure businessHours matches `openDays`.
+  /// - Any *open* day with no ranges gets a single default interval
+  ///   using the current startTime/endTime.
+  /// - Any *closed* day gets cleared ([]).
+  void applyOpenDaysToBH() {
+    // ensure all 7 keys exist
+    const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    for (final d in days) {
+      businessHours.putIfAbsent(d, () => []);
+    }
+
+    final defaultStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
+    final defaultEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+
+    // normalize set for lookup
+    final openSet = openDays.map((e) => e.toLowerCase()).toSet();
+
+    for (final d in days) {
+      if (openSet.contains(d)) {
+        // if no custom ranges yet, seed with default
+        if (businessHours[d] == null || businessHours[d]!.isEmpty) {
+          businessHours[d] = [Range(defaultStart, defaultEnd)];
+        }
+      } else {
+        // closed: clear ranges
+        businessHours[d] = [];
+      }
+    }
+
+    businessHours.refresh();
+    // keep the two sources of truth consistent
+    syncOpenDaysFromBH();
+  }
+
+  // --- Canonical days and normalizer ---
+  static const List<String> _allDaysTitle = <String>[
+    'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+  ];
+  static const List<String> _allDaysLower = <String>[
+    'monday','tuesday','wednesday','thursday','friday','saturday','sunday'
+  ];
+
+  static const Map<String, String> _dayCanonical = {
+    // monday
+    'm': 'Monday', 'mon': 'Monday', 'monday': 'Monday',
+    // tuesday
+    't': 'Tuesday', 'tue': 'Tuesday', 'tues': 'Tuesday', 'tuesday': 'Tuesday',
+    // wednesday
+    'w': 'Wednesday', 'wed': 'Wednesday', 'weds': 'Wednesday', 'wednesday': 'Wednesday',
+    // thursday
+    'thu': 'Thursday', 'thur': 'Thursday', 'thurs': 'Thursday', 'thursday': 'Thursday',
+    // friday
+    'f': 'Friday', 'fri': 'Friday', 'friday': 'Friday',
+    // saturday
+    'sat': 'Saturday', 'saturday': 'Saturday',
+    // sunday
+    'sun': 'Sunday', 'sunday': 'Sunday',
+  };
+
+  String _normalizeDay(String s) {
+    final k = s.trim().toLowerCase();
+    if (_dayCanonical.containsKey(k)) return _dayCanonical[k]!;
+    // fallback: TitleCase the input, but only first match wins
+    return k.isEmpty ? '' : k[0].toUpperCase() + k.substring(1);
+  }
+
+
   // ---------------- Networking: create ----------------
   Future<void> createBusinessProfile({
     required String businessName,
@@ -360,6 +690,18 @@ class BusinessOwnerProfileController extends GetxController {
       const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
       final closed = allDays.where((d) => !openDays.contains(d)).toList();
 
+      // Validate all ranges
+      for (final entry in businessHours.entries) {
+        if (!_isValidDay(entry.value)) {
+          AppSnackBar.showError('Invalid hours for ${entry.key.toUpperCase()}: check start/end.');
+          isLoading.value = false;
+          return;
+        }
+      }
+
+      final closeDaysFromBh = _deriveCloseDaysFromBH();
+      final bhPayload = _serializeBusinessHoursForApi();
+
       // Build request
       final resp = await ShopApi().createShopWithImage(
         name: businessName,
@@ -368,7 +710,7 @@ class BusinessOwnerProfileController extends GetxController {
         capacity: int.tryParse(capacity) ?? 0,
         startAtUi: uiStart,
         closeAtUi: uiClose,
-        closeDays: closed.map((e) => e.toLowerCase()).toList(),
+        closeDays: closeDaysFromBh,
         latitude: lat.value.isEmpty ? null : lat.value,
         longitude: long.value.isEmpty ? null : long.value,
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
@@ -378,6 +720,7 @@ class BusinessOwnerProfileController extends GetxController {
         cancellationFeePercentage: willSendPolicy ? feePct : null,
         noRefundHours: willSendPolicy ? noRefH : null,
         token: AuthService.accessToken ?? '',
+        extraJson: { "business_hours": bhPayload },
         // ⬇️ IF ShopApi supports deposit, include it only when allowed:
         // isDepositRequired: canEditDeposit ? isDepositRequired.value : null,
         // depositAmount:     canEditDeposit ? depositAmount.value : null,
@@ -484,6 +827,16 @@ class BusinessOwnerProfileController extends GetxController {
       }
       // If cannot edit deposit on current plan, do not send those fields (server keeps existing)
 
+      for (final entry in businessHours.entries) {
+        if (!_isValidDay(entry.value)) {
+          AppSnackBar.showError('Invalid hours for ${entry.key.toUpperCase()}: check start/end.');
+          return;
+        }
+      }
+
+      final closeDaysFromBh = _deriveCloseDaysFromBH();
+      final bhPayload = _serializeBusinessHoursForApi();
+
       final resp = await ShopApi().updateShopWithImage(
         id: id,
         name: businessName,
@@ -492,12 +845,13 @@ class BusinessOwnerProfileController extends GetxController {
         capacity: int.tryParse(capacity) ?? 0,
         startAtUi: normStart,
         closeAtUi: normClose,
-        closeDays: closed.map((e) => e.toLowerCase()).toList(),
+        closeDays: closeDaysFromBh,
         latitude: lat.value.isEmpty ? null : lat.value,
         longitude: long.value.isEmpty ? null : long.value,
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
         documents: documents,
         token: AuthService.accessToken ?? '',
+        extraJson: { "business_hours": bhPayload },
 
         // ✅ send policy only if allowed
         freeCancellationHours: sendPolicy ? freeH : null,

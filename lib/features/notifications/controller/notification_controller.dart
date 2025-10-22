@@ -1,5 +1,5 @@
-// lib/features/user/profile/controller/notification_controller.dart
-import 'dart:convert';
+// lib/features/notifications/controller/notification_controller.dart
+ import 'dart:convert';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/services/network_caller.dart';

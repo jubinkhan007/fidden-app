@@ -23,6 +23,39 @@ class ShopApi {
     return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
   }
 
+  // NEW: "09:00 AM" -> "09:00"  (keeps "HH:mm" if already that)
+  static String toApiHHmm(String ui) {
+    final s = toApiTime(ui); // HH:mm:ss or original
+    final hhmmss = RegExp(r'^\d{2}:\d{2}:\d{2}$');
+    final hhmm   = RegExp(r'^\d{2}:\d{2}$');
+    if (hhmmss.hasMatch(s)) return s.substring(0, 5);
+    if (hhmm.hasMatch(s)) return s;
+    return ui; // fallback unchanged
+  }
+
+  // NEW: normalize and JSON-encode business_hours
+  // Expects UI map: {"monday":[["09:00 AM","02:00 PM"],["03:00 PM","06:00 PM"]], ...}
+  static String? encodeBusinessHoursUi(
+      Map<String, List<List<String>>>? ui,
+      ) {
+    if (ui == null) return null;
+    final out = <String, List<List<String>>>{};
+    ui.forEach((day, ranges) {
+      final d = day.toLowerCase();
+      final list = <List<String>>[];
+      for (final r in ranges) {
+        if (r.length >= 2) {
+          final s = toApiHHmm(r[0]);
+          final e = toApiHHmm(r[1]);
+          // (optional) skip obviously bad pairs
+          if (s.isNotEmpty && e.isNotEmpty) list.add([s, e]);
+        }
+      }
+      out[d] = list;
+    });
+    return jsonEncode(out);
+  }
+
   static int? _asInt(dynamic v) =>
       v == null ? null : (v is int ? v : int.tryParse(v.toString()));
 
@@ -53,71 +86,9 @@ class ShopApi {
     int? noRefundHours,
     bool? isDepositRequired,
     int? defaultDepositPercentage,
-  }) async {
-    final body = <String, String>{
-      'name': name,
-      'address': address,
-      'about_us': aboutUs,
-      'capacity': capacity.toString(),
-      'start_at': toApiTime(startAtUi),
-      'close_at': toApiTime(closeAtUi),
-      'close_days': jsonEncode(
-        closeDays.map((e) => e.toLowerCase()).toList(),
-      ),
-    };
 
-    final lat = double.tryParse(latitude ?? '');
-    final lon = double.tryParse(longitude ?? '');
-    if (lat != null && lon != null) {
-      body['location'] = '$lat,$lon';
-    }
-
-    // Policy
-    final fch = _clamp(_asInt(freeCancellationHours));
-    final cfp = _clamp(_asInt(cancellationFeePercentage), min: 0, max: 100);
-    final nrf = _clamp(_asInt(noRefundHours));
-    if (fch != null) body['free_cancellation_hours'] = '$fch';
-    if (cfp != null) body['cancellation_fee_percentage'] = '$cfp';
-    if (nrf != null) body['no_refund_hours'] = '$nrf';
-
-    // Deposit (now also supported on CREATE)
-    if (isDepositRequired != null) {
-      body['is_deposit_required'] = isDepositRequired ? 'true' : 'false';
-    }
-    if (defaultDepositPercentage != null) {
-      body['default_deposit_percentage'] = defaultDepositPercentage.toString();
-    }
-
-    return await _networkCaller.multipartRequest(
-      AppUrls.getMBusinessProfile,
-      method: 'POST',
-      body: body,
-      token: token,
-      photo: imagePath != null ? File(imagePath) : null,
-      documents: documents,
-    );
-  }
-
-  Future<ResponseData> updateShopWithImage({
-    required String id,
-    required String name,
-    required String address,
-    required String aboutUs,
-    required int capacity,
-    required String startAtUi,
-    required String closeAtUi,
-    required List<String> closeDays,
-    String? latitude,
-    String? longitude,
-    String? imagePath,
-    required List<File> documents,
-    required String token,
-
-    int? freeCancellationHours,
-    int? cancellationFeePercentage,
-    int? noRefundHours,
-    bool? isDepositRequired,
-    int? defaultDepositPercentage,
+    // NEW: arbitrary extra JSON (e.g., business_hours)
+    Map<String, dynamic>? extraJson,
   }) async {
     final body = <String, String>{
       'name': name,
@@ -153,6 +124,88 @@ class ShopApi {
       body['default_deposit_percentage'] = defaultDepositPercentage.toString();
     }
 
+    // NEW: merge extra JSON (encode non-strings)
+    if (extraJson != null) {
+      extraJson.forEach((k, v) {
+        body[k] = v is String ? v : jsonEncode(v);
+      });
+    }
+
+    return await _networkCaller.multipartRequest(
+      AppUrls.getMBusinessProfile,
+      method: 'POST',
+      body: body,
+      token: token,
+      photo: imagePath != null ? File(imagePath) : null,
+      documents: documents,
+    );
+  }
+
+  Future<ResponseData> updateShopWithImage({
+    required String id,
+    required String name,
+    required String address,
+    required String aboutUs,
+    required int capacity,
+    required String startAtUi,
+    required String closeAtUi,
+    required List<String> closeDays,
+    String? latitude,
+    String? longitude,
+    String? imagePath,
+    required List<File> documents,
+    required String token,
+
+    int? freeCancellationHours,
+    int? cancellationFeePercentage,
+    int? noRefundHours,
+    bool? isDepositRequired,
+    int? defaultDepositPercentage,
+
+    // NEW
+    Map<String, dynamic>? extraJson,
+  }) async {
+    final body = <String, String>{
+      'name': name,
+      'address': address,
+      'about_us': aboutUs,
+      'capacity': capacity.toString(),
+      'start_at': toApiTime(startAtUi),
+      'close_at': toApiTime(closeAtUi),
+      'close_days': jsonEncode(
+        closeDays.map((e) => e.toLowerCase()).toList(),
+      ),
+    };
+
+    final lat = double.tryParse(latitude ?? '');
+    final lon = double.tryParse(longitude ?? '');
+    if (lat != null && lon != null) {
+      body['location'] = '$lat,$lon';
+    }
+
+    // Policy
+    final fch = _clamp(_asInt(freeCancellationHours));
+    final cfp = _clamp(_asInt(cancellationFeePercentage), min: 0, max: 100);
+    final nrf = _clamp(_asInt(noRefundHours));
+    if (fch != null) body['free_cancellation_hours'] = '$fch';
+    if (cfp != null) body['cancellation_fee_percentage'] = '$cfp';
+    if (nrf != null) body['no_refund_hours'] = '$nrf';
+
+    // Deposit
+    if (isDepositRequired != null) {
+      body['is_deposit_required'] = isDepositRequired ? 'true' : 'false';
+    }
+    if (defaultDepositPercentage != null) {
+      body['default_deposit_percentage'] = defaultDepositPercentage.toString();
+    }
+
+    // NEW: merge extra JSON
+    if (extraJson != null) {
+      extraJson.forEach((k, v) {
+        body[k] = v is String ? v : jsonEncode(v);
+      });
+    }
+
     return await _networkCaller.multipartRequest(
       AppUrls.editBusinessProfile(id),
       method: 'PATCH',
@@ -163,11 +216,11 @@ class ShopApi {
     );
   }
 
+
   Future<StripeOnboardingLink> getStripeOnboardingLink({
     required int shopId,
     required String token,
   }) async {
-    // Must match backend-allowed URLs
     const String returnUrl =
         'https://fidden-service-provider-1.onrender.com/payments/stripe/return/';
     const String refreshUrl =

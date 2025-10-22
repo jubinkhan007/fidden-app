@@ -1,4 +1,8 @@
+// lib/features/business_owner/profile/screens/edit_business_profile_screen.dart
+
 import 'package:fidden/core/commom/widgets/custom_button.dart';
+
+
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/custom_text_form_field.dart';
 import 'package:fidden/features/business_owner/profile/screens/widgets/cancellationPolicy_card.dart';
@@ -16,6 +20,7 @@ import '../../../../core/utils/constants/icon_path.dart';
 import '../../../../core/utils/constants/image_path.dart';
 import '../controller/busines_owner_profile_controller.dart';
 import '../data/business_profile_model.dart';
+import '../widgets/per_day_hours_card.dart';
 import 'map_screen.dart';
 import 'package:fidden/core/services/location_service.dart';
 
@@ -62,6 +67,7 @@ class _EditBusinessOwnerProfileScreenState
       controller1.defaultDepositPercentage.value = _depositPercentageCtrl.text;
 
       controller1.isDepositRequired.value = profileData?.isDepositRequired ?? false;
+      controller1.ensureBusinessHoursForOpenDays();
     }
     // <-- ADD THIS SUBSCRIPTION
     _profileSub = ever<GetBusinesModel>(controller1.profileDetails, (m) {
@@ -472,7 +478,11 @@ class _EditBusinessOwnerProfileScreenState
                   ),
                   builder: (_) => const _DaysPickerSheet(),
                 );
-                if (result != null) controller1.openDays.value = result.toSet();
+                if (result != null) {
+                  controller1.setOpenDays(result);
+                  // Seed defaults for newly-open days, clear newly-closed days
+                  controller1.applyOpenDaysToBH();
+                }
               },
         borderRadius: BorderRadius.circular(12),
         child: Container(
@@ -678,7 +688,7 @@ ButtonStyle _saveBtnStyle() {
     return;
   }
   controller1.defaultDepositPercentage.value = p.toString(); // "68", not "68.0"
-
+  controller1.syncOpenDaysFromBH();
   controller1.updateBusinessProfile(
     businessName: nameTEController.text,
     businessAddress: locationTEController.text,
@@ -801,11 +811,10 @@ ButtonStyle _saveBtnStyle() {
                                       ),
                                     );
                                     if (t != null) {
-                                      controller1.startTime.value = t.format(
-                                        context,
-                                      );
+                                      controller1.onDefaultTimeChanged(isStart: true, value: t.format(context));
                                     }
-                                  },
+
+                            },
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -837,9 +846,7 @@ ButtonStyle _saveBtnStyle() {
                                       ),
                                     );
                                     if (t != null) {
-                                      controller1.endTime.value = t.format(
-                                        context,
-                                      );
+                                      controller1.onDefaultTimeChanged(isStart: false, value: t.format(context));
                                     }
                                   },
                           ),
@@ -848,6 +855,10 @@ ButtonStyle _saveBtnStyle() {
                     ),
                     const SizedBox(height: 12),
                     _daysMultiSelect(disabled: isPending),
+                    const SizedBox(height: 12),
+
+                    // NEW: per-day overrides editor
+                    PerDayHoursCard(c: controller1, disabled: isPending),
                     const SizedBox(height: 8),
                     Obx(() {
                       final closed = _allDays

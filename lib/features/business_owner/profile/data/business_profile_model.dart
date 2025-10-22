@@ -96,6 +96,7 @@ class Data {
   bool? isVarified;
   String? status;
   List<UploadedFile>? verificationFiles;
+  Map<String, List<(String,String)>>? businessHours; // e.g. {"monday":[("09:00 AM","02:00 PM"), ...]}
 
   Data({
     this.id,
@@ -125,6 +126,7 @@ class Data {
     this.isVarified,
     this.status,
     this.verificationFiles,
+    this.businessHours,
   });
 
   /// All 7 days for computing openDays
@@ -257,6 +259,31 @@ class Data {
       }
     } catch (_) {}
 
+    // business_hours: {"monday":[["09:00","14:00"],["15:00","18:00"]], ...}
+    Map<String, List<(String,String)>>? bh;
+    final rawBH = json['business_hours'];
+    if (rawBH is Map) {
+      bh = {};
+      rawBH.forEach((key, ranges) {
+        final day = key.toString().toLowerCase();
+        final list = <(String,String)>[];
+        if (ranges is List) {
+          for (final r in ranges) {
+            if (r is List && r.length >= 2) {
+              final s24 = r[0]?.toString();
+              final e24 = r[1]?.toString();
+              // Convert "HH:mm" -> UI "hh:mm AM/PM"
+              final sUi = _toUiTime(s24 != null ? '$s24:00' : null) ?? (s24 ?? '');
+              final eUi = _toUiTime(e24 != null ? '$e24:00' : null) ?? (e24 ?? '');
+              list.add((sUi, eUi));
+            }
+          }
+        }
+        bh![day] = list;
+      });
+    }
+
+
     return Data(
       id: id,
       userId: ownerId,
@@ -289,6 +316,7 @@ class Data {
           .map((fileJson) => UploadedFile.fromJson(fileJson))
           .toList()
           : null,
+      businessHours: bh, // <-- add this line
     );
   }
 

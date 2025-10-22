@@ -17,6 +17,7 @@ import '../../../../core/utils/constants/app_spacers.dart';
 import '../../../../core/utils/constants/icon_path.dart';
 import '../../../../core/utils/constants/image_path.dart';
 import '../controller/busines_owner_profile_controller.dart';
+import '../widgets/per_day_hours_card.dart';
 import 'map_screen.dart';
 
 class AddBusinessOwnerProfileScreen extends StatefulWidget {
@@ -71,6 +72,8 @@ class _AddBusinessOwnerProfileScreenState
       controller1.startTime.value = '09:00 AM';
       controller1.endTime.value   = '08:00 PM';
       controller1.openDays.assignAll(['Monday','Tuesday','Wednesday','Thursday','Friday']);
+      controller1.applyOpenDaysToBH();
+      controller1.ensureBusinessHoursForOpenDays();
     }
   }
 
@@ -398,10 +401,12 @@ class _AddBusinessOwnerProfileScreenState
                             ),
                           );
                           if (t != null) {
-                            controller1.startTime.value = t.format(
-                              context,
-                            ); // <-- no seconds
+                            controller1.onDefaultTimeChanged(
+                              isStart: true,
+                              value: t.format(context),
+                            );
                           }
+
                         },
                       ),
                     ),
@@ -428,11 +433,12 @@ class _AddBusinessOwnerProfileScreenState
                             ),
                           );
                           if (t != null) {
-                            controller1.endTime.value = t.format(
-                              context,
-                            ); // <-- no seconds
-                          }
-                        },
+                            controller1.onDefaultTimeChanged(
+                              isStart: false,
+                              value: t.format(context),
+                            );
+                          }// <-- no seconds
+                          },
                       ),
                     ),
                   ],
@@ -441,13 +447,24 @@ class _AddBusinessOwnerProfileScreenState
 
               SizedBox(height: getHeight(16)),
 
+              PerDayHoursCard(
+                c: controller1,
+                // you could pass disabled: true when needed
+              ),
+              SizedBox(height: getHeight(12)),
+
               // One card to select multiple OPEN days
               _DaysMultiSelectCard(
                 title: 'Open Days',
-                selectedDays: controller1
-                    .openDays, // RxSet<String> in controller (see below)
-                onChanged: (set) => controller1.openDays.value = set.toSet(),
+                selectedDays: controller1.openDays,
+                onChanged: (set) {
+                  // keep openDays
+                  controller1.setOpenDays(set);
+                  // apply default interval to newly-open days, clear removed ones
+                  controller1.applyOpenDaysToBH();
+                },
               ),
+
 
               SizedBox(height: getHeight(12)),
 
@@ -556,7 +573,7 @@ class _AddBusinessOwnerProfileScreenState
                           controller1.noRefundHours.value =
                               _noRefHCtrl.text.trim();
 
-
+                          controller1.syncOpenDaysFromBH();
                           controller1.createBusinessProfile(
                             businessName: nameTEController.text,
                             businessAddress: locationTEController.text,
