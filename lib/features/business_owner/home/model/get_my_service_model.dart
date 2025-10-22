@@ -20,6 +20,9 @@ class GetMyServiceModel {
   int? capacity;
   bool? isActive;
 
+  /// NEW: Age restriction toggle (defaults to false if missing)
+  final bool requiresAge18Plus;
+
   GetMyServiceModel({
     this.id,
     this.title,
@@ -31,7 +34,16 @@ class GetMyServiceModel {
     this.duration,
     this.capacity,
     this.isActive,
+    this.requiresAge18Plus = false,
   });
+
+  /// Make it static so it can be used from the factory
+  static bool _asBool(dynamic v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) return v.toLowerCase() == 'true' || v == '1';
+    return false;
+  }
 
   factory GetMyServiceModel.fromJson(Map<String, dynamic> json) =>
       GetMyServiceModel(
@@ -45,6 +57,7 @@ class GetMyServiceModel {
         duration: json["duration"],
         capacity: json["capacity"],
         isActive: json["is_active"],
+        requiresAge18Plus: _asBool(json['requires_age_18_plus']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -58,5 +71,7 @@ class GetMyServiceModel {
     "duration": duration,
     "capacity": capacity,
     "is_active": isActive,
+    // NEW: include in payload
+    "requires_age_18_plus": requiresAge18Plus,
   };
 }

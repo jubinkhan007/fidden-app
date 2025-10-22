@@ -187,6 +187,14 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                           ? 'Description is required'
                           : null,
                     ),
+                    SizedBox(height: getHeight(10)),
+                    // 18+ Toggle
+                    Obx(() => SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Requires age 18+'),
+                      value: controller.requiresAge18Plus.value,
+                      onChanged: (v) => controller.requiresAge18Plus.value = v,
+                    )),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Upload image"),
                     SizedBox(height: getHeight(10)),

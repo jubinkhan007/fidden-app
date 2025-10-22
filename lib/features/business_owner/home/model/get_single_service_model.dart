@@ -18,6 +18,9 @@ class GetSingleServiceModel {
   int? capacity;
   bool? isActive;
 
+  /// NEW
+  final bool requiresAge18Plus;
+
   GetSingleServiceModel({
     this.id,
     this.title,
@@ -29,7 +32,15 @@ class GetSingleServiceModel {
     this.duration,
     this.capacity,
     this.isActive,
+    this.requiresAge18Plus = false,
   });
+
+  static bool _asBool(dynamic v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) return v.toLowerCase() == 'true' || v == '1';
+    return false;
+  }
 
   factory GetSingleServiceModel.fromJson(Map<String, dynamic> json) =>
       GetSingleServiceModel(
@@ -43,6 +54,7 @@ class GetSingleServiceModel {
         duration: json["duration"],
         capacity: json["capacity"],
         isActive: json["is_active"],
+        requiresAge18Plus: _asBool(json['requires_age_18_plus']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -56,5 +68,7 @@ class GetSingleServiceModel {
     "duration": duration,
     "capacity": capacity,
     "is_active": isActive,
+    // NEW
+    "requires_age_18_plus": requiresAge18Plus,
   };
 }

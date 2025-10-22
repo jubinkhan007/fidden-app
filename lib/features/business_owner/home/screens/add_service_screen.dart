@@ -1,3 +1,5 @@
+// lib/features/business_owner/home/screens/add_service_screen.dart
+
 import 'dart:io';
 import 'package:fidden/core/commom/widgets/custom_button.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
@@ -168,6 +170,7 @@ class AddServiceScreen extends StatelessWidget {
                     return null;
                   },
                 ),
+
                 VerticalSpace(height: getHeight(20)),
                 CustomText(
                   text: "Description",
@@ -175,6 +178,7 @@ class AddServiceScreen extends StatelessWidget {
                   fontSize: getWidth(15),
                   fontWeight: FontWeight.w600,
                 ),
+
                 SizedBox(height: getHeight(10)),
                 CustomTexFormField(
                   controller: controller.descriptionTEController,
@@ -184,6 +188,14 @@ class AddServiceScreen extends StatelessWidget {
                       ? 'Description is required'
                       : null,
                 ),
+                SizedBox(height: getHeight(10)),
+                // 18+ Toggle
+                Obx(() => SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Requires age 18+'),
+                  value: controller.requiresAge18Plus.value,
+                  onChanged: (v) => controller.requiresAge18Plus.value = v,
+                )),
                 VerticalSpace(height: getHeight(20)),
                 CustomText(
                   text: "Upload image",

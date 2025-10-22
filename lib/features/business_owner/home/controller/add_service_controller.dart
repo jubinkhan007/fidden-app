@@ -29,6 +29,7 @@ class AddServiceController extends GetxController {
   var inProgress = false.obs;
 
   var singleServiceDetails = GetSingleServiceModel().obs;
+  final RxBool requiresAge18Plus = false.obs;
 
   @override
   void onInit() {
@@ -70,6 +71,8 @@ class AddServiceController extends GetxController {
             response.responseData,
           );
           selectedCategoryId.value = singleServiceDetails.value.category;
+          // NEW: seed the toggle from the loaded model
+          requiresAge18Plus.value = singleServiceDetails.value.requiresAge18Plus;
         } else {
           throw Exception('Unexpected response data format');
         }
@@ -123,6 +126,8 @@ class AddServiceController extends GetxController {
         "duration": durationTEController.text,
         "capacity": capacityTEController.text,
         "is_active": "true",
+        // NEW: send the toggle
+        "requires_age_18_plus": requiresAge18Plus.value.toString(), // "true"/"false"
       };
 
       await _sendPostRequestWithHeadersAndImagesOnly(
@@ -206,7 +211,9 @@ class AddServiceController extends GetxController {
         'description' : descriptionTEController.text.trim(),
         'duration'    : int.tryParse(durationTEController.text.trim()) ?? s.duration ?? 0,
         'capacity'    : int.tryParse(capacityTEController.text.trim()) ?? s.capacity ?? 1,
-        'category'    : categoryId, // ← never null now
+        'category'    : categoryId, // ← never null
+        // NEW: JSON can carry a real boolean
+        'requires_age_18_plus': requiresAge18Plus.value,
       };
 
       // only send discount_price if user entered one
@@ -256,6 +263,8 @@ class AddServiceController extends GetxController {
       "duration": singleServiceDetails.value.duration?.toString() ?? '',
       "capacity": singleServiceDetails.value.capacity?.toString() ?? '',
       "is_active": (!currentStatus).toString(),
+      "requires_age_18_plus":
+      (singleServiceDetails.value.requiresAge18Plus).toString(),
     };
 
     try {
