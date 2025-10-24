@@ -9,6 +9,8 @@ import 'package:fidden/features/user/shops/services/data/time_slots_model.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
+import '../presentation/widgets/18+_required.dart';
+
 class ServiceDetailsController extends GetxController {
   ServiceDetailsController(this.serviceId);
 
@@ -19,6 +21,7 @@ class ServiceDetailsController extends GetxController {
   final didLoadSlotsOnce = false.obs;
 
   final details = Rxn<ServiceDetailsModel>();
+  final acknowledged18Plus = false.obs;
   final slots = <SlotItem>[].obs;
 
   // date state
@@ -70,7 +73,18 @@ class ServiceDetailsController extends GetxController {
         final svc = ServiceDetailsModel.fromJson(res.responseData);
         details.value = svc;
 
-        // fetch shop details to get close_days
+        // ── NEW: show 18+ warning if needed, once
+        if (svc.requiresAge18Plus && !acknowledged18Plus.value) {
+          final ok = await ensure18PlusAcknowledged();
+          if (!ok) {
+            // User declined; go back
+            Get.back();
+            return;
+          }
+          acknowledged18Plus.value = true;
+        }
+
+        // (rest of your code...)
         final shopResp = await NetworkCaller().getRequest(
           AppUrls.shopDetails((svc.shopId.toString())),
           token: AuthService.accessToken,
@@ -82,9 +96,7 @@ class ServiceDetailsController extends GetxController {
 
         _snapSelectedToNextOpenInWindow();
         await fetchSlotsForDate(selectedDate.value, mutateSelection: true);
-
-        // ───────── NEW: warm the cache (today..+6) in the background
-        prefetchNext7Days(); // fire & forget
+        prefetchNext7Days();
       } else {
         AppSnackBar.showError(res.errorMessage ?? 'Failed to load service.');
       }
@@ -94,6 +106,7 @@ class ServiceDetailsController extends GetxController {
       isLoadingDetails.value = false;
     }
   }
+
 
   /// Fetch slots for a date.
   /// [useCache]: read from cache if available.

@@ -120,6 +120,20 @@ void dispose() {
   super.dispose();
 }
 
+// helper (put inside the widget or a utils file)
+  bool _isSelectedSlotInFuture({required Map<String, dynamic>? args, required int slotId}) {
+    final preload = args?['preload'] as Map<String, dynamic>?;
+    if (preload == null) return true; // can't verify, let backend decide
+    final slots = (preload['slots'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final m = slots.firstWhereOrNull((e) => e['id'] == slotId);
+    if (m == null) return true; // not found, defer to backend
+    final startIso = m['start'] as String?;
+    if (startIso == null) return true;
+    final startLocal = DateTime.parse(startIso).toLocal();
+    return startLocal.isAfter(DateTime.now());
+  }
+  final args = Get.arguments as Map<String, dynamic>?;
+
   @override
   Widget build(BuildContext context) {
     const Color primaryTextColor = Color(0xFF111827);
@@ -312,25 +326,38 @@ SizedBox(
             child: Obx(
               () => ElevatedButton(
                 onPressed: (controller.isTermsAgreed.value && !controller.isPaying.value)
-    ? () => controller.payForBooking(
-          slotId: bookingId,
-          couponId: _appliedCoupon?.id,     // <— NEW
-          successArgs: {
-            'serviceName': serviceName,
-            'dateTimeText': selectedSlot,
-            'shopName': shopName,
-            'location': shopAddress,
-            'bookingId': bookingId,
-            'service_img': serviceImg,
-            'price': servicePrice,
-            'discountPrice': discountPrice,
-            'appliedCoupon': _appliedCoupon == null ? null : {
-              'id': _appliedCoupon!.id,
-              'code': _appliedCoupon!.code,
-            },
-          },
-        )
-    : null,
+                    ? () {
+                  // HARD client guard
+                  if (!_isSelectedSlotInFuture(args: args, slotId: bookingId)) {
+                    Get.defaultDialog(
+                      title: 'This slot has passed',
+                      middleText: 'Please pick another time. We’ll find you a new opening.',
+                      textConfirm: 'OK',
+                      onConfirm: Get.back,
+                    );
+                    return;
+                  }
+
+                  controller.payForBooking(
+                    slotId: bookingId,
+                    couponId: _appliedCoupon?.id,
+                    successArgs: {
+                      'serviceName': serviceName,
+                      'dateTimeText': selectedSlot,
+                      'shopName': shopName,
+                      'location': shopAddress,
+                      'bookingId': bookingId,
+                      'service_img': serviceImg,
+                      'price': servicePrice,
+                      'discountPrice': discountPrice,
+                      'appliedCoupon': _appliedCoupon == null ? null : {
+                        'id': _appliedCoupon!.id,
+                        'code': _appliedCoupon!.code,
+                      },
+                    },
+                  );
+                }
+                    : null,
 
                 child: controller.isPaying.value
                     ? const SizedBox(

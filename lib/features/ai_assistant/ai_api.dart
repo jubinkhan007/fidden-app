@@ -1,3 +1,5 @@
+// lib/features/ai_assistant/ai_api.dart
+
 import 'package:flutter/foundation.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 
@@ -54,26 +56,66 @@ class AiApi {
   ///   "plan": {"ai_assistant": "included", ...},
   ///   "ai":   {"state": "included" | "active" | ...}
   /// }
-  Future<bool> getIsAiActive() async {
+
+  /// Cancels the AI add-on subscription (POST /subscriptions/cancel-ai-addon/).
+  /// Returns true on success, otherwise throws with the backend error message.
+  Future<bool> cancelAiAddon() async {
+    final res = await _net.postRequest(
+      AppUrls.cancelAiAddon,         // <-- ensure this constant is defined to "/subscriptions/cancel-ai-addon/"
+      body: const {},                // <-- important so request.data isn't null on DRF side
+      // NetworkCaller should send Content-Type: application/json
+    );
+
+    if (res.isSuccess) return true;
+
+    // Surface the server's message if available
+    final msg = (res.errorMessage.isNotEmpty)
+        ? res.errorMessage
+        : (res.responseData is Map<String, dynamic> && (res.responseData as Map<String, dynamic>).containsKey('error'))
+        ? (res.responseData as Map<String, dynamic>)['error']?.toString() ?? 'Cancellation failed'
+        : 'Cancellation failed';
+    throw Exception(msg);
+  }
+
+
+
+Future<bool> getIsAiActive() async {
     try {
       final res = await _net.getRequest(AppUrls.subscriptionDetails);
       if (!res.isSuccess || res.responseData == null) return false;
 
-      final data = res.responseData as Map<String, dynamic>;
-      final ai = (data['ai'] as Map<String, dynamic>?) ?? const {};
-      final plan = (data['plan'] as Map<String, dynamic>?) ?? const {};
+      final data  = res.responseData as Map<String, dynamic>;
+      final ai    = (data['ai'] as Map<String, dynamic>?) ?? const {};
+      final plan  = (data['plan'] as Map<String, dynamic>?) ?? const {};
 
       final aiState = (ai['state'] ?? '').toString().toLowerCase();
-      final planAi = (plan['ai_assistant'] ?? '').toString().toLowerCase();
+      final planAi  = (plan['ai_assistant'] ?? '').toString().toLowerCase();
 
-      final activeByAiState = aiState == 'included' || aiState == 'active';
-      final activeByPlan = planAi == 'included';
+      // Treat both "included" and "addon_active" as active (keep "active" for backward compat)
+      final activeByAiState = const {'included', 'addon_active', 'active'}.contains(aiState);
+      final activeByPlan    = planAi == 'included';
       return activeByAiState || activeByPlan;
     } catch (e) {
       debugPrint('getIsAiActive error: $e');
       return false;
     }
   }
+
+  Future<({String aiState, String planAi})> getAiFlags() async {
+    final res = await _net.getRequest(AppUrls.subscriptionDetails);
+    if (!res.isSuccess || res.responseData == null) {
+      return (aiState: '', planAi: '');
+    }
+    final data = res.responseData as Map<String, dynamic>;
+    final ai   = (data['ai'] as Map<String, dynamic>?) ?? const {};
+    final plan = (data['plan'] as Map<String, dynamic>?) ?? const {};
+    return (
+    aiState: (ai['state'] ?? '').toString().toLowerCase(),
+    planAi:  (plan['ai_assistant'] ?? '').toString().toLowerCase(),
+    );
+  }
+
+
 
   /// Fetch the weekly report from /api/ai-report/
   Future<AiReport> getWeeklyReport() async {
@@ -101,7 +143,11 @@ class AiApi {
   /// Expects { "url": "https://checkout.stripe.com/..." }
   Future<String?> createAiAddonCheckoutSession() async {
     try {
-      final res = await _net.postRequest(AppUrls.checkoutAiAddon);
+      final res = await _net.postRequest(
+        AppUrls.checkoutAiAddon,
+        body: const {}, // <- important
+        // ensure NetworkCaller sets Content-Type: application/json
+      );
       if (!res.isSuccess || res.responseData == null) return null;
       final data = res.responseData as Map<String, dynamic>;
       return data['url'] as String?;

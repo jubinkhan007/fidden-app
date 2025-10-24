@@ -18,6 +18,7 @@ class ServiceDetailsModel {
   final int? reviewCount;
   final List<ServiceReview> reviews;
   final String? shopAddress;
+  final bool requiresAge18Plus;
 
   ServiceDetailsModel({
     required this.id,
@@ -33,6 +34,7 @@ class ServiceDetailsModel {
     this.avgRating,
     this.reviewCount,
     required this.reviews,
+    this.requiresAge18Plus = false,
   });
 
   factory ServiceDetailsModel.fromJson(Map<String, dynamic> json) {
@@ -52,6 +54,9 @@ class ServiceDetailsModel {
       reviews: (json["reviews"] as List<dynamic>? ?? [])
           .map((e) => ServiceReview.fromJson(e))
           .toList(),
+      requiresAge18Plus: (json["requires_age_18_plus"] is bool)
+          ? json["requires_age_18_plus"] as bool
+          : (json["requires_age_18_plus"]?.toString() == '1'),
     );
   }
 }

@@ -142,6 +142,8 @@ class Service {
   String? categoryName;
   String? categoryImg;
   String? serviceImg;
+  bool requiresAge18Plus;
+
 
   Service({
     this.id,
@@ -153,6 +155,8 @@ class Service {
     this.categoryName,
     this.categoryImg,
     this.serviceImg,
+    this.requiresAge18Plus = false,
+
   });
 
   factory Service.fromJson(Map<String, dynamic> json) => Service(
@@ -165,5 +169,8 @@ class Service {
     categoryName: json["category_name"],
     categoryImg: json["category_img"],
     serviceImg: json["service_img"],
+    requiresAge18Plus: (json["requires_age_18_plus"] is bool)
+        ? json["requires_age_18_plus"] as bool
+        : (json["requires_age_18_plus"]?.toString() == '1'),
   );
 }

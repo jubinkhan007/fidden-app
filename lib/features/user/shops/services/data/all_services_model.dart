@@ -1,3 +1,4 @@
+// lib/features/user/shops/services/data/all_services_model.dart
 import 'dart:convert';
 import 'dart:math';
 
@@ -47,6 +48,7 @@ class ServiceResult {
   String? badge;
   bool? isFavorite;
   double? distance;
+  bool requiresAge18Plus;
 
   ServiceResult({
     this.id,
@@ -61,6 +63,7 @@ class ServiceResult {
     this.badge,
     this.isFavorite,
     this.distance,
+    this.requiresAge18Plus = false,
   });
 
   factory ServiceResult.fromJson(Map<String, dynamic> json) => ServiceResult(
@@ -78,6 +81,10 @@ class ServiceResult {
     distance: (json["distance"] is String)
         ? double.tryParse(json["distance"])
         : (json["distance"] as num?)?.toDouble(),
+    // NEW: accept snake_case from backend (bool or 0/1 string)
+    requiresAge18Plus: (json["requires_age_18_plus"] is bool)
+        ? json["requires_age_18_plus"] as bool
+        : (json["requires_age_18_plus"]?.toString() == '1'),
   );
 
   Map<String, dynamic> toJson() => {
@@ -93,6 +100,7 @@ class ServiceResult {
     "badge": badge,
     "is_favorite": isFavorite,
     "distance": distance,
+    "requires_age_18_plus": requiresAge18Plus,
   };
 
   String get randomPlaceholderImage {

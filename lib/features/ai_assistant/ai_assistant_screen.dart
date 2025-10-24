@@ -1,3 +1,6 @@
+// lib/features/ai_assistant/ai_assistant_screen.dart
+
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -19,6 +22,8 @@ class _AiAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
+String _aiState = '';
+String _planAi = '';
 
 
 class AiAssistantScreen extends StatefulWidget {
@@ -36,6 +41,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   AiReport? _report;
   String _selectedPartner = 'Amara';
   bool _refreshing = false;
+  bool _cancelling = false;
+
 
   static const _partners = ['Amara', 'Zuri', 'Malik', 'Dre'];
   static final _currency = NumberFormat.simpleCurrency();
@@ -55,6 +62,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     setState(() => _loading = true);
     final active = await _api.getIsAiActive();
     AiReport? rep;
+    final flags = await _api.getAiFlags();
     if (active) {
       try {
         rep = await _api.getWeeklyReport();
@@ -66,8 +74,13 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       _report = rep;
       if (rep != null) _selectedPartner = rep.aiPartnerName;
       _loading = false;
+      _aiActive = active;
+      _aiState  = flags.aiState;
+      _planAi   = flags.planAi;
     });
   }
+
+
 
   Future<void> _openCheckout() async {
     final url = await _api.createAiAddonCheckoutSession();
@@ -90,6 +103,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   Future<void> _refreshAfterPurchase() async {
     setState(() => _refreshing = true);
     final active = await _api.getIsAiActive();
+    final flags = await _api.getAiFlags();
     if (active) {
       final rep = await _api.getWeeklyReport();
       if (!mounted) return;
@@ -97,13 +111,66 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         _aiActive = true;
         _report = rep;
         _selectedPartner = rep.aiPartnerName;
+        _aiActive = active;
+        _aiState  = flags.aiState;
+        _planAi   = flags.planAi;
       });
     }
     if (!mounted) return;
     setState(() => _refreshing = false);
   }
 
-  Future<void> _changePartner(String partner) async {
+  Future<void> _confirmAndCancel() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel AI Assistant?'),
+        content: const Text(
+          'This will remove the AI add-on from your subscription. '
+              'You can re-purchase it later if you change your mind.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep AI')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cancel add-on'),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!ok) return;
+
+    setState(() => _cancelling = true);
+    try {
+      await _api.cancelAiAddon();
+
+      // After cancellation, refresh flags so header badge is accurate
+      final flags = await _api.getAiFlags();
+
+      if (!mounted) return;
+      setState(() {
+        _aiActive = false;
+        _report = null;
+        _aiState = flags.aiState;
+        _planAi  = flags.planAi;
+        _cancelling = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI add-on cancelled.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _cancelling = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+
+Future<void> _changePartner(String partner) async {
     if (_selectedPartner == partner) return;
     setState(() => _selectedPartner = partner);
     try {
@@ -132,6 +199,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       );
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -172,9 +241,28 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     final r = _report!;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: Text('AI Assistant'),
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,),
+      appBar: AppBar(
+        title: const Text('AI Assistant'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        actions: [
+          if (_planAi != 'included') // <- canCancel check
+            TextButton.icon(
+              onPressed: _cancelling ? null : _confirmAndCancel,
+              icon: _cancelling
+                  ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+                  : const Icon(Icons.cancel_outlined),
+              label: const Text('Cancel'),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+            ),
+        ],
+      ),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -182,7 +270,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             child: _GradientHeader(
               partner: _selectedPartner,
               onPartnerChanged: _changePartner,
-              planState: 'included', // optional: set to 'included' | 'addon'
+              planState: _planAi == 'included' ? 'included'
+                  : (_aiState == 'addon_active' ? 'addon' : 'addon'),
             ),
           ),
           SliverPadding(
@@ -206,6 +295,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           ),
         ],
       ),
+
+
     );
 
   }
@@ -646,8 +737,10 @@ class _GradientHeader extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           _PlanBadge(
-            text: planState == 'included' ? 'Included' : 'Add-on',
-            tone: _PlanTone.info, // neutral outline, no fill
+            text: _planAi == 'included'
+                ? 'Included'
+                : (_aiState == 'addon_active' ? 'Add-on' : 'Add-on'),
+            tone: _PlanTone.info,
           ),
         ],
       ),
