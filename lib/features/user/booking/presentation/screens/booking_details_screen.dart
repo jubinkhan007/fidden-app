@@ -1,3 +1,5 @@
+// lib/features/user/booking/presentation/screens/booking_details_screen.dart
+
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/fallBack_image.dart'; // <-- fallback image

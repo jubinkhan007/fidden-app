@@ -1,18 +1,19 @@
-// lib/features/business_owner/subscription/controller/subscription_controller.dart
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:get/get.dart';
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:fidden/features/business_owner/subscription/data/subscription_model.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:fidden/core/services/Auth_service.dart'; // ⬅️ add this
+import 'package:fidden/core/services/Auth_service.dart'; // still fine to import if you need it later
+
 
 class SubscriptionController extends GetxController {
   final RxBool isLoading = true.obs;
-  final Rx<CurrentSubscription?> currentSubscription = Rx<CurrentSubscription?>(null);
-  final RxList<SubscriptionPlan> availablePlans = <SubscriptionPlan>[].obs;
+  final Rx<CurrentSubscription?> currentSubscription =
+  Rx<CurrentSubscription?>(null);
+  final RxList<SubscriptionPlan> availablePlans =
+      <SubscriptionPlan>[].obs;
 
-  String? get _token => AuthService.accessToken; // ⬅️ convenience getter
   String get planName =>
       (currentSubscription.value?.plan.name ?? '').trim();
 
@@ -30,35 +31,42 @@ class SubscriptionController extends GetxController {
     try {
       isLoading(true);
 
-      // ⬇️ pass token to BOTH requests
+      // ⬇️ NOTE: we are NOT passing token anymore.
       final responses = await Future.wait([
         NetworkCaller().getRequest(
           AppUrls.subscriptionDetails,
-          token: _token,
         ),
         NetworkCaller().getRequest(
           AppUrls.subscriptionPlans,
-          token: _token,
         ),
       ]);
 
       final currentSubResponse = responses[0];
-      final allPlansResponse = responses[1];
+      final allPlansResponse   = responses[1];
 
+      // --- current subscription ---
       if (currentSubResponse.isSuccess) {
-        currentSubscription.value =
-            CurrentSubscription.fromJson(currentSubResponse.responseData);
+        currentSubscription.value = CurrentSubscription.fromJson(
+          currentSubResponse.responseData,
+        );
       } else {
-        AppSnackBar.showError('Failed to load your current subscription.');
+        // suppress snackbar for 401 (expired token / logged out flow)
+        if (currentSubResponse.statusCode != 401) {
+          AppSnackBar.showError(
+            'Failed to load your current subscription.',
+          );
+        }
       }
 
-
+      // --- available plans ---
       if (allPlansResponse.isSuccess) {
         availablePlans.value = (allPlansResponse.responseData as List)
             .map((planJson) => SubscriptionPlan.fromJson(planJson))
             .toList();
       } else {
-        AppSnackBar.showError('Failed to load available plans.');
+        if (allPlansResponse.statusCode != 401) {
+          AppSnackBar.showError('Failed to load available plans.');
+        }
       }
     } finally {
       isLoading(false);
@@ -68,7 +76,7 @@ class SubscriptionController extends GetxController {
   Future<void> createCheckoutSession(int planId) async {
     final response = await NetworkCaller().postRequest(
       AppUrls.createCheckoutSession,
-      token: _token,
+      //  no token param
       body: {'plan_id': planId},
     );
 
@@ -85,24 +93,26 @@ class SubscriptionController extends GetxController {
       return;
     }
 
-    // ✨ better errors
+    // better inline error handling:
     final code = response.responseData is Map<String, dynamic>
         ? (response.responseData['code'] as String?)?.toUpperCase()
         : null;
 
-    final sc = response.statusCode ?? 0;
+    final sc  = response.statusCode ?? 0;
     final msg = (response.errorMessage ?? '').toLowerCase();
 
     if (code == 'NO_SHOP' || (sc == 404 && msg.contains('shop'))) {
-      AppSnackBar.showError('Please create your shop first to purchase a subscription.');
-      // Optionally deep-link them:
-      // Get.toNamed('/add-business-profile');
+      AppSnackBar.showError(
+        'Please create your shop first to purchase a subscription.',
+      );
+      // Optional: deep link -> Get.toNamed('/add-business-profile');
       return;
     }
 
     if (sc == 401) {
+      // Session actually dead. You can route to login here.
       AppSnackBar.showError('You need to sign in again.');
-      // trigger re-auth flow…
+      // trigger re-auth flow / Get.offAllNamed(LoginRoute)
       return;
     }
 
@@ -114,17 +124,10 @@ class SubscriptionController extends GetxController {
     AppSnackBar.showError('Could not create payment session.');
   }
 
-
   Future<void> handleReturnFromStripeCheckout(String? sessionId) async {
-    // (Optional) call a backend confirm endpoint with sessionId.
-    // If you don’t need server-side confirm, just refetch current status:
+    // This can still just refetch
     await fetchData();
-
-    // Optionally navigate the user back to Subscription screen (or home)
-    // Get.offAllNamed(AppRoute.subscriptionScreen);
   }
-
-
 
   Future<void> cancelSubscription() async {
     Get.defaultDialog(
@@ -134,19 +137,26 @@ class SubscriptionController extends GetxController {
       textConfirm: "Yes, Cancel",
       textCancel: "No",
       onConfirm: () async {
-        Get.back(); // Close dialog
+        Get.back(); // close dialog
 
         final response = await NetworkCaller().postRequest(
           AppUrls.cancelSubscription,
-          token: _token, // ⬅️ add token
+          //  no token param
           body: {},
         );
 
         if (response.isSuccess) {
           AppSnackBar.showSuccess(
-              response.responseData['message'] ?? 'Your subscription has been cancelled.');
-          await fetchData(); // Refresh data
+            response.responseData['message'] ??
+                'Your subscription has been cancelled.',
+          );
+          await fetchData(); // refresh UI
         } else {
+          if (response.statusCode == 401) {
+            // probably logged out – don't show a scary "failed" message
+            // you might want to push to login instead
+            return;
+          }
           AppSnackBar.showError('Failed to cancel subscription.');
         }
       },

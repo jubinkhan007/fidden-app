@@ -1,3 +1,6 @@
+// lib/routes/app_routes.dart
+
+
 import 'package:fidden/features/business_owner/booking/screen/booking_details_screen.dart';
 import 'package:fidden/features/business_owner/coupons/screens/add_edit_coupon_screen.dart';
 import 'package:fidden/features/business_owner/coupons/screens/all_coupons_screen.dart';
@@ -12,6 +15,7 @@ import 'package:fidden/features/user/profile/presentation/screens/edit_profile_s
 import 'package:fidden/features/user/profile/presentation/screens/notification_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/terms_and_condition_screen.dart';
 import 'package:fidden/features/user/wishlist/presentation/screens/wishlist_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../features/auth/presentation/screens/login/forget_email_screen.dart';
 import '../features/auth/presentation/screens/login/login_screen.dart';
@@ -25,6 +29,8 @@ import '../features/business_owner/analytics/performance_analytics_screen.dart';
 import '../features/business_owner/subscription/presentation/screens/subscription_screen.dart';
 import '../features/splash/presentation/screens/on_boarding_screen.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
+import '../features/user/shops/presentation/screens/shop_details_screen.dart';
+import '../features/user/shops/services/presentation/screens/service_details_screen.dart';
 // import '../features/user/booking/presentation/screens/aggrement_screen.dart';
 // import '../features/user/home/controller/book_confirm_screen.dart';
 // import '../features/user/home/presentation/screens/search_result_screen.dart';
@@ -63,6 +69,8 @@ class AppRoute {
   static const String editCouponScreen = '/edit-coupon';
   static const String performanceAnalytics = '/performance-analytics';
   static const String subscriptionScreen = '/subscription';
+  static const String serviceDetailsScreen = '/userServiceDetails';
+  static const String shopDetailsScreen = '/shopDetailsScreen';
 
 
   static List<GetPage> routes = [
@@ -135,6 +143,25 @@ GetPage(
       name: subscriptionScreen,
       page: () => const SubscriptionScreen(),
     ),
+    GetPage(
+      name: serviceDetailsScreen,
+      page: () {
+        final args = Get.arguments as Map<String, dynamic>? ?? const {};
+        final int? serviceId = args['serviceId'] as int?;
+        if (serviceId == null) {
+          // Defensive: show a tiny placeholder if someone forgot the arg
+          return const Scaffold(
+            body: Center(child: Text('Missing serviceId')),
+          );
+        }
+        return ServiceDetailsScreen(serviceId: serviceId);
+      },
+    ),
+
+    GetPage(
+      name: shopDetailsScreen,
+      page: () => ShopDetailsScreen(id: Get.arguments['shopId']),
+    )
 
   ];
 }

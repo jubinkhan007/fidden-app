@@ -182,7 +182,8 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
 
  // ai
 
-  static const String aiReport = '$_baseUrl/api/ai-report/';
+  static const String aiReport = '$_baseUrl/api/weekly-summary/latest/';
+  static const String generateContent = '$_baseUrl/api/weekly-summary/';
   static const String checkoutAiAddon = '$_baseUrl/subscriptions/create-ai-addon-checkout-session/';
   static const cancelAiAddon = '$_baseUrl/subscriptions/cancel-ai-addon/';
 

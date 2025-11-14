@@ -45,7 +45,7 @@ class AnalyticsController extends GetxController {
       }
     } catch (e) {
       // fallback for unexpected errors
-      analyticsData(AnalyticsModel(detail: 'Failed to load analytics data.'));
+      analyticsData(AnalyticsModel(detail: 'Unable to load analytics data.'));
     } finally {
       isLoading(false);
     }

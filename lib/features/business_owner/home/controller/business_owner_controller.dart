@@ -185,7 +185,7 @@ Future<void> _boot() async {
   Future<void> _initProfileAndGuards() async {
     try {
       final profileController = Get.find<BusinessOwnerProfileController>();
-      await profileController.fetchProfileDetails();
+      await profileController.onProfileLoaded;
 
       final data = profileController.profileDetails.value.data;
 

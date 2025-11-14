@@ -1,3 +1,5 @@
+// lib/features/user/shops/controller/shop_details_controller.dart
+
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/services/network_caller.dart';
@@ -57,7 +59,9 @@ class ShopDetailsController extends GetxController {
 
       if (response.isSuccess) {
         shopDetails.value = ShopDetailsModel.fromJson(response.responseData);
-      } else {
+        shopDetails.refresh();  // make sure Obx rebuilds
+      }
+      else {
         AppSnackBar.showError(
           response.errorMessage ?? 'Failed to fetch shop details.',
         );

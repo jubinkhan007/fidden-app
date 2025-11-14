@@ -28,7 +28,11 @@ class AuthService {
   }
 
   static Future<String?> getValidAccessToken() async {
-    //await init();
+    // If the token is null, it means init() hasn't run or the app just started.
+    // Ensure init() completes before proceeding.
+    if (_accessToken == null) {
+      await init();
+    }
     return _accessToken;
   }
 

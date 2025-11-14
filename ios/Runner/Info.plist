@@ -22,6 +22,19 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>NSAppTransportSecurity</key>
+    <dict>
+      <key>NSExceptionDomains</key>
+      <dict>
+        <key>amazonaws.com</key>
+        <dict>
+          <key>NSIncludesSubdomains</key><true/>
+          <key>NSExceptionAllowsInsecureHTTPLoads</key><false/>
+          <key>NSExceptionMinimumTLSVersion</key><string>TLSv1.2</string>
+          <key>NSRequiresCertificateTransparency</key><false/>
+        </dict>
+      </dict>
+    </dict>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

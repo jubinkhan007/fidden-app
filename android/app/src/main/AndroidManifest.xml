@@ -1,3 +1,5 @@
+<!-- android/app/src/main/AndroidManifest.xml -->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Needed for network/Stripe/WebSocket etc. -->
@@ -69,12 +71,21 @@
                 <data android:scheme="fidden" android:host="book" />
             </intent-filter>
 
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fidden" android:host="service" />
+            </intent-filter>
+
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="your-app.com" android:pathPrefix="/book" />
+                <data android:scheme="fidden" android:host="shop" />
             </intent-filter>
+
+
             <intent-filter>
                 <action android:name="FLUTTER_NOTIFICATION_CLICK" />
                 <category android:name="android.intent.category.DEFAULT" />

@@ -17,6 +17,9 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../../../../../../core/deeplinks/deep_link_service.dart';
+import '../../../../../../routes/app_routes.dart';
+
 class ServiceDetailsScreen extends StatelessWidget {
   const ServiceDetailsScreen({super.key, required this.serviceId});
   final int serviceId;
@@ -24,20 +27,48 @@ class ServiceDetailsScreen extends StatelessWidget {
   static const fallbackImg =
       'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0';
 
+  Future<bool> _smartBack() async {
+    // DISARM watchdog + brief suppression to stop re-entry
+    if (Get.isRegistered<DeepLinkService>()) {
+      final dl = Get.find<DeepLinkService>();
+      // Accessing private would normally be discouraged, but it's your app.
+      // Add public methods if you prefer; here’s the inline approach:
+      // ignore: invalid_use_of_protected_member
+      dl
+        ..watchdogArmed = false
+        ..suppressDeepLinkUntil = DateTime.now().add(const Duration(seconds: 3));
+    }
+
+    if (Get.key.currentState?.canPop() ?? false) {
+      Get.back();
+      return false;
+    }
+    if (Get.previousRoute.isNotEmpty) {
+      Get.back();
+      return false;
+    }
+    await Get.offAllNamed(AppRoute.landingScreen);
+    return false;
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final RxBool _bookingBusy = false.obs; // ← spinner state
     final tag = 'svc_${serviceId}';
 final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
     ? Get.find<ServiceDetailsController>(tag: tag)
-    : Get.put(ServiceDetailsController(serviceId), tag: tag, permanent: true);
+    : Get.put(ServiceDetailsController(serviceId), tag: tag);
 
     //  Ensure we have a WishlistController to manage the heart state
     final wishlist = Get.isRegistered<WishlistController>()
         ? Get.find<WishlistController>()
         : Get.put(WishlistController());
 
-    return Scaffold(
+    return WillPopScope(
+        onWillPop: _smartBack,
+        child:Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
         bottom: false,
@@ -81,7 +112,7 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
                               children: [
                                 _roundIcon(
                                   icon: Icons.arrow_back_ios_new_rounded,
-                                  onTap: () => Navigator.of(context).pop(),
+                                  onTap: () => _smartBack(), // ← use the same guarded back path
                                 ),
                                 Row(
                                   children: [
@@ -596,7 +627,7 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
           );
         }),
       ),
-    );
+    ));
   }
 
   // --- helpers (unchanged) ---

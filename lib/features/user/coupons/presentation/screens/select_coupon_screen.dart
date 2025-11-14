@@ -22,7 +22,7 @@ class SelectCouponScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: const Text('Available Coupons', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text('Available Deals', style: TextStyle(fontWeight: FontWeight.w800)),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
@@ -175,7 +175,7 @@ class _EmptyState extends StatelessWidget {
           children: [
             const Icon(Icons.local_offer_outlined, size: 56, color: Color(0xFF9CA3AF)),
             const SizedBox(height: 10),
-            Text('No coupons available', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.grey.shade900)),
+            Text('Nothing here yet, keep checking back', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.grey.shade900)),
             const SizedBox(height: 6),
             Text('There aren’t any coupons for this service right now.',
                 textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600)),

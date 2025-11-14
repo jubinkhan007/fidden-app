@@ -1,3 +1,5 @@
+// lib/features/user/shops/presentation/screens/shop_details_screen.dart
+
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/show_progress_indicator.dart';
 import 'package:fidden/core/utils/constants/app_sizes.dart';
@@ -29,14 +31,26 @@ class ShopDetailsScreen extends StatelessWidget {
   Color get _warning => const Color(0xffFACC15);
   Color get _cta => const Color(0xffDC143C);
 
+
+  String? _normalizeUrl(String? u) {
+    if (u == null) return null;
+    final t = u.trim();
+    return (t.isEmpty || t.toLowerCase() == 'null') ? null : t;
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(ShopDetailsController());
     final wishlistController = Get.find<WishlistController>();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.fetchShopDetails(id);
+      if (!controller.isLoading.value && controller.shopDetails.value.id == null) {
+        controller.fetchShopDetails(id);
+      }
     });
+    final heroUrl = _normalizeUrl(controller.shopDetails.value.shopImg) ?? fallbackImg;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -82,10 +96,15 @@ class ShopDetailsScreen extends StatelessWidget {
                       AspectRatio(
                         aspectRatio: 16 / 10,
                         child: Image.network(
-                          data.shopImg ?? fallbackImg,
+                          heroUrl,
+                          key: ValueKey(heroUrl),           // ← forces rebuild when URL changes
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              Container(color: _divider),
+                          loadingBuilder: (c, child, prog) =>
+                          prog == null ? child : Container(color: const Color(0xffE5E7EB)),
+                          errorBuilder: (c, err, st) {
+                            debugPrint('Shop image load failed: $err');  // helpful log
+                            return Image.network(fallbackImg, fit: BoxFit.cover);
+                          },
                         ),
                       ),
                       Positioned(
@@ -209,7 +228,7 @@ class ShopDetailsScreen extends StatelessWidget {
                     ),
                     SizedBox(width: getWidth(6)),
                     _TabChip(
-                      label: "Review",
+                      label: "Reviews",
                       icon: IconPath.ratingIcon,
                       selected: controller.selectedTab.value == 2,
                       onTap: () => controller.selectTab(2),

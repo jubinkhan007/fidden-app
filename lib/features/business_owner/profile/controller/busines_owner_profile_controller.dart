@@ -1,7 +1,9 @@
 // lib/features/business_owner/profile/controller/busines_owner_profile_controller.dart
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/features/business_owner/home/controller/business_owner_controller.dart';
 import 'package:fidden/features/business_owner/profile/data/stripe_models.dart';
@@ -9,6 +11,7 @@ import 'package:fidden/features/business_owner/profile/screens/stripe_webview_sc
 import 'package:fidden/features/business_owner/profile/services/shop_api.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:flutter/material.dart';
@@ -63,6 +66,8 @@ class BusinessOwnerProfileController extends GetxController {
   final isDepositRequired = false.obs;
   final defaultDepositPercentage = ''.obs;
 
+  final RxBool _fetchingProfile = false.obs;
+
   // ---- Subscription context ----
   final sub = Get.isRegistered<SubscriptionController>()
       ? Get.find<SubscriptionController>()
@@ -91,6 +96,11 @@ class BusinessOwnerProfileController extends GetxController {
   var profileDetails = GetBusinesModel(data: null).obs;
   final RxMap<String, List<Range>> businessHours = <String, List<Range>>{}.obs;
 
+  // Add a Completer to manage the initial loading state
+  Completer<void> _initCompleter = Completer<void>();
+  /// Other controllers can wait on this to know when the profile is ready.
+  Future<void> get onProfileLoaded => _initCompleter.future;
+
   // ---------------- Lifecycle ----------------
   @override
   void onInit() {
@@ -114,36 +124,56 @@ class BusinessOwnerProfileController extends GetxController {
   }
 
   Future<void> _init() async {
-    await AuthService.waitForToken();
-    await fetchProfileDetails(silentAuthErrors: true);
-
-    // Seed UI from API
-    final data = profileDetails.value.data;
-    final fromApiOpenDays = data?.openDays;
-    if (fromApiOpenDays != null && fromApiOpenDays.isNotEmpty) {
-      openDays
-        ..clear()
-        ..addAll(fromApiOpenDays.map(_normalizeDay));
+    // If _init is already running (e.g., from another controller), just wait.
+    if (isLoading.isTrue && !_initCompleter.isCompleted) {
+      await _initCompleter.future;
+      return;
+    }
+    // Reset completer if we are re-running this (e.g., pull-to-refresh)
+    if (_initCompleter.isCompleted) {
+      _initCompleter = Completer<void>();
     }
 
+    isLoading.value = true;
+    try {
+      // 1. Fetch all profile data *first*.
+      await fetchProfileDetails(silentAuthErrors: true);
 
+      // 2. NOW, seed the UI with the data we just fetched.
+      //    This is the key fix for your empty fields.
+      final data = profileDetails.value.data;
+      final fromApiOpenDays = data?.openDays;
+      if (fromApiOpenDays != null && fromApiOpenDays.isNotEmpty) {
+        openDays
+          ..clear()
+          ..addAll(fromApiOpenDays.map(_normalizeDay));
+      }
 
-    startTime.value = data?.startTime ?? startTime.value;
-    endTime.value   = data?.endTime   ?? endTime.value;
+      startTime.value = data?.startTime ?? ''; // Use empty string, not old value
+      endTime.value   = data?.endTime   ?? ''; // Use empty string, not old value
 
-    // Cancellation policy (defaults when missing)
-    freeCancellationHours.value     = (data?.freeCancellationHours ?? 24).toString();
-    cancellationFeePercentage.value = (data?.cancellationFeePercentage ?? 0).toString();
-    noRefundHours.value             = (data?.noRefundHours ?? 0).toString();
+      // Cancellation policy (defaults when missing)
+      freeCancellationHours.value     = (data?.freeCancellationHours ?? 24).toString();
+      cancellationFeePercentage.value = (data?.cancellationFeePercentage ?? 0).toString();
+      noRefundHours.value             = (data?.noRefundHours ?? 0).toString();
 
-    // Deposit (best-effort – BusinessProfileModel has defaultDepositPercentage)
-    defaultDepositPercentage.value = (data?.defaultDepositPercentage ?? 0).toString();
+      // Deposit
+      defaultDepositPercentage.value = (data?.defaultDepositPercentage ?? 0).toString();
+      isDepositRequired.value  =  data?.isDepositRequired ?? false;
 
-    isDepositRequired.value  =  data?.isDepositRequired ?? false;
-    // NEW: Seed per-day hours
-    _seedBusinessHoursFromData(data);
-    ensureBusinessHoursForOpenDays();
-    await checkStripeStatusIfPossible();
+      _seedBusinessHoursFromData(data);
+      ensureBusinessHoursForOpenDays();
+      await checkStripeStatusIfPossible();
+
+    } catch (e) {
+      if (kDebugMode) log('Error during _init: $e');
+    } finally {
+      isLoading.value = false;
+      // 3. Signal that *everything* (fetch + UI seeding) is done.
+      if (!_initCompleter.isCompleted) {
+        _initCompleter.complete();
+      }
+    }
   }
 
 
@@ -291,7 +321,7 @@ class BusinessOwnerProfileController extends GetxController {
         token: AuthService.accessToken ?? '',
       );
       Get.back(); // close loader
-
+      _awaitingOnboarding = true;
       final completed = await Get.to<bool>(
             () => StripeWebViewScreen(onboardingUrl: link.url),
       );
@@ -408,33 +438,42 @@ class BusinessOwnerProfileController extends GetxController {
 
   // ---------------- Networking: read ----------------
   Future<void> fetchProfileDetails({bool silentAuthErrors = false}) async {
+    // Reentrancy guard: if a fetch is already running, just return.
+    if (_fetchingProfile.value) return;
+
+    _fetchingProfile.value = true;
     isLoading.value = true;
+
     try {
-      await AuthService.waitForToken();
-
-      final response = await NetworkCaller().getRequest(
-        AppUrls.getMBusinessProfile,
-        token: AuthService.accessToken,
-        treat404AsEmpty: true,
-        emptyPayload: const {"data": null},
-      );
-
-      if (response.isSuccess && response.responseData is Map<String, dynamic>) {
-        profileDetails.value = GetBusinesModel.fromJson(response.responseData);
-        return;
-      }
-
-      final sc = response.statusCode ?? 0;
-      final err = (response.errorMessage ?? '').toLowerCase();
-
-      if (sc == 401 || sc == 403 || err.contains('shop')) {
+      // 1) Ensure we actually have a valid token
+      final String? token = await AuthService.getValidAccessToken();
+      if (token == null || token.isEmpty) {
+        if (!silentAuthErrors) AppSnackBar.showError('You are not logged in.');
         profileDetails.value = GetBusinesModel(data: null);
         return;
       }
 
-      profileDetails.value = GetBusinesModel(data: null);
-      if (!silentAuthErrors) {
-        AppSnackBar.showError(response.errorMessage ?? 'Failed to fetch profile.');
+      // 2) Do the request (with a retry on 401)
+      Future _doGet(String auth) => NetworkCaller().getRequest(
+        AppUrls.getMBusinessProfile,
+        token: auth,
+        treat404AsEmpty: true,
+        emptyPayload: const {"data": null},
+      );
+
+      var resp = await _doGet(token);
+      final sc = resp.statusCode ?? 0;
+      if (sc == 401 || sc == 403) {
+        final String? retryToken = await AuthService.getValidAccessToken();
+        if (retryToken != null && retryToken.isNotEmpty) {
+          resp = await _doGet(retryToken);
+        }
+      }
+
+      if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+        profileDetails.value = GetBusinesModel.fromJson(resp.responseData);
+      } else {
+        profileDetails.value = GetBusinesModel(data: null);
       }
     } catch (e) {
       profileDetails.value = GetBusinesModel(data: null);
@@ -443,7 +482,9 @@ class BusinessOwnerProfileController extends GetxController {
       }
       if (kDebugMode) log('Fetch profile details error: $e');
     } finally {
+      _fetchingProfile.value = false;
       isLoading.value = false;
+      if (!_initCompleter.isCompleted) _initCompleter.complete();
     }
   }
 
@@ -865,11 +906,33 @@ void syncOpenDaysFromBH() {
 
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         AppSnackBar.showSuccess("Business Profile updated successfully!");
-        await fetchProfileDetails();
+
+        // 1) Fetch profile to get latest image URL
+        await fetchProfileDetails(silentAuthErrors: true);
+
+        // 2) Evict + bust cache if we have a URL
+        final rawUrl = profileDetails.value.data?.image; // or .shopImg if that's your field
+        if (rawUrl != null && rawUrl.isNotEmpty) {
+          await CachedNetworkImage.evictFromCache(rawUrl);
+          try { await DefaultCacheManager().removeFile(rawUrl); } catch (_) {}
+
+          final busted = '$rawUrl${rawUrl.contains('?') ? '&' : '?'}v=${DateTime.now().millisecondsSinceEpoch}';
+
+          final m = profileDetails.value;
+          if (m.data != null) {
+            m.data!.image = busted; // or m.data!.shopImg = busted;
+            profileDetails.value = m; // trigger GetX update
+            profileDetails.refresh();
+          }
+        }
+
+        // 3) Navigate after state is fresh
         Get.offNamed('/all-services');
       } else {
         AppSnackBar.showError('Update failed');
       }
+      // --- END MODIFIED BLOCK ---
+
     } catch (e) {
       log('Update error: $e');
       AppSnackBar.showError('Failed to update business profile.');

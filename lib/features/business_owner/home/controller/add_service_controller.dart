@@ -5,8 +5,10 @@ import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/features/business_owner/home/model/category_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:mime/mime.dart';
 
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
@@ -14,6 +16,7 @@ import '../../../../core/utils/constants/api_constants.dart';
 import '../model/get_single_service_model.dart';
 import 'business_owner_controller.dart';
 import 'owner_service_slot_controller.dart';
+import 'package:path/path.dart' as p;
 
 class AddServiceController extends GetxController {
   TextEditingController titleTEController = TextEditingController();
@@ -196,7 +199,6 @@ class AddServiceController extends GetxController {
     try {
       final s = singleServiceDetails.value;
 
-      // choose selected category or fallback to the service's current category
       final int? categoryId = selectedCategoryId.value ?? s.category;
       if (categoryId == null) {
         AppSnackBar.showError('Please select a category.');
@@ -204,51 +206,107 @@ class AddServiceController extends GetxController {
         return;
       }
 
-      // build base body
       final Map<String, dynamic> body = {
-        'title'       : titleTEController.text.trim(),
-        'price'       : priceTEController.text.trim(),
-        'description' : descriptionTEController.text.trim(),
-        'duration'    : int.tryParse(durationTEController.text.trim()) ?? s.duration ?? 0,
-        'capacity'    : int.tryParse(capacityTEController.text.trim()) ?? s.capacity ?? 1,
-        'category'    : categoryId, // ← never null
-        // NEW: JSON can carry a real boolean
+        'title'      : titleTEController.text.trim(),
+        'price'      : priceTEController.text.trim(),
+        'description': descriptionTEController.text.trim(),
+        'duration'   : int.tryParse(durationTEController.text.trim()) ?? s.duration ?? 0,
+        'capacity'   : int.tryParse(capacityTEController.text.trim()) ?? s.capacity ?? 1,
+        'category'   : categoryId,
         'requires_age_18_plus': requiresAge18Plus.value,
       };
 
-      // only send discount_price if user entered one
       final dp = discountPriceTEController.text.trim();
       if (dp.isNotEmpty) body['discount_price'] = dp;
 
-      // include disabled times chosen in the Manage Slots card
+      // include disabled times chosen in the Manage Slots card (JSON is fine)
       final tag = s.id != null ? 'svc_${s.id}' : null;
       if (tag != null && Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
         final slotsCtrl = Get.find<OwnerServiceSlotsController>(tag: tag);
         body['disabled_start_times'] = slotsCtrl.disabledStartTimesForSave;
       }
 
+      // 1) Update all metadata via JSON (no multipart here)
       final resp = await NetworkCaller().putRequest(
         AppUrls.updateService(id),
         token: AuthService.accessToken,
         body: body,
       );
-
       if (!resp.isSuccess) {
         AppSnackBar.showError(resp.errorMessage ?? 'Update failed');
         return;
       }
 
-      // reset the “unsaved” state for slots if present
+      // 2) If user picked a new image, PATCH image ONLY (no list fields)
+      final hasNewImage = selectedImagePath.value.isNotEmpty;
+      if (hasNewImage) {
+        await _sendPatchMultipartWithImage(
+          url: AppUrls.updateService(id),
+          token: AuthService.accessToken ?? '',
+          fields: const {}, // ← IMPORTANT: send no fields, only the file
+          imagePath: selectedImagePath.value,
+        );
+        AppSnackBar.showSuccess('Service updated (image uploaded)');
+      } else {
+        AppSnackBar.showSuccess('Service updated');
+      }
+
+      // reset unsaved state if present
       if (tag != null && Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
         Get.find<OwnerServiceSlotsController>(tag: tag).markSaved();
       }
 
-      AppSnackBar.showSuccess('Service updated');
-      await fetchService(id); // refresh local model
+      await fetchService(id);
+    } catch (e) {
+      AppSnackBar.showError('Failed to update service. $e');
     } finally {
       inProgress.value = false;
     }
   }
+
+
+  Future<void> _sendPatchMultipartWithImage({
+    required String url,
+    required String token,
+    required Map<String, dynamic> fields, // send {} for image-only
+    required String imagePath,
+  }) async {
+    final req = http.MultipartRequest('PATCH', Uri.parse(url));
+    req.headers['Authorization'] = 'Bearer $token';
+
+    // Add only non-problematic fields (you’ll pass {} here)
+    fields.forEach((k, v) {
+      if (v == null) return;
+      if (v is bool || v is num || v is String) {
+        final s = v.toString();
+        if (s.isNotEmpty) req.fields[k] = s;
+      } else {
+        // avoid sending lists/maps here; they break with multipart
+        // If you ever need them, JSON-encode only when non-empty.
+        req.fields[k] = jsonEncode(v);
+      }
+    });
+
+    // Attach image (with proper filename + content type)
+    final mime = lookupMimeType(imagePath) ?? 'image/jpeg';
+    final type = mime.split('/');
+    req.files.add(
+      await http.MultipartFile.fromPath(
+        'service_img',
+        imagePath,
+        filename: p.basename(imagePath),
+        contentType: MediaType(type[0], type[1]),
+      ),
+    );
+
+    final res = await req.send();
+    final body = await res.stream.bytesToString();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Multipart PATCH failed (${res.statusCode}): $body');
+    }
+  }
+
+
 
 
   Future<void> toggleServiceStatus(String id) async {
