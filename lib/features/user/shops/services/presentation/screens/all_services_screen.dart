@@ -24,29 +24,16 @@ class AllServicesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(AllServicesController());
-
-    // This callback ensures the controller's state is updated every time this screen is shown.
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   controller.filterByCategory(categoryId);
-    // });
+    final controller = Get.put(AllServicesController(categoryId: categoryId));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.black,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        // ---  DYNAMICALLY SET TITLE ---
+        // ... unchanged ...
         title: CustomText(
-          text: categoryName ?? "All Services", // Use category name if provided
+          text: categoryName ?? "All Services",
           fontSize: getWidth(20),
           fontWeight: FontWeight.w700,
         ),
@@ -90,7 +77,7 @@ class AllServicesScreen extends StatelessWidget {
           Expanded(
             child: Obx(() {
               final hasData = controller.hasLocalData;
-              final results = controller.allServices.value.results ?? const [];
+              final list = controller.results;
 
               // 1) No cache yet + fetching => shimmer
               if (!hasData && controller.isLoading.value) {
@@ -103,7 +90,7 @@ class AllServicesScreen extends StatelessWidget {
               }
 
               // 2) After load finished, still empty => true empty state
-              if (!controller.isLoading.value && results.isEmpty) {
+              if (!controller.isLoading.value && list.isEmpty) {
                 return const Center(
                   child: CustomText(
                     text: "No services found",
@@ -112,49 +99,69 @@ class AllServicesScreen extends StatelessWidget {
                 );
               }
 
-              // 3) Normal list (will also show cached data while fetching fresh)
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                itemCount: results.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 14),
-                itemBuilder: (context, index) {
-                  final service = results[index];
-                  // ... existing card building code unchanged ...
-                  // (keep your _ServiceCard usage)
-                  final imageUrl = (service.serviceImg != null && service.serviceImg!.isNotEmpty)
-                      ? service.serviceImg!
-                      : service.randomPlaceholderImage;
-                  final rating = (service.avgRating ?? 0).toDouble();
-                  final reviewCount = service.reviewCount ?? 0;
-                  final hasDiscount = (service.discountPrice != null && service.discountPrice != "0.00");
-                  final displayPrice = hasDiscount ? service.discountPrice : service.price;
-                  final originalPrice = hasDiscount ? service.price : null;
-                  final distanceKm = service.distance;
-                  final String? distanceLabel = (distanceKm != null)
-                      ? '${distanceKm.toStringAsFixed(1)} km' : null;
+              // 3) Normal list with infinite scroll + pull-to-refresh
+              final itemCount =
+                  list.length + (controller.isLoadingMore.value ? 1 : 0);
 
-                  return _ServiceCard(
-                    service: service,
-                    heroTag: 'service_${service.id ?? index}',
-                    imageUrl: imageUrl,
-                    title: service.title ?? '',
-                    address: service.shopAddress ?? '',
-                    rating: rating,
-                    reviewCount: reviewCount,
-                    price: displayPrice?.toString(),
-                    originalPrice: originalPrice?.toString(),
-                    isFavorite: service.isFavorite ?? false,
-                    badge: service.badge,
-                    distanceLabel: distanceLabel,
-                    onTap: () {
-                      if (service.id != null) {
-                        Get.to(() => ServiceDetailsScreen(serviceId: service.id!),
-                            transition: Transition.cupertino);
-                      }
-                    },
-                    onFavoriteToggle: () {},
-                  );
-                },
+              return RefreshIndicator(
+                onRefresh: controller.refreshFirstPage,
+                child: ListView.separated(
+                  controller: controller.scrollController, // <-- attach
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  itemCount: itemCount,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    // Footer loader
+                    if (index >= list.length) {
+                      return const _BottomLoader();
+                    }
+
+                    final service = list[index];
+
+                    final imageUrl = (service.serviceImg != null &&
+                        service.serviceImg!.isNotEmpty)
+                        ? service.serviceImg!
+                        : service.randomPlaceholderImage;
+
+                    final rating = (service.avgRating ?? 0).toDouble();
+                    final reviewCount = service.reviewCount ?? 0;
+                    final hasDiscount = (service.discountPrice != null &&
+                        service.discountPrice != "0.00");
+                    final displayPrice = hasDiscount
+                        ? service.discountPrice
+                        : service.price;
+                    final originalPrice = hasDiscount ? service.price : null;
+                    final distanceKm = service.distance;
+                    final String? distanceLabel = (distanceKm != null)
+                        ? '${distanceKm.toStringAsFixed(1)} km'
+                        : null;
+
+                    return _ServiceCard(
+                      service: service,
+                      heroTag: 'service_${service.id ?? index}',
+                      imageUrl: imageUrl,
+                      title: service.title ?? '',
+                      address: service.shopAddress ?? '',
+                      rating: rating,
+                      reviewCount: reviewCount,
+                      price: displayPrice?.toString(),
+                      originalPrice: originalPrice?.toString(),
+                      isFavorite: service.isFavorite ?? false,
+                      badge: service.badge,
+                      distanceLabel: distanceLabel,
+                      onTap: () {
+                        if (service.id != null) {
+                          Get.to(
+                                () => ServiceDetailsScreen(serviceId: service.id!),
+                            transition: Transition.cupertino,
+                          );
+                        }
+                      },
+                      onFavoriteToggle: () {},
+                    );
+                  },
+                ),
               );
             }),
           ),
@@ -164,6 +171,32 @@ class AllServicesScreen extends StatelessWidget {
   }
 }
 
+// Little “loading more” footer row
+class _BottomLoader extends StatelessWidget {
+  const _BottomLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 10),
+          Text(
+            'Loading more...',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
 /// pill search with a filter button
 class _SearchBar extends StatelessWidget {
   const _SearchBar({

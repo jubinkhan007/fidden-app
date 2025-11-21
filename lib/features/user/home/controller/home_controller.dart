@@ -1,3 +1,6 @@
+// lib/features/user/booking/presentation/screens/home_controller.dart
+
+
 import 'dart:convert';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/features/user/home/data/promotion_offers_model.dart';
@@ -14,6 +17,7 @@ import '../data/nearest_bar_bar_single_details.dart';
 import '../data/nearest_barbar_model.dart';
 import '../data/trending_service_model.dart';
 import '../../shops/data/all_shops_model.dart';
+
 
 class HomeController extends GetxController {
   // --- Existing Properties ---

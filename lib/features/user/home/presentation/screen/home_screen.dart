@@ -1,3 +1,5 @@
+// lib/features/user/home/presentation/screen/home_screen.dart
+
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
@@ -1025,6 +1027,21 @@ class _ShopItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = R.of(context);
+
+    // Use the actual field from your Shop model
+    final String imgUrl = (shop.shop_img ?? '').trim();
+
+    const String fallback =
+        'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0';
+
+    // If your API sometimes returns relative paths like "/media/shops/1.jpg",
+    // uncomment and set your base URL:
+    // String resolveUrl(String u) =>
+    //     u.isEmpty ? '' : (u.startsWith('http') ? u : 'https://YOUR_BASE_URL$u');
+    // final resolved = resolveUrl(imgUrl);
+
+    final resolved = imgUrl; // as-is (absolute URLs)
+
     return GestureDetector(
       onTap: () => Get.to(() => ShopDetailsScreen(id: shop.id.toString())),
       child: Column(
@@ -1042,11 +1059,17 @@ class _ShopItem extends StatelessWidget {
                   blurRadius: 10,
                 ),
               ],
-              image: const DecorationImage(
-                image: NetworkImage(
-                  'https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0',
-                ),
+            ),
+            child: ClipOval(
+              child: resolved.isEmpty
+                  ? Image.network(fallback, fit: BoxFit.cover)
+                  : CachedNetworkImage(
+                imageUrl: resolved,
                 fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    Container(color: const Color(0xFFF0F2F6)),
+                errorWidget: (_, __, ___) =>
+                    Image.network(fallback, fit: BoxFit.cover),
               ),
             ),
           ),
@@ -1067,18 +1090,12 @@ class _ShopItem extends StatelessWidget {
               SizedBox(width: r.w(4)),
               Text(
                 shop.avgRating?.toStringAsFixed(1) ?? '0.0',
-                style: TextStyle(
-                  fontSize: r.sp(12),
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: r.sp(12), fontWeight: FontWeight.w700),
               ),
               SizedBox(width: r.w(4)),
               Text(
                 '(${shop.reviewCount})',
-                style: TextStyle(
-                  fontSize: r.sp(12),
-                  color: const Color(0xFF6B6F7C),
-                ),
+                style: TextStyle(fontSize: r.sp(12), color: const Color(0xFF6B6F7C)),
               ),
             ],
           ),

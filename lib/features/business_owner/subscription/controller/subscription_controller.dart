@@ -4,7 +4,9 @@ import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:fidden/features/business_owner/subscription/data/subscription_model.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:fidden/core/services/Auth_service.dart'; // still fine to import if you need it later
+import 'package:fidden/core/services/Auth_service.dart';
+
+import '../../../../core/utils/payment_provider.dart'; // still fine to import if you need it later
 
 
 class SubscriptionController extends GetxController {
@@ -13,6 +15,9 @@ class SubscriptionController extends GetxController {
   Rx<CurrentSubscription?>(null);
   final RxList<SubscriptionPlan> availablePlans =
       <SubscriptionPlan>[].obs;
+  /// Default provider (you can later make this user-configurable)
+  final PaymentProvider defaultProvider = PaymentProvider.stripe;
+
 
   String get planName =>
       (currentSubscription.value?.plan.name ?? '').trim();
@@ -73,11 +78,18 @@ class SubscriptionController extends GetxController {
     }
   }
 
-  Future<void> createCheckoutSession(int planId) async {
+  Future<void> createCheckoutSession(
+      int planId, {
+        PaymentProvider? provider,
+      }) async {
+    final chosen = provider ?? defaultProvider;
+
     final response = await NetworkCaller().postRequest(
       AppUrls.createCheckoutSession,
-      //  no token param
-      body: {'plan_id': planId},
+      body: {
+        'plan_id': planId,
+        'provider': chosen.apiValue, // ⬅️ stripe | paypal
+      },
     );
 
     if (response.isSuccess) {
@@ -92,6 +104,7 @@ class SubscriptionController extends GetxController {
       }
       return;
     }
+
 
     // better inline error handling:
     final code = response.responseData is Map<String, dynamic>
@@ -141,8 +154,10 @@ class SubscriptionController extends GetxController {
 
         final response = await NetworkCaller().postRequest(
           AppUrls.cancelSubscription,
-          //  no token param
-          body: {},
+          body: {
+            // backend can ignore or use this hint if needed
+            'provider': defaultProvider.apiValue,
+          },
         );
 
         if (response.isSuccess) {
@@ -153,8 +168,6 @@ class SubscriptionController extends GetxController {
           await fetchData(); // refresh UI
         } else {
           if (response.statusCode == 401) {
-            // probably logged out – don't show a scary "failed" message
-            // you might want to push to login instead
             return;
           }
           AppSnackBar.showError('Failed to cancel subscription.');

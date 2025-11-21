@@ -50,8 +50,8 @@ class ShopDetailsScreen extends StatelessWidget {
         controller.fetchShopDetails(id);
       }
     });
-    final heroUrl = _normalizeUrl(controller.shopDetails.value.shopImg) ?? fallbackImg;
 
+    
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
@@ -80,6 +80,8 @@ class ShopDetailsScreen extends StatelessWidget {
             child: CustomText(text: "No Shop Found", color: _muted),
           );
         }
+
+        final heroUrl = _normalizeUrl(data.shopImg) ?? fallbackImg;
 
         return SingleChildScrollView(
           padding: EdgeInsets.only(bottom: getHeight(16)),

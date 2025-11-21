@@ -6,6 +6,8 @@ import 'package:fidden/features/business_owner/subscription/controller/subscript
 import 'package:fidden/features/business_owner/subscription/data/subscription_model.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../core/utils/payment_provider.dart';
+
 class SubscriptionScreen extends StatelessWidget {
   const SubscriptionScreen({super.key});
 
@@ -71,10 +73,60 @@ class SubscriptionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlanCard(BuildContext context, SubscriptionPlan plan,
-      {required bool isCurrentPlan, required SubscriptionController controller}) {
+  /// Stripe vs PayPal picker for paid plans
+  Future<PaymentProvider?> _pickPaymentProvider(
+      BuildContext context,
+      ) {
+    return showModalBottomSheet<PaymentProvider>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Choose payment method',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.credit_card),
+                title: Text(PaymentProvider.stripe.label),
+                subtitle: const Text('Pay with debit/credit card'),
+                onTap: () =>
+                    Navigator.of(ctx).pop(PaymentProvider.stripe),
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_balance_wallet),
+                title: Text(PaymentProvider.paypal.label),
+                subtitle: const Text('Pay with your PayPal account'),
+                onTap: () =>
+                    Navigator.of(ctx).pop(PaymentProvider.paypal),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
-    final double currentPrice = double.tryParse(controller.currentSubscription.value?.plan.monthlyPrice ?? '0') ?? 0;
+  Widget _buildPlanCard(
+      BuildContext context,
+      SubscriptionPlan plan, {
+        required bool isCurrentPlan,
+        required SubscriptionController controller,
+      }) {
+    final double currentPrice =
+        double.tryParse(controller.currentSubscription.value?.plan.monthlyPrice ?? '0') ?? 0;
     final double planPrice = double.tryParse(plan.monthlyPrice) ?? 0;
 
     String buttonText = 'Switch to ${plan.name}';
@@ -87,11 +139,15 @@ class SubscriptionScreen extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8.0),
-      color: isCurrentPlan ? AppColors.primaryColor.withOpacity(0.05) : Colors.white,
+      color: isCurrentPlan
+          ? AppColors.primaryColor.withOpacity(0.05)
+          : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isCurrentPlan ? AppColors.primaryColor : Colors.grey.shade300,
+          color: isCurrentPlan
+              ? AppColors.primaryColor
+              : Colors.grey.shade300,
           width: 1.5,
         ),
       ),
@@ -100,26 +156,62 @@ class SubscriptionScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(plan.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            Text(
+              plan.name,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
-              plan.name == "Foundation" ? 'Free' : '\$${plan.monthlyPrice}/month',
-              style: const TextStyle(fontSize: 18, color: AppColors.primaryColor, fontWeight: FontWeight.bold),
+              plan.name == "Foundation"
+                  ? 'Free'
+                  : '\$${plan.monthlyPrice}/month',
+              style: const TextStyle(
+                fontSize: 18,
+                color: AppColors.primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            if(double.tryParse(plan.commissionRate) != null && double.parse(plan.commissionRate) > 0)
-              Text('+ ${plan.commissionRate}% commission per booking', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
-
+            if (double.tryParse(plan.commissionRate) != null &&
+                double.parse(plan.commissionRate) > 0)
+              Text(
+                '+ ${plan.commissionRate}% commission per booking',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                ),
+              ),
             const SizedBox(height: 16),
-            _buildFeatureRow('Deposit Customization: ${plan.depositCustomization.capitalizeFirst}'),
-            _buildFeatureRow('Priority Marketplace Ranking', enabled: plan.priorityMarketplaceRanking),
-            _buildFeatureRow('Advanced Calendar Tools', enabled: plan.advancedCalendarTools),
-            _buildFeatureRow('Auto-followups', enabled: plan.autoFollowups),
-            _buildFeatureRow('Ghost Client Re-engagement', enabled: plan.ghostClientReEngagement),
-            _buildFeatureRow('AI Assistant: ${plan.aiAssistant.capitalizeFirst}'),
-            _buildFeatureRow('Performance Analytics: ${plan.performanceAnalytics.capitalizeFirst}'),
+            _buildFeatureRow(
+              'Deposit Customization: ${plan.depositCustomization.capitalizeFirst}',
+            ),
+            _buildFeatureRow(
+              'Priority Marketplace Ranking',
+              enabled: plan.priorityMarketplaceRanking,
+            ),
+            _buildFeatureRow(
+              'Advanced Calendar Tools',
+              enabled: plan.advancedCalendarTools,
+            ),
+            _buildFeatureRow(
+              'Auto-followups',
+              enabled: plan.autoFollowups,
+            ),
+            _buildFeatureRow(
+              'Ghost Client Re-engagement',
+              enabled: plan.ghostClientReEngagement,
+            ),
+            _buildFeatureRow(
+              'AI Assistant: ${plan.aiAssistant.capitalizeFirst}',
+            ),
+            _buildFeatureRow(
+              'Performance Analytics: ${plan.performanceAnalytics.capitalizeFirst}',
+            ),
             const SizedBox(height: 20),
 
-            // --- Button Logic ---
+            // --- Button logic ---
             if (isCurrentPlan)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,20 +219,30 @@ class SubscriptionScreen extends StatelessWidget {
                   const Chip(
                     label: Text('CURRENT PLAN'),
                     backgroundColor: AppColors.primaryColor,
-                    labelStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    labelStyle: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  if (plan.name != "Foundation" && controller.currentSubscription.value?.renewsOn != null)
+                  if (plan.name != "Foundation" &&
+                      controller.currentSubscription.value?.renewsOn != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: Text('Renews on: ${DateFormat.yMMMd().format(controller.currentSubscription.value!.renewsOn!)}', style: TextStyle(color: Colors.grey.shade700)),
+                      child: Text(
+                        'Renews on: ${DateFormat.yMMMd().format(controller.currentSubscription.value!.renewsOn!)}',
+                        style: TextStyle(color: Colors.grey.shade700),
+                      ),
                     ),
                   const SizedBox(height: 16),
-                  if(plan.name != "Foundation")
+                  if (plan.name != "Foundation")
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
                         onPressed: () => controller.cancelSubscription(),
-                        style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                        ),
                         child: const Text('Cancel Subscription'),
                       ),
                     ),
@@ -150,12 +252,22 @@ class SubscriptionScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    // Downgrade to free → just cancel on backend
                     if (plan.name == "Foundation") {
                       controller.cancelSubscription();
-                    } else {
-                      controller.createCheckoutSession(plan.id);
+                      return;
                     }
+
+                    // Paid plans → ask Stripe vs PayPal
+                    final provider =
+                    await _pickPaymentProvider(context);
+                    if (provider == null) return;
+
+                    controller.createCheckoutSession(
+                      plan.id,
+                      provider: provider,
+                    );
                   },
                   child: Text(buttonText),
                 ),
@@ -165,6 +277,7 @@ class SubscriptionScreen extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _buildFeatureRow(String text, {bool enabled = true}) {
     return Padding(

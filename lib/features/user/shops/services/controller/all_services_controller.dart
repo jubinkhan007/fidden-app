@@ -1,3 +1,5 @@
+// lib/features/user/shops/services/controller/all_services_controller.dart
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
@@ -12,70 +14,81 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AllServicesController extends GetxController {
-  // UI state
-  final isLoading = false.obs;
-  final allServices = AllServicesModel().obs;
-  bool get hasLocalData =>
-      (allServices.value.results != null && allServices.value.results!.isNotEmpty);
+  // ---------- UI state ----------
+  final isLoading = false.obs;           // first page
+  final isLoadingMore = false.obs;       // pagination spinner
 
+  // Keep the server model (for next/prev) and a merged list for UI
+  final allServices = AllServicesModel().obs;
+  final results = <ServiceResult>[].obs;
+
+  bool get hasLocalData => results.isNotEmpty;
+
+  // Infinite scroll
+  final ScrollController scrollController = ScrollController();
 
   // Search (debounced)
   final TextEditingController searchController = TextEditingController();
   Timer? _debounce;
 
   // Filters / sort state
-  final RxMap<String, dynamic> filters = <String, dynamic>{}
-      .obs; // category, min_price, max_price, duration, distance, rating...
-  final RxnString sortKey =
-      RxnString(); // e.g. distance | rating | reviews | price_asc | price_desc | new
+  final RxMap<String, dynamic> filters = <String, dynamic>{}.obs;
+  final RxnString sortKey = RxnString(); // distance | rating | reviews | price_asc | price_desc | new
   final _currentCategoryId = RxnInt();
 
-  // Location for distance sort/filter (optional)
+  // Location
   final LocationService _locationService = LocationService();
   final isLocationAvailable = false.obs;
   Position? _position;
+
+  // Optional initial category
   final int? categoryId;
   AllServicesController({this.categoryId});
 
   @override
   void onInit() {
     super.onInit();
-    isLoading.value = true;           // <-- start in loading state
+    isLoading.value = true;
     _bootstrap();
+
     searchController.addListener(_onSearchChanged);
+
+    // Infinite scroll trigger
+    scrollController.addListener(() {
+      final pos = scrollController.position;
+      // Fire when we’re close to the bottom
+      if (pos.extentAfter < 500) {
+        loadNext();
+      }
+    });
   }
 
   Future<void> _bootstrap() async {
     await _initLocation();
 
-    // If controller was created with categoryId, pre-apply it BEFORE cache load
     if (categoryId != null) {
-      filters['category'] = categoryId; // this affects the cache key
+      filters['category'] = categoryId;
     }
 
-    await _loadFromCache();            // may populate allServices
+    await _loadFromCache();    // may populate results/next
 
-    // If we already have cached data, we can drop the loading flag now
     if (hasLocalData) {
-      isLoading.value = false;         // no shimmer, cached list is visible
+      isLoading.value = false; // show cache immediately
     }
 
-    // Always revalidate in background
-    unawaited(_fetch());
+    // Revalidate first page (replace list)
+    unawaited(_fetch(reset: true));
   }
 
   // ---------- Cache helpers ----------
-
-  // Cache key based on query+filters+sort (coarse but effective)
   Future<String> _cacheKey() async {
     final search = searchController.text.trim();
     final map = <String, dynamic>{
       'search': search,
       'filters': Map<String, dynamic>.from(filters),
       'sort': sortKey.value,
-      // You can add categoryId if you pass controller(categoryId) externally
     };
-    return 'all_services_cache:${jsonEncode(map)}'; // stable key by params
+    return 'all_services_cache:${jsonEncode(map)}';
   }
 
   Future<void> _loadFromCache() async {
@@ -86,7 +99,9 @@ class AllServicesController extends GetxController {
       if (s == null || s.isEmpty) return;
 
       final decoded = jsonDecode(s) as Map<String, dynamic>;
-      allServices.value = AllServicesModel.fromJson(decoded);
+      final model = AllServicesModel.fromJson(decoded);
+      allServices.value = model;
+      results.assignAll(model.results ?? []);
     } catch (_) {/* ignore */}
   }
 
@@ -98,75 +113,51 @@ class AllServicesController extends GetxController {
     } catch (_) {/* ignore */}
   }
 
+  // ---------- Public filters/sort/search API ----------
   void filterByCategory(int? newCategoryId) {
-    // Only refetch if the category has actually changed
-    if (_currentCategoryId.value == newCategoryId) {
-      return;
-    }
+    if (_currentCategoryId.value == newCategoryId) return;
     _currentCategoryId.value = newCategoryId;
 
-    // Clear old filters and search for a clean state
     filters.clear();
     searchController.clear();
 
     if (newCategoryId != null) {
       filters['category'] = newCategoryId;
     }
-
-    // Fetch data with the updated filters
-    _fetch();
+    _fetch(reset: true);
   }
 
-  @override
-  void onClose() {
-    searchController.removeListener(_onSearchChanged);
-    searchController.dispose();
-    _debounce?.cancel();
-    super.onClose();
-  }
-
-  // ---------- Public API ----------
-
-  /// Called by the Filter screen after user taps "Apply"
   Future<void> applyFilters(Map<String, dynamic> f) async {
-    // Normalize expected keys (category, min_price, max_price, duration, distance, rating)
     filters.assignAll(f);
-    await _fetch(); // merges current search + filters + sort
+    await _fetch(reset: true);
   }
 
   Future<void> clearFilters() async {
     filters.clear();
-    await _fetch();
+    await _fetch(reset: true);
   }
 
-  /// Set sort key from a bottom sheet: distance | rating | reviews | price_asc | price_desc | new
   Future<void> setSort(String? key) async {
     sortKey.value = key;
-    await _fetch();
+    await _fetch(reset: true);
   }
 
-  /// Legacy entry to keep your existing calls working
   Future<void> fetchAllServices({String? search}) async {
-    // Update only the search term; then call unified fetch
-    if (search != null) {
-      // When this entrypoint is used (e.g. from your onChanged debounce)
-      // we set the textfield (already set by listener) & fire _fetch
-    }
-    await _fetch();
+    await _fetch(reset: true);
   }
 
-  /// If you want to call with raw map (e.g., from nav return)
   Future<void> fetchAllServicesWithFilters(Map<String, dynamic> f) async {
     filters.assignAll(f);
-    await _fetch();
+    await _fetch(reset: true);
   }
 
-  // ---------- Internals ----------
+  Future<void> refreshFirstPage() => _fetch(reset: true);
 
+  // ---------- Internals ----------
   void _onSearchChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      _fetch();
+      _fetch(reset: true);
     });
   }
 
@@ -175,7 +166,6 @@ class AllServicesController extends GetxController {
       _position = await _locationService.getCurrentPosition();
       isLocationAvailable.value = _position != null;
 
-      // Optional: fallback to last known if current failed
       if (_position == null) {
         final last = await Geolocator.getLastKnownPosition();
         if (last != null) {
@@ -191,38 +181,29 @@ class AllServicesController extends GetxController {
   Map<String, String> _buildQuery() {
     final q = <String, String>{};
 
-    // Search
     final search = searchController.text.trim();
     if (search.isNotEmpty) q['search'] = search;
 
-    // Filters (only add if present)
-    // Category (expects id)
     final cat = filters['category'];
     if (cat != null && '$cat'.isNotEmpty) q['category'] = '$cat';
 
-    // Price range
     final minPrice = filters['min_price'];
     final maxPrice = filters['max_price'];
-    if (minPrice != null) q['min_price'] = '${minPrice}';
-    if (maxPrice != null) q['max_price'] = '${maxPrice}';
+    if (minPrice != null) q['min_price'] = '$minPrice';
+    if (maxPrice != null) q['max_price'] = '$maxPrice';
 
-    // Duration buckets: you can pass min/max or a single bucket param; here assume `duration` means max minutes bucket
-    final duration = filters['duration']; // e.g., 30 | 60 | 90 | 999
+    final duration = filters['duration'];
     if (duration != null) q['max_duration'] = '$duration';
 
-    // Distance buckets (in km)
-    final distance = filters['distance']; // e.g., 30 | 60 | 90 | 999
+    final distance = filters['distance'];
     if (distance != null) q['max_distance'] = '$distance';
 
-    // Rating threshold
-    final rating = filters['rating']; // e.g., 4.5 | 4.0 | 3.5
+    final rating = filters['rating'];
     if (rating != null) q['min_rating'] = '$rating';
 
-    // Sort
     final s = sortKey.value;
     if (s != null && s.isNotEmpty) q['sort'] = s;
 
-    // If sorting/filtering by distance, include location if we have it
     final needsLocation = (s == 'distance') || distance != null;
     if (needsLocation && _position != null) {
       q['location'] = '${_position!.latitude},${_position!.longitude}';
@@ -232,23 +213,51 @@ class AllServicesController extends GetxController {
   }
 
   Map<String, dynamic> _buildBody() {
-    // ✅ always send if we have it
     if (_position == null) return {};
     return {'location': '${_position!.latitude},${_position!.longitude}'};
   }
 
   String _withTrailingSlash(String url) => url.endsWith('/') ? url : '$url/';
 
-  Future<void> _fetch() async {
-    // if (isLoading.value) return;
-    isLoading.value = true;
+
+  String _urlFromNextCursor(String next) {
+    final nextUri = Uri.parse(next);
+    final base = _withTrailingSlash(AppUrls.allServices); // your canonical base
+    // Keep whatever query params backend returned (usually just `cursor`)
+    final params = Map<String, String>.from(nextUri.queryParameters);
+    return Uri.parse(base).replace(queryParameters: params).toString();
+  }
+
+  /// Core fetcher.
+  /// reset=true  → first page, replace list, cache
+  /// reset=false → follow `next`, append
+  Future<void> _fetch({required bool reset}) async {
+    if (reset) {
+      isLoading.value = true;
+    } else {
+      if (isLoadingMore.value) return; // guard
+      final nxt = allServices.value.next;
+      if (nxt == null || nxt.trim().isEmpty) return;
+      isLoadingMore.value = true;
+    }
+
     try {
       final networkCaller = NetworkCaller();
       final token = AuthService.accessToken;
 
-      final base = _withTrailingSlash(AppUrls.allServices);
-      final q = _buildQuery();
-      final url = q.isEmpty ? base : Uri.parse(base).replace(queryParameters: q).toString();
+      String url;
+
+      if (reset) {
+        final base = _withTrailingSlash(AppUrls.allServices);
+        final q = _buildQuery();
+        url = q.isEmpty
+            ? base
+            : Uri.parse(base).replace(queryParameters: q).toString();
+      } else {
+        url = _urlFromNextCursor(allServices.value.next!);
+      }
+      debugPrint('[services] ${reset ? 'FIRST' : 'NEXT'} url => $url');
+
 
       final response = await networkCaller.getRequestWithBody(
         url,
@@ -258,23 +267,49 @@ class AllServicesController extends GetxController {
 
       if (response.isSuccess && response.responseData is Map<String, dynamic>) {
         final map = Map<String, dynamic>.from(response.responseData);
-        allServices.value = AllServicesModel.fromJson(map);
+        final model = AllServicesModel.fromJson(map);
+        debugPrint('[services] got ${model.results?.length ?? 0} items, next=${model.next}');
 
-        // ✅ cache fresh success
-        unawaited(_saveToCache(map));
+        allServices.value = model; // for next/prev
+
+        if (reset) {
+          results.assignAll(model.results ?? []);
+          unawaited(_saveToCache(map));
+          if (scrollController.hasClients &&
+              scrollController.position.pixels > 50) {
+            scrollController.jumpTo(0);
+          }
+        } else {
+          final more = model.results ?? const <ServiceResult>[];
+          if (more.isNotEmpty) results.addAll(more);
+        }
       } else {
-        // If we have cache, keep showing it quietly; otherwise, surface error
-        if (!hasLocalData) {
-          AppSnackBar.showError(response.errorMessage ?? 'Failed to fetch services.');
+        if (reset && !hasLocalData) {
+          AppSnackBar.showError(
+              response.errorMessage ?? 'Failed to fetch services.');
         }
       }
     } catch (e) {
-      // Offline / exception: if we have cache, keep it; otherwise show error
-      if (!hasLocalData) {
+      if (reset && !hasLocalData) {
         AppSnackBar.showError('An error occurred while fetching services: $e');
       }
     } finally {
-      isLoading.value = false;
+      if (reset) {
+        isLoading.value = false;
+      } else {
+        isLoadingMore.value = false;
+      }
     }
+  }
+
+  Future<void> loadNext() => _fetch(reset: false);
+
+  @override
+  void onClose() {
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
+    _debounce?.cancel();
+    scrollController.dispose();
+    super.onClose();
   }
 }

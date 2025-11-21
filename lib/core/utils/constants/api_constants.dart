@@ -136,6 +136,14 @@ class AppUrls {
   static const String createCheckoutSession = '$_baseUrl/subscriptions/create-checkout-session/';
   static const String cancelSubscription = '$_baseUrl/subscriptions/cancel-subscription/';
 
+  // Owner PayPal Subscription
+  static const String createPayPalSubOrder = '$_baseUrl/payments/paypal/subscription/create-order/';
+  static const String capturePayPalSubOrder = '$_baseUrl/payments/paypal/subscription/capture-order/';
+
+  // Owner PayPal AI Add-on
+  static const String createPayPalAiOrder = '$_baseUrl/payments/paypal/ai-addon/create-order/';
+  static const String capturePayPalAiOrder = '$_baseUrl/payments/paypal/ai-addon/capture-order/';
+
 
   static String ownerSlots({required int shopId, required int serviceId, required String date})
   => '${_baseUrl}/api/shops/$shopId/slots/?service=$serviceId&date=$date';
@@ -192,5 +200,12 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
 
   static String ownerCancelBooking(int bookingId) =>
       '${_baseUrl}/payments/bookings/cancel/$bookingId/';
+
+  // PayPal Endpoints
+  static String createPayPalOrder(String slotId) =>
+      '$_baseUrl/payments/paypal/create-order/$slotId/';
+
+  static const String capturePayPalOrder =
+      '$_baseUrl/payments/paypal/capture-order/';
 
 }

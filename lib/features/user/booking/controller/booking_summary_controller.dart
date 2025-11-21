@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
+
+import '../presentation/paypal_webview_screen.dart';
 // import your confirmation screen route or widget
 
 // booking_summary_controller.dart
@@ -27,6 +29,25 @@ class BookingSummaryController extends GetxController {
 
   void toggleTermsAgreement(bool? v) => isTermsAgreed.value = v ?? false;
 
+  // NEW: Helper to set payment method
+  // NEW: Track selected payment method
+  final selectedPaymentMethod = 'stripe'.obs;
+  void setPaymentMethod(String method) {
+    selectedPaymentMethod.value = method;
+  }
+
+
+  Future<void> processPayment({
+    required int slotId,
+    int? couponId,
+    Map<String, dynamic>? successArgs,
+  }) async {
+    if (selectedPaymentMethod.value == 'paypal') {
+      await _payWithPayPal(slotId: slotId, couponId: couponId, successArgs: successArgs);
+    } else {
+      await _payWithStripe(slotId: slotId, couponId: couponId, successArgs: successArgs);
+    }
+  }
 
   Future<void> fetchPolicy(int shopId) async {
     if (shopId <= 0) return;
@@ -51,20 +72,21 @@ class BookingSummaryController extends GetxController {
     }
   }
 
-  Future<void> payForBooking({
-    required int slotId,
-    int? couponId,                    // <— NEW
-    Map<String, dynamic>? successArgs,
-  }) async {
+  // --- STRIPE LOGIC (Your existing payForBooking logic moved here) ---
+  Future<void> _payWithStripe({required int slotId, int? couponId, Map<String, dynamic>? successArgs}) async {
     if (slotId == 0) {
       Get.snackbar('Error', 'Missing booking id');
       return;
     }
-
     isPaying.value = true;
+
     try {
+      // ... [PASTE YOUR ORIGINAL payForBooking LOGIC HERE] ...
+      // Make sure to use 'AppUrls.paymentIntent(slotId)'
+      // and handle Stripe.instance.presentPaymentSheet()
+      // ---------------------------------------------------
       final body = <String, dynamic>{};
-      if (couponId != null && couponId > 0) body['coupon_id'] = couponId; // only send if chosen
+      if (couponId != null && couponId > 0) body['coupon_id'] = couponId;
 
       final res = await NetworkCaller().postRequest(
         AppUrls.paymentIntent(slotId),
@@ -79,27 +101,11 @@ class BookingSummaryController extends GetxController {
 
       final data = res.responseData as Map<String, dynamic>;
       final bookingId = data['booking_id'] as int?;
-      final clientSecret = data['client_secret'] .toString();
-      final ephemeralKey = data['ephemeral_key'] .toString();
-      final customerId = data['customer_id'] .toString();
+      final clientSecret = data['client_secret'].toString();
+      final ephemeralKey = data['ephemeral_key'].toString();
+      final customerId = data['customer_id'].toString();
 
-      // Save the REAL booking id for later (cancel/back)
-      if (bookingId != null) {
-        paymentBookingId.value = bookingId;
-      }
-
-      if (clientSecret == null || clientSecret.isEmpty) {
-        Get.snackbar('Error', 'Missing client_secret from server.');
-        return;
-      }
-      if (ephemeralKey == null || ephemeralKey.isEmpty) {
-        Get.snackbar('Error', 'Missing ephemeral_key from server.');
-        return;
-      }
-      if (customerId == null || customerId.isEmpty) {
-        Get.snackbar('Error', 'Missing customer_id from server.');
-        return;
-      }
+      if (bookingId != null) paymentBookingId.value = bookingId;
 
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
@@ -120,6 +126,8 @@ class BookingSummaryController extends GetxController {
       };
 
       Get.offAllNamed('/booking-confirmation', arguments: mergedArgs);
+      // ---------------------------------------------------
+
     } on StripeException catch (e) {
       if (e.error.code != FailureCode.Canceled) {
         Get.snackbar('Payment Error', e.error.message ?? 'Payment failed');
@@ -130,6 +138,72 @@ class BookingSummaryController extends GetxController {
       isPaying.value = false;
     }
   }
+
+  // --- NEW PAYPAL LOGIC ---
+  Future<void> _payWithPayPal({required int slotId, int? couponId, Map<String, dynamic>? successArgs}) async {
+    isPaying.value = true;
+    try {
+      final body = <String, dynamic>{};
+      if (couponId != null && couponId > 0) body['coupon_id'] = couponId;
+
+      // 1. Create Order
+      final res = await NetworkCaller().postRequest(
+        AppUrls.createPayPalOrder(slotId.toString()),
+        token: AuthService.accessToken,
+        body: body,
+      );
+
+      if (!res.isSuccess) {
+        Get.snackbar('Error', res.errorMessage ?? 'PayPal Init Failed');
+        isPaying.value = false;
+        return;
+      }
+
+      final data = res.responseData;
+      final String approveUrl = data['approve_url'];
+      final String orderId = data['order_id'];
+      final int bookingId = data['booking_id'];
+
+      paymentBookingId.value = bookingId; // Store for cancel logic
+
+      // 2. Open WebView©∫
+      final bool? approved = await Get.to(() => PayPalWebViewScreen(url: approveUrl));
+
+      if (approved == true) {
+        // 3. Capture Order
+        await _capturePayPalOrder(orderId, bookingId, successArgs);
+      } else {
+        Get.snackbar('Cancelled', 'PayPal payment cancelled');
+        isPaying.value = false;
+      }
+    } catch (e) {
+      isPaying.value = false;
+      Get.snackbar('Error', 'PayPal Error: $e');
+    }
+  }
+
+  Future<void> _capturePayPalOrder(String orderId, int bookingId, Map<String, dynamic>? successArgs) async {
+    try {
+      final res = await NetworkCaller().postRequest(
+        AppUrls.capturePayPalOrder,
+        token: AuthService.accessToken,
+        body: {'order_id': orderId},
+      );
+
+      if (res.isSuccess) {
+        final mergedArgs = <String, dynamic>{
+          if (successArgs != null) ...successArgs!,
+          'bookingId': bookingId,
+        };
+        Get.offAllNamed('/booking-confirmation', arguments: mergedArgs);
+      } else {
+        Get.snackbar('Error', 'Payment Verification Failed');
+      }
+    } finally {
+      isPaying.value = false;
+    }
+  }
+
 
   Future<void> cancelBooking(int bookingId) async {
     if (bookingId <= 0) return;

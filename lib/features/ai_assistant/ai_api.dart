@@ -9,6 +9,8 @@ import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/utils/payment_provider.dart';
+
 /// --- Models ---
 
 /// --- Custom Exception ---
@@ -349,16 +351,22 @@ class AiApi {
         action: 'send_loyalty_sms',
       );
 
-  Future<void> cancelAiAddon() async {
-    final resp =
-    await _net.postRequest(AppUrls.cancelAiAddon, body: {});
+  Future<void> cancelAiAddon({
+    PaymentProvider? provider,
+  }) async {
+    final resp = await _net.postRequest(
+      AppUrls.cancelAiAddon,
+      body: {
+        if (provider != null) 'provider': provider.apiValue,
+      },
+    );
+
     if (!resp.isSuccess) {
       String errorMsg =
           resp.errorMessage ?? 'Failed to cancel add-on';
       if (resp.responseData is Map<String, dynamic> &&
           resp.responseData['error'] != null) {
-        errorMsg =
-            resp.responseData['error'].toString();
+        errorMsg = resp.responseData['error'].toString();
       }
       throw AiApiException(
         message: errorMsg,

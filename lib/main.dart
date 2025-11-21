@@ -46,7 +46,7 @@ Future<void> main() async {
     FirebaseMessaging.onBackgroundMessage(_bg);
 
     Stripe.publishableKey =
-    'pk_test_51S56r33eKAUTJHyfzxn8z3GbxLpdNdl2ynBLGoLwEOx4bR2qoJdWwt6CWYoFzu3lPlHfBikm5gt0DqhA49w3Nj4700TIDOqiGr';
+    'pk_test_51SUjSZPvn52W2hluUeYJXFyQPFsXXBwwfB4KhWszroRPBhPx5lROrON6mYvQIAhtnWAaEo813nTRUbYUjvi2CUtW0048Gm4z91';
 
     // Run the app
     runApp(const MyApp());

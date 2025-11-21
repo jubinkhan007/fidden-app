@@ -21,6 +21,8 @@ class BookingSummaryScreen extends StatefulWidget {
   State<BookingSummaryScreen> createState() => _BookingSummaryScreenState();
 }
 
+
+
 class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   // --- All properties are now state variables ---
   late final String serviceName;
@@ -197,7 +199,25 @@ void dispose() {
               const SizedBox(height: 24),
               _buildSectionTitle("Pay with", color: primaryTextColor),
               const SizedBox(height: 12),
-              const _PaymentMethodCard(),
+              Obx(() => Column(
+                children: [
+                  _PaymentOptionTile(
+                    title: 'Credit / Debit Card',
+                    icon: Icons.credit_card,
+                    value: 'stripe',
+                    groupValue: controller.selectedPaymentMethod.value,
+                    onChanged: (v) => controller.setPaymentMethod(v!),
+                  ),
+                  const SizedBox(height: 8),
+                  _PaymentOptionTile(
+                    title: 'PayPal',
+                    icon: Icons.paypal, // Or use Icons.payment if paypal icon isn't available
+                    value: 'paypal',
+                    groupValue: controller.selectedPaymentMethod.value,
+                    onChanged: (v) => controller.setPaymentMethod(v!),
+                  ),
+                ],
+              )),
               const SizedBox(height: 24),
               _buildSectionTitle("Coupon", color: primaryTextColor),
 const SizedBox(height: 12),
@@ -327,7 +347,7 @@ SizedBox(
               () => ElevatedButton(
                 onPressed: (controller.isTermsAgreed.value && !controller.isPaying.value)
                     ? () {
-                  // HARD client guard
+                  // HARD client guard (Keep your existing guard)
                   if (!_isSelectedSlotInFuture(args: args, slotId: bookingId)) {
                     Get.defaultDialog(
                       title: 'This slot has passed',
@@ -338,7 +358,8 @@ SizedBox(
                     return;
                   }
 
-                  controller.payForBooking(
+                  // CHANGED: Call processBookingPayment (which handles both Stripe & PayPal)
+                  controller.processPayment(
                     slotId: bookingId,
                     couponId: _appliedCoupon?.id,
                     successArgs: {
@@ -850,54 +871,98 @@ class _PaymentMethodCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: const ListTile(
-        leading: Icon(Icons.payment, color: Colors.deepPurple),
-        title: Text('Stripe'),
-        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // VISA + Mastercard logos
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images/visa.png',      // TODO: update to your actual path
+                  height: 22,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(width: 8),
+                Image.asset(
+                  'assets/images/mastercard.png', // TODO: update to your actual path
+                  height: 22,
+                  fit: BoxFit.contain,
+                ),
+              ],
+            ),
+
+            const SizedBox(width: 16),
+
+            // Text: Credit / Debit Card
+            const Expanded(
+              child: Text(
+                'Credit / Debit Card',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+
+            // (No trailing arrow anymore)
+          ],
+        ),
       ),
     );
   }
 }
+class _PaymentOptionTile extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final String value;
+  final String groupValue;
+  final ValueChanged<String?> onChanged;
 
+  const _PaymentOptionTile({
+    required this.title,
+    required this.icon,
+    required this.value,
+    required this.groupValue,
+    required this.onChanged,
+  });
 
-// design me a mordern, sleek and user friendly coupons screens which will show all the coupons in a list with api endpoint /api/users/coupons/?shop_id={shop_id}}&service_id={service_id} which returns all the available coupons for that service of that shop. The response is like this:
-// [
-//     {
-//         "id": 4,
-//         "code": "MX1758645088",
-//         "description": "$20 off all services",
-//         "amount": "20.00",
-//         "in_percentage": false,
-//         "discount_type": "amount",
-//         "shop": 7,
-//         "services": [
-//             9,
-//             10
-//         ],
-//         "validity_date": "2025-12-31",
-//         "is_active": true,
-//         "max_usage_per_user": 2,
-//         "created_at": "2025-09-23T22:31:28.792845+06:00",
-//         "updated_at": "2025-09-24T17:05:08.160868+06:00"
-//     },
-//     {
-//         "id": 2,
-//         "code": "MX1758644098",
-//         "description": "20% off all services",
-//         "amount": "20.00",
-//         "in_percentage": true,
-//         "discount_type": "percentage",
-//         "shop": 7,
-//         "services": [
-//             9,
-//             10
-//         ],
-//         "validity_date": "2025-12-31",
-//         "is_active": true,
-//         "max_usage_per_user": 3,
-//         "created_at": "2025-09-23T22:14:58.931919+06:00",
-//         "updated_at": "2025-09-24T17:55:54.476142+06:00"
-//     }
-// ]
-// we will navigate to this screen from booking summary screen when user taps on apply coupon button (remove the input text field for the coupon and add a button). The screen will have a back button to go back to booking summary screen. After applying the coupon, we will automatically go back to booking summary screen with the applied coupon details. The applied coupon details will be shown in booking summary screen and the price will be updated accordingly.
-// 
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = value == groupValue;
+    // Use your primary color or hardcode it
+    const activeColor = Color(0xFFDC143C);
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isSelected ? activeColor : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        color: isSelected ? activeColor.withOpacity(0.05) : Colors.white,
+      ),
+      child: RadioListTile<String>(
+        value: value,
+        groupValue: groupValue,
+        onChanged: onChanged,
+        activeColor: activeColor,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+        title: Row(
+          children: [
+            Icon(icon, color: isSelected ? activeColor : Colors.grey.shade700),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isSelected ? const Color(0xFF111827) : Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

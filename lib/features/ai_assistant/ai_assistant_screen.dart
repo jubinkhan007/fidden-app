@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
+import '../../core/utils/payment_provider.dart';
 import 'ai_api.dart';
 
 class AiAssistantScreen extends StatefulWidget {
@@ -273,17 +274,68 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     }
   }
 
+
+  Future<PaymentProvider?> _pickPaymentProvider(
+      BuildContext context,
+      ) {
+    return showModalBottomSheet<PaymentProvider>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Choose payment method',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.credit_card),
+                title: Text(PaymentProvider.stripe.label),
+                onTap: () =>
+                    Navigator.of(ctx).pop(PaymentProvider.stripe),
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_balance_wallet),
+                title: Text(PaymentProvider.paypal.label),
+                onTap: () =>
+                    Navigator.of(ctx).pop(PaymentProvider.paypal),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
   Future<void> _purchaseAi() async {
     if (_isPurchasing) return;
 
+    // 1) Ask for Stripe vs PayPal
+    final provider = await _pickPaymentProvider(context);
+    if (provider == null) return;
+
     setState(() => _isPurchasing = true);
     try {
-      final resp = await NetworkCaller()
-          .postRequest(AppUrls.checkoutAiAddon, body: {});
-      if (resp.isSuccess &&
-          resp.responseData['url'] != null) {
-        final url =
-        Uri.parse(resp.responseData['url']);
+      final resp = await NetworkCaller().postRequest(
+        AppUrls.checkoutAiAddon,
+        body: {
+          'provider': provider.apiValue, // ⬅️ stripe | paypal
+        },
+      );
+      if (resp.isSuccess && resp.responseData['url'] != null) {
+        final url = Uri.parse(resp.responseData['url']);
         if (await canLaunchUrl(url)) {
           await launchUrl(
             url,
@@ -300,8 +352,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         );
       }
     } catch (e) {
-      AppSnackBar.showError(
-          'An error occurred: $e');
+      AppSnackBar.showError('An error occurred: $e');
     } finally {
       if (mounted) {
         setState(() => _isPurchasing = false);
@@ -309,6 +360,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       }
     }
   }
+
 
   Widget _buildSubscriptionError(
       BuildContext context) {

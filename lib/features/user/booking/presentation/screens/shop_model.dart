@@ -1,3 +1,5 @@
+// lib/features/user/booking/presentation/screens/shop_model.dart
+
 class ShopModel {
   final String name;
   final String location;
