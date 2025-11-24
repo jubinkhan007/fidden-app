@@ -86,7 +86,7 @@ class WeeklySummary {
     final rec = j['ai_recommendations'] ?? {};
     final aiPayload = j['ai'] ?? {};
 
-    return WeeklySummary(
+    final summary = WeeklySummary(
       id: (j['id'] ?? '').toString(),
       weekStartDate: DateTime.parse(j['week_start_date']),
       weekEndDate: DateTime.parse(j['week_end_date']),
@@ -115,6 +115,13 @@ class WeeklySummary {
       legacy500: aiPayload['legacy'] == true,
       aiPriceId: aiPayload['price_id']?.toString(),
     );
+    
+    // DEBUG: Log parsed AI state
+    print('🔍 DEBUG: Parsed aiState: ${aiPayload['state']}');
+    print('🔍 DEBUG: Parsed legacy500: ${aiPayload['legacy']}');
+    print('🔍 DEBUG: Parsed aiPriceId: ${aiPayload['price_id']}');
+    
+    return summary;
   }
 }
 

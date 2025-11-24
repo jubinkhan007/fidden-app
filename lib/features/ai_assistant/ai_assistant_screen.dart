@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
+import 'package:fidden/core/models/response_data.dart';
 import '../../core/utils/payment_provider.dart';
 import 'ai_api.dart';
 
@@ -20,7 +21,7 @@ class AiAssistantScreen extends StatefulWidget {
       _AiAssistantScreenState();
 }
 
-class _AiAssistantScreenState extends State<AiAssistantScreen> {
+class _AiAssistantScreenState extends State<AiAssistantScreen> with WidgetsBindingObserver {
   final AiApi _api = AiApi();
 
   WeeklySummary? _summary;
@@ -36,7 +37,23 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // When user returns to app from browser (PayPal/Stripe), refresh data
+    if (state == AppLifecycleState.resumed) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -328,12 +345,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
     setState(() => _isPurchasing = true);
     try {
+      // Use the same pattern as subscription plans
+      // One endpoint handles both Stripe and PayPal based on provider parameter
       final resp = await NetworkCaller().postRequest(
         AppUrls.checkoutAiAddon,
         body: {
           'provider': provider.apiValue, // ⬅️ stripe | paypal
         },
       );
+
       if (resp.isSuccess && resp.responseData['url'] != null) {
         final url = Uri.parse(resp.responseData['url']);
         if (await canLaunchUrl(url)) {
@@ -342,13 +362,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             mode: LaunchMode.externalApplication,
           );
         } else {
-          AppSnackBar.showError(
-              'Could not open checkout page.');
+          AppSnackBar.showError('Could not open checkout page.');
         }
       } else {
         AppSnackBar.showError(
-          resp.errorMessage ??
-              'Could not create checkout session.',
+          resp.errorMessage ?? 'Could not create checkout session.',
         );
       }
     } catch (e) {
@@ -356,7 +374,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     } finally {
       if (mounted) {
         setState(() => _isPurchasing = false);
-        await _load();
+        // Don't reload here - the lifecycle listener will refresh when user returns
       }
     }
   }
