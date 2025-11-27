@@ -10,17 +10,39 @@ class ShopApi {
   final _networkCaller = NetworkCaller();
 
   static String toApiTime(String ui) {
+    // Try 12-hour format first
     final m = RegExp(
       r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$',
       caseSensitive: false,
     ).firstMatch(ui);
-    if (m == null) return ui; // fallback
-    int h = int.parse(m.group(1)!);
-    final mm = int.parse(m.group(2)!);
-    final ap = m.group(3)!.toUpperCase();
-    if (ap == 'PM' && h != 12) h += 12;
-    if (ap == 'AM' && h == 12) h = 0;
-    return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
+    
+    if (m != null) {
+      int h = int.parse(m.group(1)!);
+      final mm = int.parse(m.group(2)!);
+      final ap = m.group(3)!.toUpperCase();
+      if (ap == 'PM' && h != 12) h += 12;
+      if (ap == 'AM' && h == 12) h = 0;
+      return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
+    }
+
+    // Try 24-hour format (HH:mm)
+    final m24 = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*$').firstMatch(ui.trim());
+    if (m24 != null) {
+      final h = int.parse(m24.group(1)!);
+      final mm = int.parse(m24.group(2)!);
+      return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:00';
+    }
+
+    // Try 24-hour format with seconds (HH:mm:ss) - just return normalized
+    final m24s = RegExp(r'^\s*(\d{1,2}):(\d{2}):(\d{2})\s*$').firstMatch(ui.trim());
+    if (m24s != null) {
+      final h = int.parse(m24s.group(1)!);
+      final mm = int.parse(m24s.group(2)!);
+      final ss = int.parse(m24s.group(3)!);
+      return '${h.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}:${ss.toString().padLeft(2, '0')}';
+    }
+
+    return ui; // fallback
   }
 
   // NEW: "09:00 AM" -> "09:00"  (keeps "HH:mm" if already that)
