@@ -56,17 +56,20 @@ class HomeScreen extends StatelessWidget {
         // your existing content (skeleton vs actual)
         final Widget content = c.isLoading.value
             ? _HomeSkeleton(r: r)
-            : SafeArea(
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(child: _Header(r: r)),
-                    SliverToBoxAdapter(child: _PromoCarousel(r: r)),
-                    SliverToBoxAdapter(child: _Categories(r: r)),
-                    SliverToBoxAdapter(child: _TrendingServices(r: r)),
-                    SliverToBoxAdapter(child: _PopularShops(r: r)),
-                    // keeps last items from hiding behind the button
-                    SliverToBoxAdapter(child: SizedBox(height: r.h(90))),
-                  ],
+            : RefreshIndicator(
+                onRefresh: () => c.fetchAllHomeData(),
+                child: SafeArea(
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(child: _Header(r: r)),
+                      SliverToBoxAdapter(child: _PromoCarousel(r: r)),
+                      SliverToBoxAdapter(child: _Categories(r: r)),
+                      SliverToBoxAdapter(child: _TrendingServices(r: r)),
+                      SliverToBoxAdapter(child: _PopularShops(r: r)),
+                      // keeps last items from hiding behind the button
+                      SliverToBoxAdapter(child: SizedBox(height: r.h(90))),
+                    ],
+                  ),
                 ),
               );
 

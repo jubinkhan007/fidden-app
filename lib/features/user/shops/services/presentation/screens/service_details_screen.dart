@@ -453,6 +453,41 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
 }),
 
                           const SizedBox(height: 26),
+
+                          // Add-on Services
+                          Obx(() {
+                            if (c.shopServices.isEmpty) return const SizedBox.shrink();
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CustomText(
+                                  text: 'Add-on Services',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                const SizedBox(height: 12),
+                                ...c.shopServices.map((service) {
+                                  final isSelected = c.selectedAddOns.contains(service);
+                                  return CheckboxListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      service.title ?? '',
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                    subtitle: Text(
+                                      '${service.duration ?? 0} min • \$${service.discountPrice ?? service.price ?? 0}',
+                                      style: TextStyle(color: Colors.grey.shade600),
+                                    ),
+                                    value: isSelected,
+                                    onChanged: (val) => c.toggleAddOn(service),
+                                    activeColor: Get.theme.primaryColor,
+                                    controlAffinity: ListTileControlAffinity.leading,
+                                  );
+                                }).toList(),
+                                const SizedBox(height: 26),
+                              ],
+                            );
+                          }),
                         ],
                       ),
                     ),
@@ -490,12 +525,26 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
                       children: [
                         Expanded(
                           child: Obx(
-                            () => Text(
-                              'Total: \$${c.effectivePrice.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
+                            () => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Total: \$${c.effectivePrice.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  'Duration: ${c.totalDuration} min',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -560,13 +609,11 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
             'shopName': details?.shopName ?? '',
             'service_img': details?.serviceImg ?? '',
             'shopAddress': details?.shopAddress ?? '',
-            'serviceDurationMinutes': details?.duration ?? 0,
+            'serviceDurationMinutes': c.totalDuration, // Use total duration
             'selectedSlotLabel': slotLabel,
-            'price': originalPriceStr ?? '',
-            'discountPrice':
-                (details?.discountPrice?.trim().isNotEmpty ?? false)
-                    ? details?.discountPrice
-                    : null,
+            'price': c.effectivePrice, // Use effective price
+            'discountPrice': null, // Already handled in effectivePrice
+            'add_on_ids': c.selectedAddOns.map((s) => s.id).toList(), // Pass add-ons
 
             // keep a reference payload if the summary screen needs context
             'booking': {

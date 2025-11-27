@@ -386,7 +386,7 @@ class AiApi {
 /// --- Formatting helpers ---
 final _moneyFmt = NumberFormat.currency(
   locale: 'en_BD',
-  symbol: '৳',
+  symbol: '\$',
   decimalDigits: 0,
 );
 String bdMoney(num v) => _moneyFmt.format(v);

@@ -66,6 +66,28 @@ class UserBookingsModel {
       };
 }
 
+class AddOnService {
+  final String title;
+  final String duration; // minutes as string
+
+  AddOnService({
+    required this.title,
+    required this.duration,
+  });
+
+  factory AddOnService.fromJson(Map<String, dynamic> json) {
+    return AddOnService(
+      title: json['title'] ?? '',
+      duration: json['duration'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'duration': duration,
+      };
+}
+
 class BookingItem {
   final int id;
   final int user;
@@ -79,6 +101,7 @@ class BookingItem {
   final String slotTimeIso;      // keep ISO string (as you do)
   final String serviceTitle;
   final String serviceDuration;  // minutes as string from API
+  final List<AddOnService> addOnServices; // NEW: Add-on services
   final String status;           // "active" / "completed" / "cancelled" etc.
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -99,6 +122,7 @@ class BookingItem {
     required this.slotTimeIso,
     required this.serviceTitle,
     required this.serviceDuration,
+    this.addOnServices = const [],  // NEW: Default to empty list
     required this.status,
     required this.createdAt,
     required this.updatedAt,
@@ -110,6 +134,16 @@ class BookingItem {
   factory BookingItem.fromJson(Map<String, dynamic> json) {
     double _toDouble(v) => v is num ? v.toDouble() : double.tryParse("$v") ?? 0.0;
     int _toInt(v) => v is num ? v.toInt() : int.tryParse("$v") ?? 0;
+
+    // Parse add-on services
+    final List<AddOnService> addOns = [];
+    if (json['add_on_services'] is List) {
+      addOns.addAll(
+        (json['add_on_services'] as List)
+            .map((e) => AddOnService.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+    }
 
     return BookingItem(
       id: _toInt(json['id']),
@@ -124,6 +158,7 @@ class BookingItem {
       slotTimeIso: (json['slot_time'] ?? '').toString(),
       serviceTitle: json['service_title'] ?? '',
       serviceDuration: json['service_duration'] ?? '',
+      addOnServices: addOns, // NEW
       status: (json['status'] ?? '').toString().toLowerCase(),
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
@@ -147,6 +182,7 @@ class BookingItem {
         'slot_time': slotTimeIso,
         'service_title': serviceTitle,
         'service_duration': serviceDuration,
+        'add_on_services': addOnServices.map((e) => e.toJson()).toList(), // NEW
         'status': status,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -169,6 +205,7 @@ class BookingItem {
       slotTimeIso: slotTimeIso,
       serviceTitle: serviceTitle,
       serviceDuration: serviceDuration,
+      addOnServices: addOnServices, // NEW
       status: status ?? this.status,
       createdAt: createdAt,
       updatedAt: updatedAt,

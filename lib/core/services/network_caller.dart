@@ -213,11 +213,12 @@ class NetworkCaller {
     if (first.statusCode == 401) {
       final ok = await _ensureTokenRefreshed();
       if (!ok) {
-        await AuthService.clearAuthData();
+        // Token refresh failed - force logout and redirect to login
+        await AuthService.logoutUser();
         return ResponseData(
           isSuccess: false,
           statusCode: 401,
-          errorMessage: 'You are not authorized. Please log in to continue.',
+          errorMessage: 'Your session has expired. Please log in again.',
           responseData: null,
         );
       }

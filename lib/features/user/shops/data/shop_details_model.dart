@@ -24,6 +24,10 @@ class ShopDetailsModel {
   int? freeCancellationHours;
   int? cancellationFeePercentage;
   int? noRefundHours;
+  String? niche; // DEPRECATED
+  List<String>? niches; // NEW: Multi-niche support
+  bool? isDepositRequired; // NEW
+  int? defaultDepositPercentage; // NEW
 
   ShopDetailsModel({
     this.id,
@@ -44,36 +48,54 @@ class ShopDetailsModel {
     this.freeCancellationHours,
     this.cancellationFeePercentage,
     this.noRefundHours,
+    this.niche,
+    this.niches,
+    this.isDepositRequired,
+    this.defaultDepositPercentage,
   });
 
   factory ShopDetailsModel.fromJson(
     Map<String, dynamic> json,
-  ) => ShopDetailsModel(
-    id: json["id"],
-    name: json["name"],
-    address: json["address"],
-    location: json["location"],
-    capacity: json["capacity"],
-    startAt: json["start_at"],
-    closeAt: json["close_at"],
-    aboutUs: json["about_us"],
-    shopImg: json["shop_img"],
-    closeDays: json["close_days"] == null
-        ? []
-        : List<String>.from(json["close_days"]!.map((x) => x)),
-    ownerId: json["owner_id"],
-    avgRating: (json["avg_rating"] as num?)?.toDouble(),
-    reviewCount: json["review_count"],
-    services: json["services"] == null
-        ? []
-        : List<Service>.from(json["services"]!.map((x) => Service.fromJson(x))),
-    reviews: json["reviews"] == null
-        ? []
-        : List<Review>.from(json["reviews"]!.map((x) => Review.fromJson(x))),
-    freeCancellationHours: json['free_cancellation_hours'] as int?,
-    cancellationFeePercentage: json['cancellation_fee_percentage'] as int?,
-    noRefundHours: json['no_refund_hours'] as int?,
-  );
+  ) {
+    // Parse niches with backward compatibility
+    List<String>? parsedNiches;
+    if (json['niches'] != null && json['niches'] is List) {
+      parsedNiches = List<String>.from(json['niches']);
+    } else if (json['niche'] != null) {
+      parsedNiches = [json['niche'] as String];
+    }
+    
+    return ShopDetailsModel(
+      id: json["id"],
+      name: json["name"],
+      address: json["address"],
+      location: json["location"],
+      capacity: json["capacity"],
+      startAt: json["start_at"],
+      closeAt: json["close_at"],
+      aboutUs: json["about_us"],
+      shopImg: json["shop_img"],
+      closeDays: json["close_days"] == null
+          ? []
+          : List<String>.from(json["close_days"]!.map((x) => x)),
+      ownerId: json["owner_id"],
+      avgRating: (json["avg_rating"] as num?)?.toDouble(),
+      reviewCount: json["review_count"],
+      services: json["services"] == null
+          ? []
+          : List<Service>.from(json["services"]!.map((x) => Service.fromJson(x))),
+      reviews: json["reviews"] == null
+          ? []
+          : List<Review>.from(json["reviews"]!.map((x) => Review.fromJson(x))),
+      freeCancellationHours: json['free_cancellation_hours'] as int?,
+      cancellationFeePercentage: json['cancellation_fee_percentage'] as int?,
+      noRefundHours: json['no_refund_hours'] as int?,
+      niche: json["niche"], // Deprecated
+      niches: parsedNiches, // NEW
+      isDepositRequired: json['is_deposit_required'] == true || json['is_deposit_required'] == 'true',
+      defaultDepositPercentage: (json['default_deposit_percentage'] as num?)?.toInt(),
+    );
+  }
 }
 
 class Review {
@@ -143,6 +165,7 @@ class Service {
   String? categoryImg;
   String? serviceImg;
   bool requiresAge18Plus;
+  int? duration; // NEW
 
 
   Service({
@@ -156,6 +179,7 @@ class Service {
     this.categoryImg,
     this.serviceImg,
     this.requiresAge18Plus = false,
+    this.duration,
 
   });
 
@@ -172,5 +196,6 @@ class Service {
     requiresAge18Plus: (json["requires_age_18_plus"] is bool)
         ? json["requires_age_18_plus"] as bool
         : (json["requires_age_18_plus"]?.toString() == '1'),
+    duration: (json["duration"] as num?)?.toInt(),
   );
 }

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
@@ -7,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
@@ -15,6 +15,16 @@ import '../data/get_my_profile_model.dart';
 class ProfileController extends GetxController {
   var profileImage = Rxn<File>();
   var imagePath = ''.obs;
+  
+  // Observable fields for profile data
+  final profileDetails = GetMyProfileModel().obs;
+  final isLoading = false.obs;
+  
+  // DEPRECATED: Single niche for backward compat
+  final RxString shopNiche = ''.obs;
+  
+  // NEW: Multi-niche support
+  final RxList<String> shopNiches = <String>[].obs;
 
   // Method to pick profile image
   Future<void> pickImage() async {
@@ -30,18 +40,24 @@ class ProfileController extends GetxController {
 
   @override
   void onInit() {
-    // TODO: implement onInit
-    fetchProfileDetails();
     super.onInit();
+    log('🟢 ProfileController onInit called');
+    fetchProfileDetails();
   }
 
-  var isLoading = false.obs;
-  var profileDetails = GetMyProfileModel().obs;
+  @override
+  void onClose() {
+    log('🔴 ProfileController onClose called');
+    super.onClose();
+  }
 
-  // Function to fetch course details
+  // Function to fetch profile details
   Future<void> fetchProfileDetails() async {
     isLoading.value = true;
     try {
+      // Try to load from cache first to avoid empty state
+      await _loadCachedNiches();
+
       final response = await NetworkCaller().getRequest(
         AppUrls.getMyProfile,
         token: AuthService.accessToken,
@@ -52,7 +68,43 @@ class ProfileController extends GetxController {
           // 1. Directly parse the response into the Data object.
           final data = Data.fromJson(response.responseData);
 
-          // 2. Manually construct the parent GetMyProfileModel.
+          // 2. Handle multi-niche support with backward compatibility
+          if (data.shopNiches != null && data.shopNiches!.isNotEmpty) {
+            // Use new shop_niches array
+            shopNiches.value = data.shopNiches!;
+            log('🔍 API returned shop_niches: ${data.shopNiches}'); // DEBUG LOG
+            
+            // Cache the niches
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setStringList('cached_shop_niches', data.shopNiches!);
+
+            // Load persisted selection or default to first
+            final savedNiche = prefs.getString('selected_niche');
+            
+            if (savedNiche != null && shopNiches.contains(savedNiche)) {
+              shopNiche.value = savedNiche;
+            } else {
+              shopNiche.value = data.shopNiches!.first;
+            }
+          } else if (data.shopNiche != null && data.shopNiche!.isNotEmpty) {
+            // Fallback to old shop_niche field
+            shopNiches.value = [data.shopNiche!];
+            shopNiche.value = data.shopNiche!;
+            
+            // Cache fallback value
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setStringList('cached_shop_niches', shopNiches);
+            if (prefs.getString('selected_niche') == null) {
+               await prefs.setString('selected_niche', shopNiche.value);
+            }
+          } else if (shopNiche.value.isNotEmpty) {
+            // Preserve existing value from login
+            if (shopNiches.isEmpty) {
+              shopNiches.value = [shopNiche.value];
+            }
+          }
+
+          // 3. Manually construct the parent GetMyProfileModel.
           profileDetails.value = GetMyProfileModel(
             success: true,
             statusCode: response.statusCode,
@@ -68,6 +120,40 @@ class ProfileController extends GetxController {
       Get.snackbar('Error', 'An error occurred: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> _loadCachedNiches() async {
+    if (shopNiches.isNotEmpty) return; // Already loaded
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getStringList('cached_shop_niches');
+      final savedNiche = prefs.getString('selected_niche');
+
+      if (cached != null && cached.isNotEmpty) {
+        shopNiches.value = cached;
+        log('📦 Loaded cached shop_niches: $cached');
+        
+        if (savedNiche != null && cached.contains(savedNiche)) {
+          shopNiche.value = savedNiche;
+        } else {
+          shopNiche.value = cached.first;
+        }
+      }
+    } catch (e) {
+      log('Error loading cached niches: $e');
+    }
+  }
+
+  // Set primary niche and persist preference
+  Future<void> setPrimaryNiche(String niche) async {
+    if (shopNiches.contains(niche)) {
+      shopNiche.value = niche;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('selected_niche', niche);
+      log('Switched dashboard to niche: $niche');
+      update(); // Trigger UI updates
     }
   }
 

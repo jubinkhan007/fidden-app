@@ -1,0 +1,247 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Here is new information that will help further the user’s experience. “Adding a service category list during registration”. This will be another niche and a game changer.  Here’s why this is a good idea: 
+Tailored UX = Higher Engagement
+	•	People feel seen when the app talks their language. A tattoo artist doesn’t think like a barber, and a trainer doesn’t need the same tools as a loctician.
+Smart UX = Cleaner Interface
+	•	You can hide irrelevant features and show only the most useful tools.
+	•	Tattoo artist? Show “Design Portfolio.” Barber? Highlight “Walk-in Queue.”
+	•	This keeps the app lightweight and frictionless.
+Better Data = Better Growth
+	•	You’ll know which industries are growing inside Fidden, and you can build focused features for top niches later 
+🔽 How to Set It Up:
+On the Service Provider Registration Flow, add a step like:
+“What kind of pro are you?”
+	•	Fitness Trainer 🏋️
+	•	Tattoo Artist 🖋️
+	•	Barber ✂️
+	•	Hairstylist 💇
+	•	Nail Tech 💅
+	•	Makeup Artist (MUA) 💄
+	•	Esthetician 🧖
+	•	Massage Therapist 🌿
+	•	Other (text input)
+
+🎯 Tailored Dashboard Mapping by Niche
+Goal: Give each service pro a homepage that feels custom-built for their hustle.
+
+1. 🖋️ Tattoo Artist Dashboard
+Top Section:
+	•	🔁 Upcoming Appointments
+	•	📷 "Upload ID" Request Tracker
+	•	🗓️ Custom Consultation Calendar
+Core Tabs:
+	•	Portfolio Manager (photo gallery)
+	•	Design Requests (new client ideas or sketch uploads)
+	•	Consent/ID Verification
+	•	Deposit Management
+	•	Reviews ⭐
+2. 🏋️ Fitness Trainer Dashboard
+Top Section:
+	•	🗓️ Weekly Schedule (classes + 1:1)
+	•	💪 Client Progress Quick View
+	•	📈 Revenue/Package Tracker
+Core Tabs:
+	•	Workout Templates
+	•	Progress Photos/Notes Uploads
+	•	Nutrition Plan Links
+	•	Cancellation Policy Toggle
+Add-Ons:
+	•	“Pre-Session Questionnaire” option
+3. ✂️ Barber Dashboard
+Top Section:
+	•	🚨 Today’s Appointments
+	•	💵 Total Daily Revenue
+	•	🔁 No-show alerts
+Core Tabs:
+	•	Service Menu (easy-edit)
+
+4. 💇‍♀️ Hairstylist/Loctician Dashboard
+Top Section:
+	•	🧼 Prep Notes for Today’s Clients
+	•	📆 Next 7 Days at a Glance
+	•	📸 Client Gallery (linked to their profile)
+Core Tabs:
+	•	Hair Type Notes / Photos
+	•	Booking w/ Consultation Option
+	•	Style Tags / Portfolio
+	•	Product Recommendations
+
+5. 💅 Nail Tech Dashboard
+Top Section:
+	•	💎 Bookings by Style Type (Acrylic, Gel, etc.)
+	•	📊 Weekly Earnings Summary
+	•	🔁 Client Repeat Rate
+Core Tabs:
+	•	Moodboard/Lookbook Uploads
+	•	Custom Nail Shape Picker
+	•	Inspo Reels
+	•	Inventory List (optional)
+Add-Ons:
+	•	“New Set vs. Fill-In” quick toggles
+	•	Tip Estimator
+
+6. 💄 Makeup Artist Dashboard
+Top Section:
+	•	📸 Next Event/Client Booked
+	•	💄 Look Type (Natural, Glam, Bridal)
+	•	🛍️ Product Kit Checklist
+Core Tabs:
+	•	Face Charts
+	•	Booking for Events/Photoshoots
+	•	Skin Tone & Preference Notes
+	•	On-Site/Travel Toggle
+
+7. 🧖 Esthetician/Massage Therapist Dashboard
+Top Section:
+	•	🧴 Treatment Tracker
+	•	📆 Session Reminders
+	•	⚠️ Health Disclosure Alert
+Core Tabs:
+	•	Skincare Regimens
+	•	Post-Treatment Recommendations
+	•	Retail Products Offered
+
+🌐 Shared Features Across All Niches:
+	•	✅ Bookings & Calendar
+	•	💳 Payment Processing & Payouts
+	•	📱 Client Profiles
+	•	🔔 Notifications
+	•	📢 Marketing/Promos Center
+	•	🧾 Invoices & Receipts
+	•	📌 Notes & Tags
+
+✅ Included here is a developer Handoff Doc for React text stack
+	•	Component structure per niche
+	•	Modular layout blocks
+	•	UI behavior (toggle states, conditional rendering, etc.)
+	•	Notes for developer implementation
+	•	Suggested file/component names
+
+
+// Fidden Tailored Dashboard Mapping (React UI Handoff)
+// Prepared for: Developer Integration
+// Stack: React (modular components, props-driven rendering)
+
+// Shared Layout Wrapper
+export const DashboardLayout = ({ children }) => (
+  <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="max-w-6xl mx-auto">
+      {children}
+    </div>
+  </div>
+);
+
+// ------------------- NICHE COMPONENTS ------------------- //
+
+// 1. Tattoo Artist Dashboard
+export const TattooArtistDashboard = () => (
+  <DashboardLayout>
+    <Section title="Upcoming Appointments" />
+    <Section title="ID Upload Requests" />
+    <Section title="Design Requests" />
+    <Section title="Portfolio Manager" />
+    <Section title="Consent Forms & Verification" />
+    <Section title="Deposit Overview" />
+  </DashboardLayout>
+);
+
+// 2. Fitness Trainer Dashboard
+export const FitnessTrainerDashboard = () => (
+  <DashboardLayout>
+    <Section title="Weekly Schedule" />
+    <Section title="Client Progress Overview" />
+    <Section title="Workout Templates" />
+    <Section title="Nutrition Plans" />
+    <Section title="Revenue Tracker" />
+  </DashboardLayout>
+);
+
+// 3. Barber Dashboard
+export const BarberDashboard = () => (
+  <DashboardLayout>
+    <Section title="Today’s Appointments" />
+    <Section title="Service Menu Editor" />
+    <Section title="Walk-In Queue" />
+    <Section title="Loyalty Tracker" />
+    <Section title="Spotify Integration" />
+  </DashboardLayout>
+);
+
+// 4. Hairstylist / Loctician Dashboard
+export const HairstylistDashboard = () => (
+  <DashboardLayout>
+    <Section title="Client Prep Notes" />
+    <Section title="Next 7 Days View" />
+    <Section title="Client Style History" />
+    <Section title="Hair Type Notes" />
+    <Section title="Treatment Upsell Reminders" />
+  </DashboardLayout>
+);
+
+// 5. Nail Tech Dashboard
+export const NailTechDashboard = () => (
+  <DashboardLayout>
+    <Section title="Style Type Bookings" />
+    <Section title="Weekly Earnings" />
+    <Section title="Moodboard Manager" />
+    <Section title="Shape & Length Picker" />
+  </DashboardLayout>
+);
+
+// 6. Makeup Artist Dashboard
+export const MakeupArtistDashboard = () => (
+  <DashboardLayout>
+    <Section title="Today’s Events" />
+    <Section title="Product Checklist" />
+    <Section title="Look Types" />
+    <Section title="Face Charts" />
+  </DashboardLayout>
+);
+
+// 7. Esthetician / Massage Therapist Dashboard
+export const EstheticianDashboard = () => (
+  <DashboardLayout>
+    <Section title="Treatment Tracker" />
+    <Section title="Health Disclosures" />
+    <Section title="Product Recommendations" />
+    <Section title="Retail Management" />
+  </DashboardLayout>
+);
+
+// ------------------- SUPPORTING COMPONENT ------------------- //
+
+// Reusable Section Block
+const Section = ({ title }) => (
+  <div className="mb-6">
+    <h2 className="text-xl font-semibold text-gray-800 mb-2">{title}</h2>
+    <div className="bg-white rounded-2xl shadow p-4 min-h-[120px]">
+      {/* Placeholder: Render data here */}
+      <p className="text-gray-400">Component for {title} goes here.</p>
+    </div>
+  </div>
+);
+
+// ------------------- TODO / NEXT STEPS ------------------- //
+
+// - Hook each section into backend API (already in progress)
+// - Pass relevant props (user data, role type)
+// - Add conditional logic in parent App.js to render by role
+// - Implement Section-specific features in each tab/component
+
+// EXAMPLE USAGE:
+// Render based on role (in App.js or DashboardRouter.js)
+// const role = user.role; // e.g., "tattoo_artist"
+// return role === "barber" ? <BarberDashboard /> : <TattooArtistDashboard />;
+
+
+
+
+
+
+
+
+
+
+
+
+

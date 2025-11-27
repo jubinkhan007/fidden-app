@@ -34,6 +34,40 @@ class ServiceDetailsController extends GetxController {
   // ───────── NEW: simple in-memory cache for slots (keyed by yyyy-MM-dd)
   final Map<String, List<SlotItem>> _slotsCache = {}; // NEW
 
+  // ───────── NEW: Add-on Services Logic
+  final shopServices = <Service>[].obs; // Available add-ons
+  final selectedAddOns = <Service>[].obs; // Selected add-ons
+
+  void toggleAddOn(Service service) {
+    if (selectedAddOns.contains(service)) {
+      selectedAddOns.remove(service);
+    } else {
+      selectedAddOns.add(service);
+    }
+  }
+
+  double get effectivePrice {
+    final d = details.value;
+    if (d == null) return 0;
+    final p = d.discountPrice ?? d.price ?? '0';
+    double total = double.tryParse(p) ?? 0;
+    
+    // Add add-ons price
+    for (var s in selectedAddOns) {
+      total += (s.discountPrice ?? s.price ?? 0);
+    }
+    return total;
+  }
+
+  int get totalDuration {
+    final d = details.value;
+    int total = d?.duration ?? 0;
+    for (var s in selectedAddOns) {
+      total += (s.duration ?? 0);
+    }
+    return total;
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -92,10 +126,18 @@ class ServiceDetailsController extends GetxController {
         if (shopResp.isSuccess && shopResp.responseData is Map<String, dynamic>) {
           final shop = ShopDetailsModel.fromJson(shopResp.responseData);
           applyClosedDays(shop.closeDays);
+          
+          // Store other services as potential add-ons
+          if (shop.services != null) {
+            shopServices.assignAll(
+              shop.services!.where((s) => s.id != serviceId).toList()
+            );
+          }
         }
 
         _snapSelectedToNextOpenInWindow();
-        await fetchSlotsForDate(selectedDate.value, mutateSelection: true);
+        // Force refresh slots on entry to ensure real-time availability
+        await fetchSlotsForDate(selectedDate.value, mutateSelection: true, force: true);
         prefetchNext7Days();
       } else {
         AppSnackBar.showError(res.errorMessage ?? 'Failed to load service.');
@@ -216,13 +258,6 @@ void prefetchNext7Days() {
     selectedDate.value = DateTime(selected.year, selected.month, selected.day);
     slots.assignAll(preloaded);
     selectedSlotId.value = null;
-  }
-
-  double get effectivePrice {
-    final d = details.value;
-    if (d == null) return 0;
-    final p = d.discountPrice ?? d.price ?? '0';
-    return double.tryParse(p) ?? 0;
   }
 
   final closedWeekdays = <int>{}.obs; // 1=Mon … 7=Sun

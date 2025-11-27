@@ -37,15 +37,25 @@ class BookingSummaryController extends GetxController {
   }
 
 
+  // NEW: Deposit logic
+  final RxBool isDepositRequired = false.obs;
+  final RxInt defaultDepositPercentage = 0.obs;
+
+  double getDepositAmount(double totalAmount) {
+    if (!isDepositRequired.value || defaultDepositPercentage.value <= 0) return 0;
+    return (totalAmount * defaultDepositPercentage.value) / 100;
+  }
+
   Future<void> processPayment({
     required int slotId,
     int? couponId,
+    List<int>? addOnIds, // NEW
     Map<String, dynamic>? successArgs,
   }) async {
     if (selectedPaymentMethod.value == 'paypal') {
-      await _payWithPayPal(slotId: slotId, couponId: couponId, successArgs: successArgs);
+      await _payWithPayPal(slotId: slotId, couponId: couponId, addOnIds: addOnIds, successArgs: successArgs);
     } else {
-      await _payWithStripe(slotId: slotId, couponId: couponId, successArgs: successArgs);
+      await _payWithStripe(slotId: slotId, couponId: couponId, addOnIds: addOnIds, successArgs: successArgs);
     }
   }
 
@@ -67,13 +77,18 @@ class BookingSummaryController extends GetxController {
       final noRefH  = (m['no_refund_hours'] as num?)?.toInt() ?? 0;
 
       policy.value = ShopPolicy(freeH: freeH, feePct: feePct, noRefundH: noRefH);
+
+      // NEW: Deposit settings
+      isDepositRequired.value = m['is_deposit_required'] == true || m['is_deposit_required'] == 'true';
+      defaultDepositPercentage.value = (m['default_deposit_percentage'] as num?)?.toInt() ?? 0;
+
     } catch (_) {
       // swallow or log
     }
   }
 
   // --- STRIPE LOGIC (Your existing payForBooking logic moved here) ---
-  Future<void> _payWithStripe({required int slotId, int? couponId, Map<String, dynamic>? successArgs}) async {
+  Future<void> _payWithStripe({required int slotId, int? couponId, List<int>? addOnIds, Map<String, dynamic>? successArgs}) async {
     if (slotId == 0) {
       Get.snackbar('Error', 'Missing booking id');
       return;
@@ -87,6 +102,15 @@ class BookingSummaryController extends GetxController {
       // ---------------------------------------------------
       final body = <String, dynamic>{};
       if (couponId != null && couponId > 0) body['coupon_id'] = couponId;
+      if (addOnIds != null && addOnIds.isNotEmpty) body['add_on_ids'] = addOnIds;
+      
+      // NEW: Send deposit info if applicable
+      if (isDepositRequired.value && defaultDepositPercentage.value > 0) {
+        body['is_deposit'] = true;
+        // Optional: you can send the percentage or let backend look it up.
+        // Sending 'deposit_percentage' might be safer if backend logic varies.
+        body['deposit_percentage'] = defaultDepositPercentage.value; 
+      }
 
       final res = await NetworkCaller().postRequest(
         AppUrls.paymentIntent(slotId),
@@ -140,11 +164,18 @@ class BookingSummaryController extends GetxController {
   }
 
   // --- NEW PAYPAL LOGIC ---
-  Future<void> _payWithPayPal({required int slotId, int? couponId, Map<String, dynamic>? successArgs}) async {
+  Future<void> _payWithPayPal({required int slotId, int? couponId, List<int>? addOnIds, Map<String, dynamic>? successArgs}) async {
     isPaying.value = true;
     try {
       final body = <String, dynamic>{};
       if (couponId != null && couponId > 0) body['coupon_id'] = couponId;
+      if (addOnIds != null && addOnIds.isNotEmpty) body['add_on_ids'] = addOnIds;
+      
+      // NEW: Send deposit info if applicable
+      if (isDepositRequired.value && defaultDepositPercentage.value > 0) {
+        body['is_deposit'] = true;
+        body['deposit_percentage'] = defaultDepositPercentage.value;
+      }
 
       // 1. Create Order
       final res = await NetworkCaller().postRequest(
@@ -183,6 +214,7 @@ class BookingSummaryController extends GetxController {
   }
 
   Future<void> _capturePayPalOrder(String orderId, int bookingId, Map<String, dynamic>? successArgs) async {
+    print('🔍 DEBUG: Starting PayPal capture for order: $orderId, booking: $bookingId');
     try {
       final res = await NetworkCaller().postRequest(
         AppUrls.capturePayPalOrder,
@@ -190,17 +222,27 @@ class BookingSummaryController extends GetxController {
         body: {'order_id': orderId},
       );
 
+      print('🔍 DEBUG: Capture response - isSuccess: ${res.isSuccess}, statusCode: ${res.statusCode}');
+
       if (res.isSuccess) {
         final mergedArgs = <String, dynamic>{
           if (successArgs != null) ...successArgs!,
           'bookingId': bookingId,
         };
+        print('🔍 DEBUG: Navigating to booking-confirmation with args: $mergedArgs');
+        
+        // Navigate to confirmation screen
         Get.offAllNamed('/booking-confirmation', arguments: mergedArgs);
       } else {
-        Get.snackbar('Error', 'Payment Verification Failed');
+        print('🔍 DEBUG: Capture failed - ${res.errorMessage}');
+        Get.snackbar('Error', res.errorMessage ?? 'Payment Verification Failed');
       }
+    } catch (e) {
+      print('🔍 DEBUG: Capture exception: $e');
+      Get.snackbar('Error', 'An error occurred during payment verification: $e');
     } finally {
       isPaying.value = false;
+      print('🔍 DEBUG: isPaying set to false');
     }
   }
 

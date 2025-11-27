@@ -5,8 +5,10 @@ import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/commom/widgets/progress_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/services/Auth_service.dart';
 import '../../../core/utils/constants/api_constants.dart';
+import '../../user/profile/controller/profile_controller.dart'; // For shop_niche
 import '../../business_owner/nav_bar/presentation/screens/user_nav_bar.dart'
     as owner_nav;
 import '../../user/nav_bar/presentation/screens/user_nav_bar.dart' as user_nav;
@@ -90,6 +92,16 @@ class LoginController extends GetxController {
         final accessToken = data["accessToken"] .toString();
         final refreshToken = data["refreshToken"] .toString();
         final role = (data["role"] ?? data["user"]?["role"])?.toString();
+        
+        // NEW: Extract shop_niches array with backward compatibility
+        List<String> shopNiches;
+        if (data["shop_niches"] != null && data["shop_niches"] is List) {
+          shopNiches = List<String>.from(data["shop_niches"]);
+        } else if (data["shop_niche"] != null) {
+          shopNiches = [data["shop_niche"].toString()];
+        } else {
+          shopNiches = ['other'];
+        }
 
         if (accessToken == null) {
           // ⬇️ hide first, then snackbar
@@ -103,6 +115,28 @@ class LoginController extends GetxController {
           refreshToken ?? '',
           role ?? '',
         );
+
+        // Store shop_niches in ProfileController for immediate use
+        try {
+          final profileController = Get.find<ProfileController>();
+          profileController.shopNiches.value = shopNiches;
+          profileController.shopNiche.value = shopNiches.first; // Primary for backward compat
+          log('Stored shop niches: $shopNiches');
+        } catch (e) {
+          log('ProfileController not found, niches will be loaded on profile fetch: $e');
+        }
+
+        // Cache shop_niches for persistence (Critical for app restarts/navigation)
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setStringList('cached_shop_niches', shopNiches);
+          // Only set selected_niche if not already set, to avoid overwriting user preference
+          if (prefs.getString('selected_niche') == null) {
+            await prefs.setString('selected_niche', shopNiches.first);
+          }
+        } catch (e) {
+          log('Error caching shop niches: $e');
+        }
 
         // ⬇️ hide before snackbar & navigation
         await AuthService.registerDeviceIfNeeded();

@@ -189,35 +189,9 @@ void dispose() {
     }
   },
 )),
+
               const SizedBox(height: 24),
-              _buildSectionTitle("Pricing Details", color: primaryTextColor),
-              const SizedBox(height: 12),
-              _PricingDetailsCard(
-  servicePrice: _basePrice,
-  couponDiscount: _couponDiscount, // NEW
-),
-              const SizedBox(height: 24),
-              _buildSectionTitle("Pay with", color: primaryTextColor),
-              const SizedBox(height: 12),
-              Obx(() => Column(
-                children: [
-                  _PaymentOptionTile(
-                    title: 'Credit / Debit Card',
-                    icon: Icons.credit_card,
-                    value: 'stripe',
-                    groupValue: controller.selectedPaymentMethod.value,
-                    onChanged: (v) => controller.setPaymentMethod(v!),
-                  ),
-                  const SizedBox(height: 8),
-                  _PaymentOptionTile(
-                    title: 'PayPal',
-                    icon: Icons.paypal, // Or use Icons.payment if paypal icon isn't available
-                    value: 'paypal',
-                    groupValue: controller.selectedPaymentMethod.value,
-                    onChanged: (v) => controller.setPaymentMethod(v!),
-                  ),
-                ],
-              )),
+
               const SizedBox(height: 24),
               _buildSectionTitle("Coupon", color: primaryTextColor),
 const SizedBox(height: 12),
@@ -267,6 +241,93 @@ SizedBox(
 //                   border: OutlineInputBorder(),
 //                 ),
 //               ),
+
+
+              // ─── Payment Section ────────────────────────
+              const SizedBox(height: 24),
+              _buildSectionTitle("Pay with", color: primaryTextColor),
+              const SizedBox(height: 12),
+              Obx(() => Column(
+                children: [
+                  _PaymentOptionTile(
+                    title: 'Credit / Debit Card',
+                    icon: Icons.credit_card,
+                    value: 'stripe',
+                    groupValue: controller.selectedPaymentMethod.value,
+                    onChanged: (v) => controller.setPaymentMethod(v!),
+                  ),
+                  const SizedBox(height: 8),
+                  _PaymentOptionTile(
+                    title: 'PayPal',
+                    icon: Icons.paypal, // Or use Icons.payment if paypal icon isn't available
+                    value: 'paypal',
+                    groupValue: controller.selectedPaymentMethod.value,
+                    onChanged: (v) => controller.setPaymentMethod(v!),
+                  ),
+                ],
+              )),
+
+              const SizedBox(height: 32),
+
+              // ─── Price Breakdown ────────────────────────
+              _buildSectionTitle("Price Breakdown", color: primaryTextColor),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    _PriceRow(label: 'Service Price', amount: servicePrice),
+                    if (discountPrice != null)
+                      _PriceRow(
+                        label: 'Discount',
+                        amount: '-${(servicePrice - (double.tryParse(discountPrice.toString()) ?? 0)).toStringAsFixed(2)}',
+                        isDiscount: true,
+                      ),
+                    const Divider(height: 24),
+                    _PriceRow(
+                      label: 'Total Amount',
+                      amount: servicePrice,
+                      isTotal: true,
+                    ),
+                    
+                    // NEW: Deposit Amount Display
+                    Obx(() {
+                      if (controller.isDepositRequired.value) {
+                        final deposit = controller.getDepositAmount(servicePrice);
+                        if (deposit > 0) {
+                          return Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              _PriceRow(
+                                label: 'Deposit to Pay Now (${controller.defaultDepositPercentage.value}%)',
+                                amount: deposit,
+                                isTotal: true, // bold
+                                color: Get.theme.primaryColor,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Remaining amount will be paid at the shop.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                      }
+                      return const SizedBox.shrink();
+                    }),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 24),
               _buildSectionTitle(
                 "Cancellation policy",
@@ -337,17 +398,19 @@ SizedBox(
                   ],
                 ),
               ),
+              const SizedBox(height: 100), // spacer for bottom bar
             ],
           ),
         ),
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Obx(
-              () => ElevatedButton(
-                onPressed: (controller.isTermsAgreed.value && !controller.isPaying.value)
+            child: Obx(() {
+               final busy = controller.isPaying.value;
+               return ElevatedButton(
+                onPressed: (controller.isTermsAgreed.value && !busy)
                     ? () {
-                  // HARD client guard (Keep your existing guard)
+                  // HARD client guard
                   if (!_isSelectedSlotInFuture(args: args, slotId: bookingId)) {
                     Get.defaultDialog(
                       title: 'This slot has passed',
@@ -358,10 +421,16 @@ SizedBox(
                     return;
                   }
 
-                  // CHANGED: Call processBookingPayment (which handles both Stripe & PayPal)
+                  // NEW: Pass add_on_ids
+                  final rawAddOns = (Get.arguments as Map?)?['add_on_ids'];
+                  final addOnIds = (rawAddOns is List) 
+                      ? rawAddOns.map((e) => int.tryParse('$e') ?? 0).where((e) => e > 0).toList()
+                      : <int>[];
+
                   controller.processPayment(
                     slotId: bookingId,
                     couponId: _appliedCoupon?.id,
+                    addOnIds: addOnIds,
                     successArgs: {
                       'serviceName': serviceName,
                       'dateTimeText': selectedSlot,
@@ -380,14 +449,14 @@ SizedBox(
                 }
                     : null,
 
-                child: controller.isPaying.value
+                child: busy
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : const Text(
-                        'Continue',
+                        'Confirm & Pay',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -401,8 +470,8 @@ SizedBox(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ),
-            ),
+              );
+            }),
           ),
         ),
       ),
@@ -806,113 +875,12 @@ class _DateTimeCard extends StatelessWidget {
 
 
 
-class _PricingDetailsCard extends StatelessWidget {
-  final double servicePrice;     // base (already discounted by service, if any)
-  final double couponDiscount;   // NEW
-
-  const _PricingDetailsCard({
-    required this.servicePrice,
-    this.couponDiscount = 0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final double total = (servicePrice - couponDiscount).clamp(0, double.infinity);
-    final bool hasCoupon = couponDiscount > 0.0001;
-
-    String money(double v) => '\$${v.toStringAsFixed(2)}';
-
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _row('Service Fee', money(servicePrice)),
-            if (hasCoupon) ...[
-              const SizedBox(height: 8),
-              _row('Coupon', '- ${money(couponDiscount)}'),
-            ],
-            const Divider(height: 24),
-            _row('Total Amount', money(total), isTotal: true),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _row(String label, String value, {bool isTotal = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? Colors.black : Colors.grey,
-            )),
-        Text(value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            )),
-      ],
-    );
-  }
-}
 
 
-class _PaymentMethodCard extends StatelessWidget {
-  const _PaymentMethodCard();
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // VISA + Mastercard logos
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/images/visa.png',      // TODO: update to your actual path
-                  height: 22,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(width: 8),
-                Image.asset(
-                  'assets/images/mastercard.png', // TODO: update to your actual path
-                  height: 22,
-                  fit: BoxFit.contain,
-                ),
-              ],
-            ),
 
-            const SizedBox(width: 16),
 
-            // Text: Credit / Debit Card
-            const Expanded(
-              child: Text(
-                'Credit / Debit Card',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
 
-            // (No trailing arrow anymore)
-          ],
-        ),
-      ),
-    );
-  }
-}
 class _PaymentOptionTile extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -962,6 +930,57 @@ class _PaymentOptionTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PriceRow extends StatelessWidget {
+  final String label;
+  final dynamic amount; // String or double
+  final bool isDiscount;
+  final bool isTotal;
+  final Color? color;
+
+  const _PriceRow({
+    required this.label,
+    required this.amount,
+    this.isDiscount = false,
+    this.isTotal = false,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    String valueText;
+    if (amount is num) {
+      valueText = '\$${(amount as num).toStringAsFixed(2)}';
+    } else {
+      valueText = amount.toString();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+              color: color ?? (isTotal ? Colors.black : Colors.grey.shade600),
+            ),
+          ),
+          Text(
+            valueText,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+              color: color ?? (isDiscount ? Colors.green : (isTotal ? Colors.black : Colors.black87)),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -211,30 +211,88 @@ class BookingDetailsScreen extends StatelessWidget {
                 color: const Color(0xffFFFFFF),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  radius: getWidth(26),
-                  backgroundImage:
-                      const AssetImage("assets/images/barber_image.png"),
-                ),
-                title: Text(
-                  booking.serviceTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: getWidth(16),
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xff111827),
+              child: Column(
+                children: [
+                  // Main service
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      radius: getWidth(26),
+                      backgroundImage:
+                          const AssetImage("assets/images/barber_image.png"),
+                    ),
+                    title: Text(
+                      booking.serviceTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: getWidth(16),
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xff111827),
+                      ),
+                    ),
+                    subtitle: Text(
+                      "Duration: ${booking.serviceDuration} min",
+                      style: TextStyle(
+                        fontSize: getWidth(14),
+                        color: const Color(0xff6B7280),
+                      ),
+                    ),
                   ),
-                ),
-                subtitle: Text(
-                  "Duration: ${booking.serviceDuration} min",
-                  style: TextStyle(
-                    fontSize: getWidth(14),
-                    color: const Color(0xff6B7280),
-                  ),
-                ),
+                  
+                  // Add-on services
+                  if (booking.addOnServices.isNotEmpty) ...[
+                    const Divider(),
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: getHeight(8)),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "Add-on Services",
+                          style: TextStyle(
+                            fontSize: getWidth(14),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xff6B7280),
+                          ),
+                        ),
+                      ),
+                    ),
+                    ...booking.addOnServices.map((addOn) {
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: getHeight(8)),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            radius: getWidth(22),
+                            backgroundColor: const Color(0xFFF5F6FA),
+                            child: Icon(
+                              Icons.add_circle_outline,
+                              size: getWidth(20),
+                              color: const Color(0xff7A49A5),
+                            ),
+                          ),
+                          title: Text(
+                            addOn.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: getWidth(15),
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xff111827),
+                            ),
+                          ),
+                          subtitle: Text(
+                            "Duration: ${addOn.duration} min",
+                            style: TextStyle(
+                              fontSize: getWidth(13),
+                              color: const Color(0xff6B7280),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ],
               ),
             ),
 

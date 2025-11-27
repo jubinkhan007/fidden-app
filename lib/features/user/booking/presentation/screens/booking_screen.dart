@@ -334,9 +334,26 @@ class _BookingCard extends StatelessWidget {
                     label: booking.serviceTitle,
                   ),
                   if ((booking.serviceDuration).isNotEmpty)
+                    Builder(
+                      builder: (context) {
+                        // Calculate total duration including add-ons
+                        int mainDuration = int.tryParse(booking.serviceDuration) ?? 0;
+                        int addOnsTotalDuration = booking.addOnServices.fold<int>(
+                          0,
+                          (sum, addOn) => sum + (int.tryParse(addOn.duration) ?? 0),
+                        );
+                        int totalDuration = mainDuration + addOnsTotalDuration;
+                        
+                        return _Chip(
+                          icon: Icons.timer_outlined,
+                          label: "$totalDuration min",
+                        );
+                      },
+                    ),
+                  if (booking.addOnServices.isNotEmpty)
                     _Chip(
-                      icon: Icons.timer_outlined,
-                      label: "${booking.serviceDuration} min",
+                      icon: Icons.add_circle_outline,
+                      label: "+ ${booking.addOnServices.length} Add-on${booking.addOnServices.length > 1 ? 's' : ''}",
                     ),
                 ],
               ),

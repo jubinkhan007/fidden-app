@@ -30,112 +30,115 @@ class ProfileScreen extends StatelessWidget {
         backgroundColor: Color(0xffF4F4F4),
         surfaceTintColor: Colors.transparent,
       ),
-      body: SingleChildScrollView(
-        // Added for scrollability
-        child: Column(
-          children: [
-            SizedBox(height: getHeight(34)),
-            Obx(() {
-              if (controller.isLoading.value) {
-                return buildProfileShimmer(); // Shows loading shimmer
-              }
-              // This Column only builds AFTER data is loaded
-              return Column(
-                children: [
-                  // --- Profile Info ---
-                  SizedBox(
-                    width: getWidth(150),
-                    height: getHeight(150),
-                    child: CircleAvatar(
-                      backgroundImage:
-                          controller.profileDetails.value.data?.image != null
-                          ? NetworkImage(
-                              // Append a unique timestamp to force a reload
-                              "${controller.profileDetails.value.data?.image}",
-                            )
-                          : const AssetImage(ImagePath.profileImage)
-                                as ImageProvider,
+      body: RefreshIndicator(
+        onRefresh: () => controller.fetchProfileDetails(),
+        child: SingleChildScrollView(
+          // Added for scrollability
+          child: Column(
+            children: [
+              SizedBox(height: getHeight(34)),
+              Obx(() {
+                if (controller.isLoading.value) {
+                  return buildProfileShimmer(); // Shows loading shimmer
+                }
+                // This Column only builds AFTER data is loaded
+                return Column(
+                  children: [
+                    // --- Profile Info ---
+                    SizedBox(
+                      width: getWidth(150),
+                      height: getHeight(150),
+                      child: CircleAvatar(
+                        backgroundImage:
+                            controller.profileDetails.value.data?.image != null
+                            ? NetworkImage(
+                                // Append a unique timestamp to force a reload
+                                "${controller.profileDetails.value.data?.image}",
+                              )
+                            : const AssetImage(ImagePath.profileImage)
+                                  as ImageProvider,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: getHeight(18)),
-                  CustomText(
-                    text:
-                        controller.profileDetails.value.data?.name ??
-                        "Anonymous User",
-                    color: Color(0xff232323),
-                    fontSize: getWidth(26),
-                    fontWeight: FontWeight.w600,
-                  ),
-                  SizedBox(height: getHeight(8)),
-                  CustomText(
-                    text: controller.profileDetails.value.data?.email ?? '',
-                    color: Color(0xffA3A3A3),
-                    fontSize: getWidth(14),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  SizedBox(height: getHeight(40)),
+                    SizedBox(height: getHeight(18)),
+                    CustomText(
+                      text:
+                          controller.profileDetails.value.data?.name ??
+                          "Anonymous User",
+                      color: Color(0xff232323),
+                      fontSize: getWidth(26),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    SizedBox(height: getHeight(8)),
+                    CustomText(
+                      text: controller.profileDetails.value.data?.email ?? '',
+                      color: Color(0xffA3A3A3),
+                      fontSize: getWidth(14),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    SizedBox(height: getHeight(40)),
 
-                  // --- Action Buttons (Now inside Obx) ---
-                  CustomProfileButton(
-                    title: 'Edit Profile',
-                    firstImageString: IconPath.editIcon,
-                    onTap: () {
-                      Get.toNamed(AppRoute.editProfileScreen);
-                    },
-                  ),
-                  SizedBox(height: getHeight(16)),
-                  CustomProfileButton(
-                    title: 'Notification',
-                    firstImageString: IconPath.notificationIcon,
-                    onTap: () {
-                      Get.toNamed(AppRoute.notificationScreen);
-                    },
-                  ),
-                  SizedBox(height: getHeight(16)),
-                  CustomProfileButton(
-                    title: 'Account Settings',
-                    firstImageString: IconPath.settingsGear,
-                    onTap: () {
-                      Get.toNamed(AppRoute.accountSettingsScreen);
-                    },
-                  ),
-                  SizedBox(height: getHeight(16)),
-                  CustomProfileButton(
-                    title: 'Wishlist',
-                    firstImageString: 'assets/icons/wishlist.png',
-                    onTap: () {
-                      Get.toNamed(AppRoute.wishListScreen);
-                    },
-                  ),
-                  SizedBox(height: getHeight(16)),
-                  CustomProfileButton(
-                    title: 'Term & Policy',
-                    firstImageString: IconPath.termsAndConditionIcon,
-                    onTap: () {
-                      Get.toNamed(AppRoute.termsAndConditionScreen);
-                    },
-                  ),
-                  SizedBox(height: getHeight(16)),
-                  CustomProfileButton(
-                    title: 'Logout',
-                    firstImageString: IconPath.logOutIcon,
-                    onTap: () {
-                      showDeleteDialog(
-                        onConfirm: () {
-                          AuthService.logoutUser();
-                          print("Message Deleted!");
-                        },
-                        title: "Log Out?",
-                        middleText:
-                            "Are you sure you want to logout form your account?",
-                        confirm: "Logout",
-                      );
-                    },
-                  ),
-                ],
-              );
-            }),
-          ],
+                    // --- Action Buttons (Now inside Obx) ---
+                    CustomProfileButton(
+                      title: 'Edit Profile',
+                      firstImageString: IconPath.editIcon,
+                      onTap: () {
+                        Get.toNamed(AppRoute.editProfileScreen);
+                      },
+                    ),
+                    SizedBox(height: getHeight(16)),
+                    CustomProfileButton(
+                      title: 'Notification',
+                      firstImageString: IconPath.notificationIcon,
+                      onTap: () {
+                        Get.toNamed(AppRoute.notificationScreen);
+                      },
+                    ),
+                    SizedBox(height: getHeight(16)),
+                    CustomProfileButton(
+                      title: 'Account Settings',
+                      firstImageString: IconPath.settingsGear,
+                      onTap: () {
+                        Get.toNamed(AppRoute.accountSettingsScreen);
+                      },
+                    ),
+                    SizedBox(height: getHeight(16)),
+                    CustomProfileButton(
+                      title: 'Wishlist',
+                      firstImageString: 'assets/icons/wishlist.png',
+                      onTap: () {
+                        Get.toNamed(AppRoute.wishListScreen);
+                      },
+                    ),
+                    SizedBox(height: getHeight(16)),
+                    CustomProfileButton(
+                      title: 'Term & Policy',
+                      firstImageString: IconPath.termsAndConditionIcon,
+                      onTap: () {
+                        Get.toNamed(AppRoute.termsAndConditionScreen);
+                      },
+                    ),
+                    SizedBox(height: getHeight(16)),
+                    CustomProfileButton(
+                      title: 'Logout',
+                      firstImageString: IconPath.logOutIcon,
+                      onTap: () {
+                        showDeleteDialog(
+                          onConfirm: () {
+                            AuthService.logoutUser();
+                            print("Message Deleted!");
+                          },
+                          title: "Log Out?",
+                          middleText:
+                              "Are you sure you want to logout form your account?",
+                          confirm: "Logout",
+                        );
+                      },
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );

@@ -7,12 +7,11 @@ import 'dart:developer';
 class AppUrls {
   AppUrls._();
 
-  //static const String _baseUrl = 'http://10.0.20.64:5010/api/v1';
   static const String _baseUrl =
       'https://fidden-server.onrender.com';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
-    return 'wss://fidden-server.onrender.com/ws/chat/?token=$accessToken';
+    return 'wss://fidden-server-2.onrender.com/ws/chat/?token=$accessToken';
   }
 
   static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';
@@ -207,5 +206,25 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
 
   static const String capturePayPalOrder =
       '$_baseUrl/payments/paypal/capture-order/';
+
+  // ========== Niche-Specific Endpoints ==========
+  
+  // Tattoo Artist - Portfolio
+  static const String portfolioList = '$_baseUrl/api/portfolio/';
+  static String portfolioItem(int id) => '$_baseUrl/api/portfolio/$id/';
+
+  // Tattoo Artist - Design Requests
+  static const String designRequests = '$_baseUrl/api/design-requests/';
+  static String designRequest(int id) => '$_baseUrl/api/design-requests/$id/';
+
+  // Tattoo Artist - Consent Forms
+  static const String consentTemplates = '$_baseUrl/api/consent-forms/templates/';
+  static String consentTemplate(int id) => '$_baseUrl/api/consent-forms/templates/$id/';
+  static const String signedConsentForms = '$_baseUrl/api/consent-forms/signed/';
+  static String signedConsentForm(int id) => '$_baseUrl/api/consent-forms/signed/$id/';
+
+  // Tattoo Artist - ID Verification
+  static const String idVerificationList = '$_baseUrl/api/id-verification/';
+  static String idVerificationItem(int id) => '$_baseUrl/api/id-verification/$id/';
 
 }
