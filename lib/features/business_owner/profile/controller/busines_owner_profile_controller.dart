@@ -261,7 +261,14 @@ class BusinessOwnerProfileController extends GetxController {
   String _uiTo24(String ui) {
     final reg = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$', caseSensitive: false);
     final m = reg.firstMatch(ui.trim());
-    if (m == null) return ui;
+    if (m == null) {
+      // Try 24-hour format
+      final m24 = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*$').firstMatch(ui.trim());
+      if (m24 != null) {
+        return '${m24.group(1)!.padLeft(2,'0')}:${m24.group(2)!}';
+      }
+      return ui;
+    }
     int h = int.parse(m.group(1)!);
     final mm = m.group(2)!;
     final ap = m.group(3)!.toUpperCase();
@@ -273,16 +280,29 @@ class BusinessOwnerProfileController extends GetxController {
   bool _isValidRange(Range r) {
     // very light validation: start < end when converted to minutes
     int _mins(String ui) {
-      final m = RegExp(r'(\d{1,2}):(\d{2})\s*([AP]M)', caseSensitive: false).firstMatch(ui)!;
-      int hh = int.parse(m.group(1)!);
-      final mm = int.parse(m.group(2)!);
-      final ap = m.group(3)!.toUpperCase();
-      if (ap == 'PM' && hh != 12) hh += 12;
-      if (ap == 'AM' && hh == 12) hh = 0;
-      return hh*60 + mm;
+      // Try 12-hour format
+      final m = RegExp(r'(\d{1,2}):(\d{2})\s*([AP]M)', caseSensitive: false).firstMatch(ui);
+      if (m != null) {
+        int hh = int.parse(m.group(1)!);
+        final mm = int.parse(m.group(2)!);
+        final ap = m.group(3)!.toUpperCase();
+        if (ap == 'PM' && hh != 12) hh += 12;
+        if (ap == 'AM' && hh == 12) hh = 0;
+        return hh*60 + mm;
+      }
+      
+      // Try 24-hour format
+      final m24 = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*$').firstMatch(ui.trim());
+      if (m24 != null) {
+        int hh = int.parse(m24.group(1)!);
+        final mm = int.parse(m24.group(2)!);
+        return hh*60 + mm;
+      }
+      
+      throw FormatException("Invalid time format: $ui");
     }
     try {
-      return _mins(r.start) < _mins(r.end);
+      return _mins(r.start) <= _mins(r.end);
     } catch (_) {
       return false;
     }
