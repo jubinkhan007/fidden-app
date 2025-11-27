@@ -302,7 +302,7 @@ class BusinessOwnerProfileController extends GetxController {
       throw FormatException("Invalid time format: $ui");
     }
     try {
-      return _mins(r.start) <= _mins(r.end);
+      return _mins(r.start) < _mins(r.end);
     } catch (_) {
       return false;
     }
@@ -754,7 +754,7 @@ void syncOpenDaysFromBH() {
       // Validate all ranges
       for (final entry in businessHours.entries) {
         if (!_isValidDay(entry.value)) {
-          AppSnackBar.showError('Invalid hours for ${entry.key.toUpperCase()}: check start/end.');
+          AppSnackBar.showError('Invalid hours for ${entry.key.toUpperCase()}: End time must be after start time.');
           isLoading.value = false;
           return;
         }
@@ -890,7 +890,7 @@ void syncOpenDaysFromBH() {
 
       for (final entry in businessHours.entries) {
         if (!_isValidDay(entry.value)) {
-          AppSnackBar.showError('Invalid hours for ${entry.key.toUpperCase()}: check start/end.');
+          AppSnackBar.showError('Invalid hours for ${entry.key.toUpperCase()}: End time must be after start time.');
           return;
         }
       }
