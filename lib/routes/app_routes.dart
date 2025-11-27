@@ -41,6 +41,9 @@ import 'package:fidden/features/business_owner/consent_forms/presentation/screen
 import 'package:fidden/features/business_owner/design_requests/presentation/screens/design_requests_screen.dart';
 import 'package:fidden/features/business_owner/id_verification/presentation/screens/id_verification_screen.dart';
 import 'package:fidden/features/business_owner/portfolio/presentation/screens/portfolio_screen.dart';
+import 'package:fidden/features/business_owner/home/screens/consultation_calendar_screen.dart';
+import 'package:fidden/features/business_owner/home/screens/deposit_management_screen.dart';
+import 'package:fidden/features/business_owner/home/screens/reviews_screen.dart';
 
 class AppRoute {
   static String init = "/";
@@ -81,6 +84,9 @@ class AppRoute {
   static const String designRequestsScreen = '/design-requests';
   static const String consentFormsScreen = '/consent-forms';
   static const String idVerificationScreen = '/id-verification';
+  static const String consultationCalendarScreen = '/consultation-calendar';
+  static const String depositManagementScreen = '/deposit-management';
+  static const String reviewsScreen = '/reviews';
 
 
   static List<GetPage> routes = [
@@ -178,5 +184,8 @@ GetPage(
     GetPage(name: designRequestsScreen, page: () => const DesignRequestsScreen()),
     GetPage(name: consentFormsScreen, page: () => const ConsentFormsScreen()),
     GetPage(name: idVerificationScreen, page: () => const IdVerificationScreen()),
+    GetPage(name: consultationCalendarScreen, page: () => const ConsultationCalendarScreen()),
+    GetPage(name: depositManagementScreen, page: () => const DepositManagementScreen()),
+    GetPage(name: reviewsScreen, page: () => const ReviewsScreen()),
   ];
 }

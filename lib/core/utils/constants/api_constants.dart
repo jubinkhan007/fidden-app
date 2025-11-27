@@ -8,7 +8,7 @@ class AppUrls {
   AppUrls._();
 
   static const String _baseUrl =
-      'https://fidden-server.onrender.com';
+      'https://fidden-server-2.onrender.com';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
     return 'wss://fidden-server-2.onrender.com/ws/chat/?token=$accessToken';

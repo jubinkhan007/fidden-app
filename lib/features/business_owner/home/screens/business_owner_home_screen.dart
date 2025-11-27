@@ -160,6 +160,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
             // Navigate to Design Requests
+             Get.toNamed(AppRoute.designRequestsScreen);
           },
         );
       case DashboardTileType.consentForms:
@@ -169,6 +170,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
             // Navigate to Consent Forms
+             Get.toNamed(AppRoute.consentFormsScreen);
           },
         );
       case DashboardTileType.idVerification:
@@ -178,6 +180,34 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
             // Navigate to ID Verification
+             Get.toNamed(AppRoute.idVerificationScreen);
+          },
+        );
+      case DashboardTileType.consultationCalendar:
+        return DashboardTile(
+          title: "Consultation Calendar",
+          subtitle: "Manage consultations",
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+             Get.toNamed(AppRoute.consultationCalendarScreen);
+          },
+        );
+      case DashboardTileType.depositManagement:
+        return DashboardTile(
+          title: "Deposit Management",
+          subtitle: "Track deposits",
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+             Get.toNamed(AppRoute.depositManagementScreen);
+          },
+        );
+      case DashboardTileType.reviews:
+        return DashboardTile(
+          title: "Reviews",
+          subtitle: "Client feedback",
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+             Get.toNamed(AppRoute.reviewsScreen);
           },
         );
       
