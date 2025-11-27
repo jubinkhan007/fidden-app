@@ -37,6 +37,10 @@ import '../features/user/shops/services/presentation/screens/service_details_scr
 // import '../features/user/profile/presentation/screens/edit_profile_screen.dart';
 // import '../features/user/profile/presentation/screens/notification_screen.dart';
 // import '../features/user/profile/presentation/screens/terms_and_condition_screen.dart';
+import 'package:fidden/features/business_owner/consent_forms/presentation/screens/consent_forms_screen.dart';
+import 'package:fidden/features/business_owner/design_requests/presentation/screens/design_requests_screen.dart';
+import 'package:fidden/features/business_owner/id_verification/presentation/screens/id_verification_screen.dart';
+import 'package:fidden/features/business_owner/portfolio/presentation/screens/portfolio_screen.dart';
 
 class AppRoute {
   static String init = "/";
@@ -71,6 +75,12 @@ class AppRoute {
   static const String subscriptionScreen = '/subscription';
   static const String serviceDetailsScreen = '/userServiceDetails';
   static const String shopDetailsScreen = '/shopDetailsScreen';
+
+  // Niche Routes
+  static const String portfolioScreen = '/portfolio';
+  static const String designRequestsScreen = '/design-requests';
+  static const String consentFormsScreen = '/consent-forms';
+  static const String idVerificationScreen = '/id-verification';
 
 
   static List<GetPage> routes = [
@@ -161,7 +171,12 @@ GetPage(
     GetPage(
       name: shopDetailsScreen,
       page: () => ShopDetailsScreen(id: Get.arguments['shopId']),
-    )
+    ),
 
+    // --- Niche Routes ---
+    GetPage(name: portfolioScreen, page: () => const PortfolioScreen()),
+    GetPage(name: designRequestsScreen, page: () => const DesignRequestsScreen()),
+    GetPage(name: consentFormsScreen, page: () => const ConsentFormsScreen()),
+    GetPage(name: idVerificationScreen, page: () => const IdVerificationScreen()),
   ];
 }
