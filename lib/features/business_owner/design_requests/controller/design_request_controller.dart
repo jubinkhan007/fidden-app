@@ -1,12 +1,13 @@
-import 'package:fidden/core/services/network_caller.dart';
-import 'package:fidden/core/utils/constants/api_constants.dart';
-import 'package:fidden/features/business_owner/design_requests/data/design_request_model.dart';
 import 'package:get/get.dart';
-import 'package:fidden/core/commom/widgets/app_snackbar.dart';
+import '../data/design_request_model.dart';
+import '../services/design_request_service.dart';
 
 class DesignRequestController extends GetxController {
+  final DesignRequestService _service = DesignRequestService();
+
+  final RxList<DesignRequest> requests = <DesignRequest>[].obs;
   final RxBool isLoading = false.obs;
-  final RxList<DesignRequest> designRequests = <DesignRequest>[].obs;
+  final RxString errorMessage = ''.obs;
 
   @override
   void onInit() {
@@ -14,43 +15,65 @@ class DesignRequestController extends GetxController {
     fetchDesignRequests();
   }
 
-  Future<void> fetchDesignRequests() async {
+  Future<void> fetchDesignRequests({String? status}) async {
     try {
-      isLoading(true);
-      final response = await NetworkCaller().getRequest(AppUrls.designRequests);
-
-      if (response.isSuccess) {
-        final List<dynamic> data = response.responseData as List<dynamic>;
-        designRequests.value = data
-            .map((json) => DesignRequest.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        if (response.statusCode != 401) {
-          AppSnackBar.showError('Failed to load design requests');
-        }
-      }
+      isLoading.value = true;
+      errorMessage.value = '';
+      
+      final items = await _service.getDesignRequests(status: status);
+      requests.value = items;
     } catch (e) {
-      AppSnackBar.showError('Error loading design requests: \$e');
+      errorMessage.value = e.toString();
     } finally {
-      isLoading(false);
+      isLoading.value = false;
     }
   }
 
-  Future<void> updateStatus(int id, String status) async {
+  Future<void> approveRequest(int id) async {
     try {
-      final response = await NetworkCaller().patchRequest(
-        AppUrls.designRequest(id),
-        body: {'status': status},
-      );
-
-      if (response.isSuccess) {
-        AppSnackBar.showSuccess('Status updated to \$status');
-        await fetchDesignRequests();
-      } else {
-        AppSnackBar.showError('Failed to update status');
+      isLoading.value = true;
+      errorMessage.value = '';
+      
+      final updated = await _service.approveDesignRequest(id);
+      
+      final index = requests.indexWhere((req) => req.id == id);
+      if (index != -1) {
+        requests[index] = updated;
       }
+      
+      Get.snackbar('Success', 'Design request approved');
     } catch (e) {
-      AppSnackBar.showError('Error: \$e');
+      errorMessage.value = e.toString();
+      Get.snackbar('Error', 'Failed to approve request');
+    } finally {
+      isLoading.value = false;
     }
   }
+
+  Future<void> rejectRequest(int id) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      
+      final updated = await _service.rejectDesignRequest(id);
+      
+      final index = requests.indexWhere((req) => req.id == id);
+      if (index != -1) {
+        requests[index] = updated;
+      }
+      
+      Get.snackbar('Success', 'Design request rejected');
+    } catch (e) {
+      errorMessage.value = e.toString();
+      Get.snackbar('Error', 'Failed to reject request');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  List<DesignRequest> get pendingRequests => 
+      requests.where((req) => req.isPending).toList();
+  
+  List<DesignRequest> get approvedRequests => 
+      requests.where((req) => req.isApproved).toList();
 }

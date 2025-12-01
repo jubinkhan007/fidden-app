@@ -12,7 +12,7 @@ class DashboardController extends GetxController {
   List<String> get availableChips {
     final niches = _profileController.shopNiches;
     if (niches.isEmpty) return ['All'];
-    return ['All', ...niches];
+    return ['All', ...niches.map((e) => e.trim())];
   }
 
   // Get ordered list of tile types based on selection

@@ -7,12 +7,14 @@ class ContextChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(DashboardController());
+    final controller = Get.find<DashboardController>();
 
     return SizedBox(
       height: 50,
       child: Obx(() {
         final chips = controller.availableChips;
+        final selectedChip = controller.selectedChip.value; // Access here to register dependency
+
         return ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -20,13 +22,18 @@ class ContextChips extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(width: 8),
           itemBuilder: (context, index) {
             final chip = chips[index];
-            final isSelected = controller.selectedChip.value == chip;
+            // print('Building chip: $chip, selected: $selectedChip'); // DEBUG
+            final isSelected = selectedChip == chip;
             
             return ChoiceChip(
+              key: ValueKey(chip),
               label: Text(chip),
               selected: isSelected,
               onSelected: (bool selected) {
-                if (selected) controller.selectChip(chip);
+                // print('Chip tapped: $chip, selected: $selected'); // DEBUG
+                if (selected) {
+                  controller.selectChip(chip);
+                }
               },
               selectedColor: Colors.black,
               backgroundColor: Colors.white,

@@ -1,25 +1,85 @@
-class IdVerificationModel {
+class IDVerificationRequest {
   final int id;
-  final String clientName;
-  final String status; // 'pending', 'verified', 'rejected'
-  final String documentUrl;
+  final int shopId;
+  final User user;
+  final int? bookingId;
+  final String? frontImageUrl;
+  final String? backImageUrl;
+  final String status;
+  final String? rejectionReason;
   final DateTime createdAt;
 
-  IdVerificationModel({
+  IDVerificationRequest({
     required this.id,
-    required this.clientName,
+    required this.shopId,
+    required this.user,
+    this.bookingId,
+    this.frontImageUrl,
+    this.backImageUrl,
     required this.status,
-    required this.documentUrl,
+    this.rejectionReason,
     required this.createdAt,
   });
 
-  factory IdVerificationModel.fromJson(Map<String, dynamic> json) {
-    return IdVerificationModel(
-      id: json['id'] ?? 0,
-      clientName: json['client_name'] ?? 'Unknown',
-      status: json['status'] ?? 'pending',
-      documentUrl: json['document_url'] ?? '',
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+  factory IDVerificationRequest.fromJson(Map<String, dynamic> json) {
+    return IDVerificationRequest(
+      id: json['id'] as int,
+      shopId: json['shop'] as int,
+      user: User.fromJson(json['user'] as Map<String, dynamic>),
+      bookingId: json['booking'] as int?,
+      frontImageUrl: json['front_image'] as String?,
+      backImageUrl: json['back_image'] as String?,
+      status: json['status'] as String,
+      rejectionReason: json['rejection_reason'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'shop': shopId,
+      'user': user.toJson(),
+      if (bookingId != null) 'booking': bookingId,
+      if (frontImageUrl != null) 'front_image': frontImageUrl,
+      if (backImageUrl != null) 'back_image': backImageUrl,
+      'status': status,
+      if (rejectionReason != null) 'rejection_reason': rejectionReason,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  bool get isPending => status == 'pending_upload';
+  bool get isUnderReview => status == 'under_review';
+  bool get isApproved => status == 'approved';
+  bool get isRejected => status == 'rejected';
+}
+
+// Reusing User model
+class User {
+  final int id;
+  final String name;
+  final String email;
+
+  User({
+    required this.id,
+    required this.name,
+    required this.email,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      email: json['email'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+    };
   }
 }

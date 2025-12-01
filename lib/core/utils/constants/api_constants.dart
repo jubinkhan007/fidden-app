@@ -8,10 +8,10 @@ class AppUrls {
   AppUrls._();
 
   static const String _baseUrl =
-      'https://fidden-server-2.onrender.com';
+      'https://fidden-server.onrender.com';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
-    return 'wss://fidden-server-2.onrender.com/ws/chat/?token=$accessToken';
+    return 'wss://fidden-server.onrender.com/ws/chat/?token=$accessToken';
   }
 
   static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';
@@ -76,6 +76,19 @@ class AppUrls {
 
   //Global Search
   static String globalSearch(String q) => '${_baseUrl}/api/global-search/?q=$q';
+
+  // Tattoo Artist Features
+  static const String portfolio = '$_baseUrl/api/portfolio/';
+  static const String designRequests = '$_baseUrl/api/design-requests/';
+  static const String consentTemplates = '$_baseUrl/api/consent-forms/templates/';
+  static const String signedConsents = '$_baseUrl/api/consent-forms/signed/';
+  static const String idVerification = '$_baseUrl/api/id-verification/';
+  static const String consultations = '$_baseUrl/api/consultations/';
+
+  // Barber Dashboard Features
+  static const String todayAppointments = '$_baseUrl/api/barber/today-appointments/';
+  static const String dailyRevenue = '$_baseUrl/api/barber/daily-revenue/';
+  static const String noShowAlerts = '$_baseUrl/api/barber/no-show-alerts/';
 
   // register-device
   static String registerDevice = '${_baseUrl}/api/register-device/';
@@ -214,11 +227,9 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   static String portfolioItem(int id) => '$_baseUrl/api/portfolio/$id/';
 
   // Tattoo Artist - Design Requests
-  static const String designRequests = '$_baseUrl/api/design-requests/';
   static String designRequest(int id) => '$_baseUrl/api/design-requests/$id/';
 
   // Tattoo Artist - Consent Forms
-  static const String consentTemplates = '$_baseUrl/api/consent-forms/templates/';
   static String consentTemplate(int id) => '$_baseUrl/api/consent-forms/templates/$id/';
   static const String signedConsentForms = '$_baseUrl/api/consent-forms/signed/';
   static String signedConsentForm(int id) => '$_baseUrl/api/consent-forms/signed/$id/';

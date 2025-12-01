@@ -24,7 +24,7 @@ class PortfolioTabScreen extends StatelessWidget {
         }
 
         return RefreshIndicator(
-          onRefresh: controller.fetchPortfolio,
+          onRefresh: controller.fetchPortfolioItems,
           child: GridView.builder(
             padding: EdgeInsets.all(getWidth(16)),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

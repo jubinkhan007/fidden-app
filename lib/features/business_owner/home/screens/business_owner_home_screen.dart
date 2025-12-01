@@ -2,6 +2,7 @@ import 'package:fidden/features/business_owner/home/dashboard/dashboard_controll
 import 'package:fidden/features/business_owner/home/dashboard/tile_registry.dart';
 import 'package:fidden/features/business_owner/home/dashboard/widgets/context_chips.dart';
 import 'package:fidden/features/business_owner/home/dashboard/widgets/dashboard_tile.dart';
+import 'package:fidden/features/business_owner/home/layouts/default_layout.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 import 'package:flutter/material.dart';
@@ -75,23 +76,35 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                 child: ContextChips(),
               ),
 
-              // 2. Dynamic Tiles
+              // 2. Dynamic Content (DefaultLayout for "All", Tiles for specific niches)
               Expanded(
                 child: Obx(() {
                   if (controller.isLoading.value) {
                     return const FullScreenShimmerLoader();
                   }
 
-                  final tiles = dashboardController.visibleTiles;
+                  // Check if "All" is selected
+                  final selectedChip = dashboardController.selectedChip.value;
+                  
+                  if (selectedChip == 'All') {
+                    // Show the original general dashboard
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                      children: DefaultLayout().buildContent(context, controller),
+                    );
+                  } else {
+                    // Show niche-specific tile dashboard
+                    final tiles = dashboardController.visibleTiles;
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                    itemCount: tiles.length,
-                    itemBuilder: (context, index) {
-                      final tileType = tiles[index];
-                      return _buildTile(tileType);
-                    },
-                  );
+                    return ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                      itemCount: tiles.length,
+                      itemBuilder: (context, index) {
+                        final tileType = tiles[index];
+                        return _buildTile(tileType);
+                      },
+                    );
+                  }
                 }),
               ),
             ],
@@ -208,6 +221,24 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
              Get.toNamed(AppRoute.reviewsScreen);
+          },
+        );
+      case DashboardTileType.noShowAlerts:
+        return DashboardTile(
+          title: "No-Show Alerts",
+          subtitle: "Recent no-shows",
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+             Get.toNamed(AppRoute.noShowAlertsScreen);
+          },
+        );
+      case DashboardTileType.serviceMenu:
+        return DashboardTile(
+          title: "Service Menu",
+          subtitle: "Manage services",
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+             Get.toNamed(AppRoute.serviceMenuScreen);
           },
         );
       

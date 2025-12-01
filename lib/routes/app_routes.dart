@@ -37,13 +37,17 @@ import '../features/user/shops/services/presentation/screens/service_details_scr
 // import '../features/user/profile/presentation/screens/edit_profile_screen.dart';
 // import '../features/user/profile/presentation/screens/notification_screen.dart';
 // import '../features/user/profile/presentation/screens/terms_and_condition_screen.dart';
-import 'package:fidden/features/business_owner/consent_forms/presentation/screens/consent_forms_screen.dart';
-import 'package:fidden/features/business_owner/design_requests/presentation/screens/design_requests_screen.dart';
-import 'package:fidden/features/business_owner/id_verification/presentation/screens/id_verification_screen.dart';
-import 'package:fidden/features/business_owner/portfolio/presentation/screens/portfolio_screen.dart';
-import 'package:fidden/features/business_owner/home/screens/consultation_calendar_screen.dart';
+import 'package:fidden/features/business_owner/consent_forms/presentation/screens/consent_forms_list_screen.dart';
+import 'package:fidden/features/business_owner/design_requests/presentation/screens/design_requests_list_screen.dart';
+import 'package:fidden/features/business_owner/id_verification/presentation/screens/id_verification_queue_screen.dart';
+import 'package:fidden/features/business_owner/portfolio/presentation/screens/portfolio_grid_screen.dart';
+import 'package:fidden/features/business_owner/consultation/presentation/screens/consultation_calendar_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/deposit_management_screen.dart';
 import 'package:fidden/features/business_owner/home/screens/reviews_screen.dart';
+import 'package:fidden/features/business_owner/barber/presentation/screens/no_show_alerts_screen.dart';
+import 'package:fidden/features/business_owner/barber/presentation/screens/service_menu_screen.dart';
+import 'package:fidden/features/business_owner/barber/presentation/screens/today_appointments_screen.dart';
+import 'package:fidden/features/business_owner/barber/presentation/screens/daily_revenue_screen.dart';
 
 class AppRoute {
   static String init = "/";
@@ -87,6 +91,8 @@ class AppRoute {
   static const String consultationCalendarScreen = '/consultation-calendar';
   static const String depositManagementScreen = '/deposit-management';
   static const String reviewsScreen = '/reviews';
+  static const String noShowAlertsScreen = '/no-show-alerts';
+  static const String serviceMenuScreen = '/service-menu';
 
 
   static List<GetPage> routes = [
@@ -180,12 +186,14 @@ GetPage(
     ),
 
     // --- Niche Routes ---
-    GetPage(name: portfolioScreen, page: () => const PortfolioScreen()),
-    GetPage(name: designRequestsScreen, page: () => const DesignRequestsScreen()),
-    GetPage(name: consentFormsScreen, page: () => const ConsentFormsScreen()),
-    GetPage(name: idVerificationScreen, page: () => const IdVerificationScreen()),
+    GetPage(name: portfolioScreen, page: () => const PortfolioGridScreen()),
+    GetPage(name: designRequestsScreen, page: () => const DesignRequestsListScreen()),
+    GetPage(name: consentFormsScreen, page: () => const ConsentFormsListScreen()),
+    GetPage(name: idVerificationScreen, page: () => const IDVerificationQueueScreen()),
     GetPage(name: consultationCalendarScreen, page: () => const ConsultationCalendarScreen()),
     GetPage(name: depositManagementScreen, page: () => const DepositManagementScreen()),
     GetPage(name: reviewsScreen, page: () => const ReviewsScreen()),
+    GetPage(name: noShowAlertsScreen, page: () => const NoShowAlertsScreen()),
+    GetPage(name: serviceMenuScreen, page: () => const ServiceMenuScreen()),
   ];
 }

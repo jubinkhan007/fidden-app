@@ -61,8 +61,11 @@ class Data {
 
   factory Data.fromJson(Map<String, dynamic> json) {
     // Parse niches with backward compatibility
+    // Backend may send 'niches' or 'shop_niches'
     List<String>? parsedNiches;
-    if (json['shop_niches'] != null && json['shop_niches'] is List) {
+    if (json['niches'] != null && json['niches'] is List) {
+      parsedNiches = List<String>.from(json['niches']);
+    } else if (json['shop_niches'] != null && json['shop_niches'] is List) {
       parsedNiches = List<String>.from(json['shop_niches']);
     } else if (json['shop_niche'] != null) {
       parsedNiches = [json['shop_niche'] as String];

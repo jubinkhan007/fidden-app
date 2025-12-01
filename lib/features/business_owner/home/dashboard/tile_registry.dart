@@ -13,12 +13,17 @@ enum DashboardTileType {
   depositManagement,
   reviews,
   
+  // Barber
+  noShowAlerts,
+  serviceMenu,
+  
   // Barber (Future)
   // ...
 }
 
 class TileRegistry {
   static const String _tattooArtist = 'tattoo_artist'; // Matches API value
+  static const String _barber = 'barber'; // Matches API value
   // Add other niche strings as needed
 
   static List<DashboardTileType> getSharedTiles() {
@@ -46,6 +51,16 @@ class TileRegistry {
           DashboardTileType.consentForms,
           DashboardTileType.depositManagement,
           DashboardTileType.reviews,
+        ];
+      case 'barber':
+        return [
+          // Top Section
+          DashboardTileType.todaysAppointments,
+          DashboardTileType.dailyRevenue,
+          DashboardTileType.noShowAlerts,
+          
+          // Core Features
+          DashboardTileType.serviceMenu,
         ];
       default:
         return [];
