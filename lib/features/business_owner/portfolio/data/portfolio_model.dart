@@ -16,6 +16,8 @@ class PortfolioItem {
     required this.createdAt,
   });
 
+  String get title => description.isNotEmpty ? description : 'Portfolio Item';
+
   factory PortfolioItem.fromJson(Map<String, dynamic> json) {
     return PortfolioItem(
       id: json['id'] as int,

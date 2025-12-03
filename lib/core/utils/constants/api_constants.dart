@@ -8,10 +8,10 @@ class AppUrls {
   AppUrls._();
 
   static const String _baseUrl =
-      'https://fidden-server.onrender.com';
+      'http://localhost:8000';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
-    return 'wss://fidden-server.onrender.com/ws/chat/?token=$accessToken';
+    return 'ws://localhost:8000/ws/chat/?token=$accessToken';
   }
 
   static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';

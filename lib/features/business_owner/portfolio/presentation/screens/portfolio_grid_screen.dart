@@ -12,8 +12,12 @@ class PortfolioGridScreen extends StatelessWidget {
     final controller = Get.put(PortfolioController());
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Portfolio'),
+        title: const Text('Portfolio Manager'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.add_photo_alternate),
@@ -69,20 +73,18 @@ class PortfolioGridScreen extends StatelessWidget {
         return RefreshIndicator(
           onRefresh: controller.fetchPortfolioItems,
           child: GridView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.75,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.8, // Slightly taller than wide
             ),
             itemCount: controller.portfolioItems.length,
             itemBuilder: (context, index) {
               final item = controller.portfolioItems[index];
-              return _PortfolioCard(
+              return _PortfolioImageCard(
                 imageUrl: item.imageUrl,
-                title: item.description,
-                tags: item.tags,
                 onTap: () => Get.to(() => PortfolioDetailScreen(item: item)),
               );
             },
@@ -93,16 +95,12 @@ class PortfolioGridScreen extends StatelessWidget {
   }
 }
 
-class _PortfolioCard extends StatelessWidget {
-  final String imageUrl;
-  final String title;
-  final List<String> tags;
+class _PortfolioImageCard extends StatelessWidget {
+  final String? imageUrl;
   final VoidCallback onTap;
 
-  const _PortfolioCard({
+  const _PortfolioImageCard({
     required this.imageUrl,
-    required this.title,
-    required this.tags,
     required this.onTap,
   });
 
@@ -110,59 +108,46 @@ class _PortfolioCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 2,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Image.network(
-                imageUrl,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.broken_image, size: 48, color: Colors.grey),
-                ),
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.grey[200],
-                    child: const Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title.isEmpty ? 'Untitled' : title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  if (tags.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 4,
-                      children: tags.take(2).map((tag) {
-                        return Chip(
-                          label: Text(tag, style: const TextStyle(fontSize: 10)),
-                          padding: EdgeInsets.zero,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        );
-                      }).toList(),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: imageUrl != null
+              ? Image.network(
+                  imageUrl!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
                     ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+                  ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                )
+              : Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: Icon(Icons.image, size: 48, color: Colors.grey),
+                  ),
+                ),
         ),
       ),
     );

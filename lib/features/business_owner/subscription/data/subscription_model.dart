@@ -1,3 +1,5 @@
+// lib/features/business_owner/subscription/data/subscription_model.dart 
+
 // This class will parse the response from `/subscriptions/details/`
 class CurrentSubscription {
   final SubscriptionPlan plan;

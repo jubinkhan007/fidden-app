@@ -53,6 +53,9 @@ class IDVerificationRequest {
   bool get isUnderReview => status == 'under_review';
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
+  
+  String get customerName => user.name;
+  String get customerEmail => user.email;
 }
 
 // Reusing User model

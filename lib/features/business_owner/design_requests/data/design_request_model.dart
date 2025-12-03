@@ -47,6 +47,11 @@ class DesignRequest {
     required this.createdAt,
   });
 
+  String get customerName => user.name;
+  String get customerEmail => user.email;
+  String get designDescription => description;
+  List<String> get designImages => []; // No images in current model
+
   factory DesignRequest.fromJson(Map<String, dynamic> json) {
     return DesignRequest(
       id: json['id'] as int,
