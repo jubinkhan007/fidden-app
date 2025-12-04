@@ -179,14 +179,18 @@ class AddServiceController extends GetxController {
       );
       debugPrint(response.statusCode.toString());
 
-      if (response.statusCode == 201) {
-        AppSnackBar.showSuccess('Service Created successfully!');
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final businessController = Get.find<BusinessOwnerController>();
         await businessController.fetchAllMyService();
         Get.back();
+        // Show snackbar after navigation to avoid disposed snackbar error
+        Future.delayed(const Duration(milliseconds: 100), () {
+          AppSnackBar.showSuccess('Service Created successfully!');
+        });
       } else {
         var errorResponse = await response.stream.bytesToString();
         log('Response error: $errorResponse');
+        AppSnackBar.showError('Failed to create service: $errorResponse');
       }
     } catch (e) {
       log('Request error: $e');
@@ -401,16 +405,22 @@ class AddServiceController extends GetxController {
       );
 
       if (response.isSuccess) {
-        AppSnackBar.showSuccess('Service deleted successfully!');
         final businessController = Get.find<BusinessOwnerController>();
         await businessController.fetchAllMyService();
-        Get.back(); // Pop the dialog
+        // Close dialog and screen FIRST to avoid disposed snackbar error
+        if (Get.isDialogOpen ?? false) {
+          Get.back(); // Pop the dialog
+        }
         Get.back(); // Pop the EditServiceScreen
+        // Show snackbar AFTER navigation completes
+        Future.delayed(const Duration(milliseconds: 100), () {
+          AppSnackBar.showSuccess('Service deleted successfully!');
+        });
       } else {
-        AppSnackBar.showError(response.errorMessage);
+        AppSnackBar.showError(response.errorMessage ?? 'Failed to delete service');
       }
     } catch (e) {
-      Get.snackbar('Error', 'An error occurred: $e');
+      AppSnackBar.showError('An error occurred: $e');
     } finally {
       inProgress.value = false;
     }
