@@ -243,10 +243,10 @@ class ShopApi {
     required int shopId,
     required String token,
   }) async {
-    const String returnUrl =
-        'https://fidden-service-provider-1.onrender.com/payments/stripe/return/';
-    const String refreshUrl =
-        'https://fidden-service-provider-1.onrender.com/payments/stripe/refresh/';
+    final returnUrl =
+        'https://backend.fidden.io/payments/stripe/return/';
+    final refreshUrl =
+        'https://backend.fidden.io/payments/stripe/refresh/';
 
     final String urlWithParams =
         '${AppUrls.stripeOnborading(shopId)}?return_url=$returnUrl&refresh_url=$refreshUrl';

@@ -109,7 +109,7 @@ class WsService extends GetxService with WidgetsBindingObserver {
 
     final url = AppUrls.socketUrl(token);
     final headers = {
-      'Origin': 'https://fidden-service-provider-1.onrender.com',
+      'Origin': 'https://backend.fidden.io',
     };
 
     print('──────── WS REQUEST (GLOBAL) ────────');

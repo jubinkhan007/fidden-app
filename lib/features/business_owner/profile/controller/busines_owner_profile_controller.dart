@@ -227,6 +227,20 @@ class BusinessOwnerProfileController extends GetxController {
     _propagateDefaultChange(oldStart: oldStart, oldEnd: oldEnd);
   }
 
+  /// Robust time comparison (ignores leading zeros, spacing, case)
+  bool _areTimesEqual(String t1, String t2) {
+    String norm(String s) {
+      // "09:00 AM" -> "9:00am"
+      // "9:00 a.m." -> "9:00am"
+      var n = s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '').replaceAll('.', '');
+      if (n.startsWith('0') && n.length > 1) {
+        n = n.substring(1);
+      }
+      return n;
+    }
+    return norm(t1) == norm(t2);
+  }
+
   /// Update businessHours for days that were still using the old defaults,
   /// and seed any open-but-empty day with the new defaults.
   void _propagateDefaultChange({required String oldStart, required String oldEnd}) {
@@ -243,11 +257,16 @@ class BusinessOwnerProfileController extends GetxController {
         if (ranges.isEmpty) {
           // open day with no custom hours -> seed with new defaults
           businessHours[day] = [Range(defStart, defEnd)];
-        } else if (ranges.length == 1 &&
-            ranges.first.start == oldStart &&
-            ranges.first.end == oldEnd) {
-          // still using old default -> update to new default
-          businessHours[day] = [Range(defStart, defEnd)];
+        } else if (ranges.length == 1) {
+          // Check if it matches the OLD user setting OR the system fallback (9-6)
+          // This fixes the issue where days stuck at 9-6 wouldn't update
+          final r = ranges.first;
+          final matchesOld = _areTimesEqual(r.start, oldStart) && _areTimesEqual(r.end, oldEnd);
+          final matchesSystemDefault = _areTimesEqual(r.start, '09:00 AM') && _areTimesEqual(r.end, '06:00 PM');
+          
+          if (matchesOld || matchesSystemDefault) {
+             businessHours[day] = [Range(defStart, defEnd)];
+          }
         }
       } else {
         // closed days stay empty
@@ -492,6 +511,7 @@ class BusinessOwnerProfileController extends GetxController {
 
       if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
         profileDetails.value = GetBusinesModel.fromJson(resp.responseData);
+        _populateBusinessHoursFromModel(profileDetails.value.data);
       } else {
         profileDetails.value = GetBusinesModel(data: null);
       }
@@ -506,6 +526,40 @@ class BusinessOwnerProfileController extends GetxController {
       isLoading.value = false;
       if (!_initCompleter.isCompleted) _initCompleter.complete();
     }
+  }
+
+  void _populateBusinessHoursFromModel(Data? data) {
+    if (data == null) return;
+
+    // 1. Populate start/end time observables
+    if (data.startTime != null && data.startTime!.isNotEmpty) {
+      startTime.value = data.startTime!;
+    }
+    if (data.endTime != null && data.endTime!.isNotEmpty) {
+      endTime.value = data.endTime!;
+    }
+
+    // 2. Populate openDays
+    if (data.openDays != null) {
+      openDays.clear();
+      openDays.addAll(data.openDays!);
+    }
+
+    // 3. Populate businessHours map
+    if (data.businessHours != null) {
+      businessHours.clear();
+      data.businessHours!.forEach((day, ranges) {
+        // Convert tuple (start, end) to Range object
+        final rangeList = ranges.map((r) => Range(r.$1, r.$2)).toList();
+        businessHours[day] = rangeList;
+      });
+    } else {
+      // Fallback: if businessHours is missing but we have openDays,
+      // seed them with the default start/end times.
+      ensureBusinessHoursForOpenDays();
+    }
+
+    businessHours.refresh();
   }
 
   // ---------------- Validation helpers ----------------
@@ -647,17 +701,18 @@ void syncOpenDaysFromBH() {
 
   /// Ensure businessHours matches `openDays`.
   /// - Any *open* day with no ranges gets a single default interval
-  ///   using the current startTime/endTime.
+  ///   using the current startTime/endTime (or overrides if provided).
   /// - Any *closed* day gets cleared ([]).
-  void applyOpenDaysToBH() {
+  void applyOpenDaysToBH({String? overrideStart, String? overrideEnd}) {
     // ensure all 7 keys exist
     const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     for (final d in days) {
       businessHours.putIfAbsent(d, () => []);
     }
 
-    final defaultStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
-    final defaultEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+    final defaultStart = overrideStart ?? (startTime.value.isNotEmpty ? startTime.value : '09:00 AM');
+    final defaultEnd   = overrideEnd   ?? (endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM');
+    
 
     // normalize set for lookup
     final openSet = openDays.map((e) => e.toLowerCase()).toSet();
