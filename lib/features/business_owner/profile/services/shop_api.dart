@@ -244,9 +244,9 @@ class ShopApi {
     required String token,
   }) async {
     final returnUrl =
-        'https://backend.fidden.io/payments/stripe/return/';
+        'http://10.0.2.2:8000/payments/stripe/return/';
     final refreshUrl =
-        'https://backend.fidden.io/payments/stripe/refresh/';
+        'http://10.0.2.2:8000/payments/stripe/refresh/';
 
     final String urlWithParams =
         '${AppUrls.stripeOnborading(shopId)}?return_url=$returnUrl&refresh_url=$refreshUrl';
