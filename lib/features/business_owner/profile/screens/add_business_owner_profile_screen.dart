@@ -72,7 +72,11 @@ class _AddBusinessOwnerProfileScreenState
       controller1.startTime.value = '09:00 AM';
       controller1.endTime.value   = '08:00 PM';
       controller1.openDays.assignAll(['Monday','Tuesday','Wednesday','Thursday','Friday']);
-      controller1.applyOpenDaysToBH();
+      
+      // Ensure clean slate for new profile creation
+      controller1.businessHours.clear();
+      
+      controller1.applyOpenDaysToBH(overrideStart: '09:00 AM', overrideEnd: '08:00 PM');
       controller1.ensureBusinessHoursForOpenDays();
     }
   }

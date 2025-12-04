@@ -121,6 +121,7 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
                       length: _otpLength,
                       // CORRECTED: Use the local controller
                       controller: _otpTEController,
+                      autoDisposeControllers: false,
                       keyboardType: TextInputType.number,
                       cursorColor: Colors.black,
                       animationType: AnimationType.fade,

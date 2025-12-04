@@ -152,26 +152,47 @@ class HomeController extends GetxController {
 
 
   Future<void> fetchTrendingServices() async {
-  try {
-    final res = await NetworkCaller().getRequest(
-      AppUrls.trendingServices,
-      token: AuthService.accessToken,
-    );
-    if (!res.isSuccess) return;
+    try {
+      // 1. Try fetching trending (top=5)
+      var res = await NetworkCaller().getRequest(
+        AppUrls.trendingServices,
+        token: AuthService.accessToken,
+      );
+      
+      // 2. If failed or empty, fallback to all services
+      bool isEmpty = true;
+      if (res.isSuccess) {
+        final raw = res.responseData;
+        if (raw is Map<String, dynamic> && raw['results'] is List && (raw['results'] as List).isNotEmpty) {
+          isEmpty = false;
+        } else if (raw is List && raw.isNotEmpty) {
+          isEmpty = false;
+        }
+      }
 
-    final raw = res.responseData;
+      if (isEmpty) {
+        print('DEBUG: Trending empty, falling back to all services');
+        res = await NetworkCaller().getRequest(
+          AppUrls.allServices,
+          token: AuthService.accessToken,
+        );
+      }
 
-    if (raw is Map<String, dynamic>) {
-      trendingServices.value = TrendingServiceModel.fromJson(raw);
-    } else if (raw is List) {
-      trendingServices.value = TrendingServiceModel.fromList(raw);
-    } else {
-      throw Exception('Unexpected trending services format: ${raw.runtimeType}');
+      if (!res.isSuccess) return;
+
+      final raw = res.responseData;
+
+      if (raw is Map<String, dynamic>) {
+        trendingServices.value = TrendingServiceModel.fromJson(raw);
+      } else if (raw is List) {
+        trendingServices.value = TrendingServiceModel.fromList(raw);
+      } else {
+        throw Exception('Unexpected trending services format: ${raw.runtimeType}');
+      }
+    } catch (e) {
+      AppSnackBar.showError('Could not fetch trending services: $e');
     }
-  } catch (e) {
-    AppSnackBar.showError('Could not fetch trending services: $e');
   }
-}
 
 
   Future<void> fetchPopularShops() async {
