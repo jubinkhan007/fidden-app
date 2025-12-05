@@ -727,6 +727,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> with WidgetsBindi
           Icons.query_stats),
     ];
 
+    // Calculate columns: ~200px per card, min 2, max 3
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = (screenWidth / 200).clamp(2, 3).toInt();
+
     return _card(
       child: GridView.builder(
         physics:
@@ -734,8 +738,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> with WidgetsBindi
         shrinkWrap: true,
         itemCount: kpis.length,
         gridDelegate:
-        const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
           mainAxisExtent: 84,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,

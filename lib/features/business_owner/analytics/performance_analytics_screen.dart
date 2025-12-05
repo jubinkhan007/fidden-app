@@ -110,8 +110,12 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
       BuildContext context, AnalyticsController controller) {
     final data = controller.analyticsData.value;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Calculate columns: ~200px per card, min 2, max 4
+    final crossAxisCount = (screenWidth / 200).clamp(2, 4).toInt();
+
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: crossAxisCount,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: kGap,
