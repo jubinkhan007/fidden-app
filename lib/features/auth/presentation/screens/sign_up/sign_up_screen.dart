@@ -67,34 +67,36 @@ class SignUpScreen extends StatelessWidget {
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxW),
             child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: getWidth(16)),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    VerticalSpace(height: getHeight(24)),
+                    const SizedBox(height: 24),
                     // Logo
                     Align(
                       alignment: Alignment.center,
                       child: Image.asset(
                         ImagePath.splashLogo,
-                        height: getHeight(124),
-                        width: getWidth(186),
+                        height: 100,
+                        width: 150,
                       ),
                     ),
-                    VerticalSpace(height: getHeight(16)),
+                    const SizedBox(height: 16),
                     // Title
-                    Align(
+                    const Align(
                       alignment: Alignment.center,
-                      child: CustomText(
-                        text: "Create Account",
-                        fontSize: getWidth(28),
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF191A1A),
+                      child: Text(
+                        "Create Account",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF191A1A),
+                        ),
                       ),
                     ),
-                    VerticalSpace(height: getHeight(40)),
+                    const SizedBox(height: 40),
 
                     // // User Name
                     // CustomText(
@@ -115,13 +117,15 @@ class SignUpScreen extends StatelessWidget {
                     // VerticalSpace(height: getHeight(20)),
 
                     // Role
-                    CustomText(
-                      text: "Choose your role",
-                      color: _label,
-                      fontSize: getWidth(15),
-                      fontWeight: FontWeight.w700,
+                    const Text(
+                      "Choose your role",
+                      style: TextStyle(
+                        color: _label,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    SizedBox(height: getHeight(10)),
+                    const SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
                         color: _fieldFill,
@@ -145,11 +149,11 @@ class SignUpScreen extends StatelessWidget {
                               vertical: 14,
                             ),
                           ),
-                          hint: Text(
+                          hint: const Text(
                             "Select",
                             style: TextStyle(
                               color: _hint,
-                              fontSize: getWidth(16),
+                              fontSize: 16,
                               fontWeight: FontWeight.w400,
                             ),
                           ),
@@ -158,8 +162,8 @@ class SignUpScreen extends StatelessWidget {
                               value: e,
                               child: Text(
                                 e,
-                                style: TextStyle(
-                                  fontSize: getWidth(16),
+                                style: const TextStyle(
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
@@ -172,32 +176,36 @@ class SignUpScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    VerticalSpace(height: getHeight(20)),
+                    const SizedBox(height: 20),
 
                     // Email
-                    CustomText(
-                      text: "Email",
-                      color: _label,
-                      fontSize: getWidth(15),
-                      fontWeight: FontWeight.w700,
+                    const Text(
+                      "Email",
+                      style: TextStyle(
+                        color: _label,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    SizedBox(height: getHeight(10)),
+                    const SizedBox(height: 10),
                     CustomTexFormField(
                       controller: signUpController.emailTEController,
                       hintText: "example@gmail.com",
                       inputDecoration: _decor("example@gmail.com"),
                       validator: AppValidator.validateEmail,
                     ),
-                    VerticalSpace(height: getHeight(20)),
+                    const SizedBox(height: 20),
 
                     // Password
-                    CustomText(
-                      text: "Password",
-                      color: _label,
-                      fontSize: getWidth(15),
-                      fontWeight: FontWeight.w700,
+                    const Text(
+                      "Password",
+                      style: TextStyle(
+                        color: _label,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    SizedBox(height: getHeight(10)),
+                    const SizedBox(height: 10),
                     CustomTexFormField(
                       controller: signUpController.passwordTEController,
                       hintText: "Enter your password",
@@ -206,7 +214,7 @@ class SignUpScreen extends StatelessWidget {
                       validator: AppValidator.validatePassword,
                     ),
 
-                    VerticalSpace(height: getHeight(24)),
+                    const SizedBox(height: 24),
                     // Primary CTA
                     Obx(
                       () => signUpController.isLoading.value
@@ -217,7 +225,7 @@ class SignUpScreen extends StatelessWidget {
                               ),
                             )
                           : SizedBox(
-                              height: getHeight(64),
+                              height: 56,
                               width: double.infinity,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
@@ -234,10 +242,10 @@ class SignUpScreen extends StatelessWidget {
                                     signUpController.createAccount();
                                   }
                                 },
-                                child: Text(
+                                child: const Text(
                                   "Sign Up",
                                   style: TextStyle(
-                                    fontSize: getWidth(18),
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
                                   ),
@@ -246,46 +254,48 @@ class SignUpScreen extends StatelessWidget {
                             ),
                     ),
 
-                    VerticalSpace(height: getHeight(28)),
+                    const SizedBox(height: 28),
                     // Or continue with
-                    Align(
+                    const Align(
                       alignment: Alignment.center,
-                      child: CustomText(
-                        text: "Or continue with",
-                        fontSize: getWidth(14),
-                        color: _label,
-                        fontWeight: FontWeight.w500,
+                      child: Text(
+                        "Or continue with",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _label,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                    VerticalSpace(height: getHeight(16)),
+                    const SizedBox(height: 16),
 
                     // Google button (white, bordered)
                     InkWell(
                       borderRadius: BorderRadius.circular(14),
                       onTap: () => Get.to(() => RoleSelectionScreen()),
                       child: Container(
-                        height: getHeight(56),
+                        height: 56,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: _divider),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: getWidth(16)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Image.asset(
-                              "assets/images/google_logo.png", // replace if your asset differs
-                              height: getHeight(22),
-                              width: getHeight(22),
+                              "assets/images/google_logo.png",
+                              height: 22,
+                              width: 22,
                             ),
-                            SizedBox(width: getWidth(10)),
-                            Text(
+                            const SizedBox(width: 10),
+                            const Text(
                               "Google",
                               style: TextStyle(
-                                fontSize: getWidth(16),
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF1F1F1F),
+                                color: Color(0xFF1F1F1F),
                               ),
                             ),
                           ],
@@ -293,21 +303,23 @@ class SignUpScreen extends StatelessWidget {
                       ),
                     ),
 
-                    VerticalSpace(height: getHeight(24)),
+                    const SizedBox(height: 24),
                     // Footer
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CustomText(
-                          text: "Already have an account?",
-                          fontWeight: FontWeight.normal,
-                          fontSize: getWidth(16),
-                          color: const Color(0xFF677674),
+                        const Flexible(
+                          child: Text(
+                            "Already have an account? ",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF677674),
+                            ),
+                          ),
                         ),
-                        HorizontalSpace(width: getWidth(5)),
                         CustomTextButton(
                           isUnderline: true,
-                          fontSize: getWidth(18),
+                          fontSize: 18,
                           onPressed: () {
                             Get.to(
                               () => LoginScreen(),
@@ -322,7 +334,7 @@ class SignUpScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    VerticalSpace(height: getHeight(40)),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),

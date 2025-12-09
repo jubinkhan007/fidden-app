@@ -38,15 +38,23 @@ class Thread {
   /// List endpoint shape
   factory Thread.fromJson(Map<String, dynamic> json) {
     final lm = json['last_message'];
+    
+    // Helper to handle null/empty strings properly
+    String? parseNullableString(dynamic value) {
+      if (value == null) return null;
+      final str = value.toString();
+      return (str.isEmpty || str == 'null') ? null : str;
+    }
+    
     return Thread(
       id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? -1,
       shop: json['shop'] is int ? json['shop'] : int.tryParse('${json['shop']}') ?? -1,
       shopName: (json['shop_name'] ?? '').toString(),
-      shopImg: json['shop_img'] .toString(),
+      shopImg: parseNullableString(json['shop_img']),
       user: json['user'] is int ? json['user'] : int.tryParse('${json['user']}') ?? -1,
       userEmail: (json['user_email'] ?? '').toString(),
-      userName: json['user_name'] .toString(),
-      userImg: json['user_img'] .toString(),
+      userName: parseNullableString(json['user_name']),
+      userImg: parseNullableString(json['user_img']),
       createdAt: DateTime.parse((json['created_at'] ?? '').toString()),
       lastMessage: (lm is Map<String, dynamic>) ? MessageModel.fromJson(lm) : null,
     );

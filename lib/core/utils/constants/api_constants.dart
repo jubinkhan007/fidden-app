@@ -213,6 +213,12 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   static const String portfolioList = '$_baseUrl/api/portfolio/';
   static String portfolioItem(int id) => '$_baseUrl/api/portfolio/$id/';
 
+  // Gallery (Universal for all niches)
+  static const String galleryList = '$_baseUrl/api/gallery/';
+  static String galleryItem(int id) => '$_baseUrl/api/gallery/$id/';
+  static String shopGallery(int shopId, {int page = 1}) => 
+      '$_baseUrl/api/shops/$shopId/gallery/?page=$page';
+
   // Tattoo Artist - Design Requests
   static const String designRequests = '$_baseUrl/api/design-requests/';
   static String designRequest(int id) => '$_baseUrl/api/design-requests/$id/';

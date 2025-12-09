@@ -25,6 +25,7 @@ class BookingDetailsScreen extends StatelessWidget {
       shopName: '',
       slot: 0,
       slotTime: now,
+      slotTimeIso: now.toIso8601String(),
       serviceTitle: '',
       serviceDuration: '',
       status: 'scheduled',

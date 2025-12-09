@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import '../../home/controller/business_owner_controller.dart';
+import '../../../user/booking/presentation/api_time_format.dart';
 
 String _capitalize(String s) {
   if (s.isEmpty) return s;
@@ -116,8 +117,14 @@ return RefreshIndicator(
         // NORMAL ROW
         final b = results[index];
         final displayName = (b.userName?.trim().isNotEmpty == true) ? b.userName!.trim() : b.userEmail;
-        final date = DateFormat('EEE, d MMM yyyy').format(b.slotTime);
-        final time = DateFormat('hh:mm a').format(b.slotTime);
+        
+        // Use timezone-aware formatting if shop timezone is available
+        final date = b.shopTimezone != null
+            ? formatApiDateInTimezone(b.slotTimeIso, b.shopTimezone!)
+            : DateFormat('EEE, d MMM yyyy').format(b.slotTime);
+        final time = b.shopTimezone != null
+            ? formatApiTimeInTimezone(b.slotTimeIso, b.shopTimezone!)
+            : DateFormat('hh:mm a').format(b.slotTime);
         final bookingStatus = b.status.isNotEmpty ? b.status : 'Pending';
         final bookingId = b.id;
 

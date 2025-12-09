@@ -13,7 +13,7 @@ TextStyle getTextStyleMsrt({
   double? decorationThickness,
 }) {
   return GoogleFonts.inter(
-    fontSize: getWidth(fontSize),
+    fontSize: fontSize, // Use fixed size, not getWidth() - fixes tablet scaling
     fontWeight: fontWeight,
     //color: color,
     decoration: decoration,

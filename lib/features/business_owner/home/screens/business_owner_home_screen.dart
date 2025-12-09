@@ -81,34 +81,47 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
             await controller.refreshGuardsAndServices();
             await controller.fetchBusinessOwnerBooking();
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-              child: Obx(() {
-                if (controller.isLoading.value) {
-                  return const FullScreenShimmerLoader();
-                }
-                
-                // Get the correct layout strategy based on selected niche
-                /*
-                final niche = profileController.shopNiche.value;
-                final layoutStrategy = NicheLayoutFactory.getLayout(niche);
-                
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: layoutStrategy.buildContent(context, controller),
-                );
-                */
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // For tablets, limit content width and center it
+              final isTablet = constraints.maxWidth > 600;
+              final maxContentWidth = isTablet ? 800.0 : double.infinity;
+              
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxContentWidth),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                      child: Obx(() {
+                        if (controller.isLoading.value) {
+                          return const FullScreenShimmerLoader();
+                        }
+                        
+                        // Get the correct layout strategy based on selected niche
+                        /*
+                        final niche = profileController.shopNiche.value;
+                        final layoutStrategy = NicheLayoutFactory.getLayout(niche);
+                        
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: layoutStrategy.buildContent(context, controller),
+                        );
+                        */
 
-                // Fallback to DefaultLayout directly
-                final layoutStrategy = DefaultLayout();
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: layoutStrategy.buildContent(context, controller),
-                );
-              }),
-            ),
+                        // Fallback to DefaultLayout directly
+                        final layoutStrategy = DefaultLayout();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: layoutStrategy.buildContent(context, controller),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),

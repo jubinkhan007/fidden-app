@@ -66,6 +66,15 @@ class BusinessOwnerProfileController extends GetxController {
   final isDepositRequired = false.obs;
   final defaultDepositPercentage = ''.obs;
 
+  // Shop timezone (IANA format, e.g., "America/New_York")
+  final timeZone = 'America/New_York'.obs;
+  
+  // Social Links
+  final instagramUrl = ''.obs;
+  final tiktokUrl = ''.obs;
+  final youtubeUrl = ''.obs;
+  final websiteUrl = ''.obs;
+
   final RxBool _fetchingProfile = false.obs;
 
   // ---- Subscription context ----
@@ -836,7 +845,10 @@ void syncOpenDaysFromBH() {
         cancellationFeePercentage: willSendPolicy ? feePct : null,
         noRefundHours: willSendPolicy ? noRefH : null,
         token: AuthService.accessToken ?? '',
-        extraJson: { "business_hours": bhPayload },
+        extraJson: { 
+          "business_hours": bhPayload,
+          "time_zone": timeZone.value,
+        },
         // ⬇️ IF ShopApi supports deposit, include it only when allowed:
         // isDepositRequired: canEditDeposit ? isDepositRequired.value : null,
         // depositAmount:     canEditDeposit ? depositAmount.value : null,
@@ -967,7 +979,14 @@ void syncOpenDaysFromBH() {
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
         documents: documents,
         token: AuthService.accessToken ?? '',
-        extraJson: { "business_hours": bhPayload },
+        extraJson: { 
+          "business_hours": bhPayload,
+          "time_zone": timeZone.value,
+          if (instagramUrl.value.isNotEmpty) "instagram_url": instagramUrl.value,
+          if (tiktokUrl.value.isNotEmpty) "tiktok_url": tiktokUrl.value,
+          if (youtubeUrl.value.isNotEmpty) "youtube_url": youtubeUrl.value,
+          if (websiteUrl.value.isNotEmpty) "website_url": websiteUrl.value,
+        },
 
         // ✅ send policy only if allowed
         freeCancellationHours: sendPolicy ? freeH : null,

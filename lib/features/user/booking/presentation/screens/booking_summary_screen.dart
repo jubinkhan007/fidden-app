@@ -707,7 +707,7 @@ Future<void> _openScheduleSheet() async {
                       onPressed: canUpdate ? () {
                         final selId = c.selectedSlotId.value!;
                         final sel = c.slots.firstWhere((e) => e.id == selId);
-                        final localStart = sel.startTimeUtc.toLocal();
+                        final localStart = c.toShopTz(sel.startTimeUtc); // Use shop timezone, not device local
                         setState(() {
                           bookingId   = selId;
                           selectedSlot = _slotFmt.format(localStart);

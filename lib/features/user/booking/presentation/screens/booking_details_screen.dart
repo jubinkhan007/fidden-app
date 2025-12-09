@@ -20,8 +20,13 @@ class BookingDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = formatApiDate(booking.slotTimeIso); // e.g. "Sun, 21 Sep 2025"
-    final timeText = formatApiTime(booking.slotTimeIso); // e.g. "01:30 PM"
+    // Use timezone-aware formatting if shop timezone is available
+    final dateText = booking.shopTimezone != null
+        ? formatApiDateInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+        : formatApiDate(booking.slotTimeIso);
+    final timeText = booking.shopTimezone != null
+        ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+        : formatApiTime(booking.slotTimeIso);
     final chatController = Get.put(
   ChatController(
     threadId: 0,                    // no existing thread yet

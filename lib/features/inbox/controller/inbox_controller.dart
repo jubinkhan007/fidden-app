@@ -263,8 +263,19 @@ class InboxController extends GetxController {
     return (currentUserRole == 'user') ? thread.shopName : (thread.userName ?? thread.userEmail);
   }
 
-  String getOtherPartyAvatar(Thread thread) =>
-      'https://i.pravatar.cc/150?u=${thread.id}';
+  /// Returns the avatar URL of the "other party" in the conversation
+  /// For users: show shop image
+  /// For owners: show user's profile image
+  String getOtherPartyAvatar(Thread thread) {
+    final currentUserRole = AuthService.role?.toLowerCase();
+    if (currentUserRole == 'user') {
+      // User sees the shop's avatar
+      return thread.shopImg ?? '';
+    } else {
+      // Owner sees the user's avatar
+      return thread.userImg ?? '';
+    }
+  }
 
   String getLastMessageText(Thread thread) => _getLast(thread)?.content ?? 'No messages yet.';
 

@@ -19,6 +19,7 @@ import '../../../../core/utils/constants/image_path.dart';
 import '../controller/busines_owner_profile_controller.dart';
 import '../widgets/per_day_hours_card.dart';
 import 'map_screen.dart';
+import '../../../../core/utils/timezone_helper.dart';
 
 class AddBusinessOwnerProfileScreen extends StatefulWidget {
   final String? id;
@@ -68,10 +69,17 @@ class _AddBusinessOwnerProfileScreenState
       controller1.startTime.value = _clean(p.startTime) == '' ? '09:00 AM' : p.startTime!;
       controller1.endTime.value   = _clean(p.endTime)   == '' ? '08:00 PM' : p.endTime!;
       if (p.openDays != null) controller1.openDays.assignAll(p.openDays!);
+      // Load timezone from profile or use existing
+      if (p.timeZone != null && p.timeZone!.isNotEmpty) {
+        controller1.timeZone.value = p.timeZone!;
+      }
     } else {
       controller1.startTime.value = '09:00 AM';
       controller1.endTime.value   = '08:00 PM';
       controller1.openDays.assignAll(['Monday','Tuesday','Wednesday','Thursday','Friday']);
+      
+      // Auto-detect timezone for new profile
+      _detectTimezone();
       
       // Ensure clean slate for new profile creation
       controller1.businessHours.clear();
@@ -79,6 +87,12 @@ class _AddBusinessOwnerProfileScreenState
       controller1.applyOpenDaysToBH(overrideStart: '09:00 AM', overrideEnd: '08:00 PM');
       controller1.ensureBusinessHoursForOpenDays();
     }
+  }
+
+  Future<void> _detectTimezone() async {
+    final detected = await TimezoneHelper.getDeviceTimezone();
+    // Use detected timezone if it's in our supported list, otherwise default to Eastern
+    controller1.timeZone.value = TimezoneHelper.getNearestUsTimezone(detected);
   }
 
 
@@ -448,6 +462,37 @@ class _AddBusinessOwnerProfileScreenState
                   ],
                 );
               }),
+
+              SizedBox(height: getHeight(16)),
+
+              // Timezone dropdown
+              Obx(() => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonFormField<String>(
+                  value: TimezoneHelper.isSupported(controller1.timeZone.value)
+                      ? controller1.timeZone.value
+                      : 'America/New_York',
+                  decoration: const InputDecoration(
+                    labelText: 'Shop Timezone',
+                    border: InputBorder.none,
+                    helperText: 'Auto-detected from your device',
+                    helperMaxLines: 2,
+                  ),
+                  items: TimezoneHelper.usTimezones.map((tz) => DropdownMenuItem(
+                    value: tz['value'],
+                    child: Text(tz['label']!),
+                  )).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller1.timeZone.value = value;
+                    }
+                  },
+                ),
+              )),
 
               SizedBox(height: getHeight(16)),
 

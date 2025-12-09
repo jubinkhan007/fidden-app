@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 
+import 'package:fidden/features/business_owner/portfolio/data/gallery_item_model.dart';
+
 ShopDetailsModel shopDetailsModelFromJson(String str) =>
     ShopDetailsModel.fromJson(json.decode(str));
 
@@ -28,6 +30,16 @@ class ShopDetailsModel {
   List<String>? niches; // NEW: Multi-niche support
   bool? isDepositRequired; // NEW
   int? defaultDepositPercentage; // NEW
+  String? timeZone; // IANA timezone (e.g., "America/New_York")
+  
+  // Social Links
+  String? instagramUrl;
+  String? tiktokUrl;
+  String? youtubeUrl;
+  String? websiteUrl;
+  
+  // Gallery Preview (first 5 public items)
+  List<GalleryPreviewItem>? galleryPreview;
 
   ShopDetailsModel({
     this.id,
@@ -52,6 +64,12 @@ class ShopDetailsModel {
     this.niches,
     this.isDepositRequired,
     this.defaultDepositPercentage,
+    this.timeZone,
+    this.instagramUrl,
+    this.tiktokUrl,
+    this.youtubeUrl,
+    this.websiteUrl,
+    this.galleryPreview,
   });
 
   factory ShopDetailsModel.fromJson(
@@ -63,6 +81,14 @@ class ShopDetailsModel {
       parsedNiches = List<String>.from(json['niches']);
     } else if (json['niche'] != null) {
       parsedNiches = [json['niche'] as String];
+    }
+    
+    // Parse gallery preview
+    List<GalleryPreviewItem>? galleryItems;
+    if (json['gallery_preview'] != null && json['gallery_preview'] is List) {
+      galleryItems = (json['gallery_preview'] as List)
+          .map((e) => GalleryPreviewItem.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     
     return ShopDetailsModel(
@@ -94,6 +120,14 @@ class ShopDetailsModel {
       niches: parsedNiches, // NEW
       isDepositRequired: json['is_deposit_required'] == true || json['is_deposit_required'] == 'true',
       defaultDepositPercentage: (json['default_deposit_percentage'] as num?)?.toInt(),
+      timeZone: json['time_zone']?.toString(),
+      // Social Links
+      instagramUrl: json['instagram_url']?.toString(),
+      tiktokUrl: json['tiktok_url']?.toString(),
+      youtubeUrl: json['youtube_url']?.toString(),
+      websiteUrl: json['website_url']?.toString(),
+      // Gallery Preview
+      galleryPreview: galleryItems,
     );
   }
 }

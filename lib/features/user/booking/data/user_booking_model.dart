@@ -108,6 +108,7 @@ class BookingItem {
   final double avgRating;
   final int totalReviews;
   bool isReviewed;
+  final String? shopTimezone; // Shop's IANA timezone (e.g., "America/New_York")
 
   BookingItem({
     required this.id,
@@ -129,6 +130,7 @@ class BookingItem {
     required this.avgRating,
     required this.totalReviews,
     this.isReviewed = false,
+    this.shopTimezone,
   });
 
   factory BookingItem.fromJson(Map<String, dynamic> json) {
@@ -165,6 +167,7 @@ class BookingItem {
       avgRating: _toDouble(json['avg_rating']),
       totalReviews: _toInt(json['total_reviews']),
       isReviewed: json["is_reviewed"] ?? false,
+      shopTimezone: json['shop_timezone']?.toString(),
     );
   }
 
@@ -189,6 +192,7 @@ class BookingItem {
         'avg_rating': avgRating,
         'total_reviews': totalReviews,
         'is_reviewed': isReviewed,
+        'shop_timezone': shopTimezone,
       };
 
   BookingItem copyWith({String? status}) {
@@ -212,6 +216,7 @@ class BookingItem {
       avgRating: avgRating,
       totalReviews: totalReviews,
       isReviewed: isReviewed,
+      shopTimezone: shopTimezone,
     );
   }
 }
