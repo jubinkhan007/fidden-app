@@ -116,9 +116,10 @@ class BusinessOwnerProfileController extends GetxController {
     super.onInit();
     _init(); // keep onInit lean
 
-    // If tokens refresh after we mounted, refetch profile quietly
+    // If tokens refresh after we mounted, refetch profile quietly AND re-seed UI
     ever(AuthService.tokenRefreshCount, (_) async {
       await fetchProfileDetails(silentAuthErrors: true);
+      _seedUiFromProfileData(); // FIX: Re-seed UI observables after token refresh
       await checkStripeStatusIfPossible();
     });
 
@@ -149,29 +150,8 @@ class BusinessOwnerProfileController extends GetxController {
       await fetchProfileDetails(silentAuthErrors: true);
 
       // 2. NOW, seed the UI with the data we just fetched.
-      //    This is the key fix for your empty fields.
-      final data = profileDetails.value.data;
-      final fromApiOpenDays = data?.openDays;
-      if (fromApiOpenDays != null && fromApiOpenDays.isNotEmpty) {
-        openDays
-          ..clear()
-          ..addAll(fromApiOpenDays.map(_normalizeDay));
-      }
+      _seedUiFromProfileData();
 
-      startTime.value = data?.startTime ?? ''; // Use empty string, not old value
-      endTime.value   = data?.endTime   ?? ''; // Use empty string, not old value
-
-      // Cancellation policy (defaults when missing)
-      freeCancellationHours.value     = (data?.freeCancellationHours ?? 24).toString();
-      cancellationFeePercentage.value = (data?.cancellationFeePercentage ?? 0).toString();
-      noRefundHours.value             = (data?.noRefundHours ?? 0).toString();
-
-      // Deposit
-      defaultDepositPercentage.value = (data?.defaultDepositPercentage ?? 0).toString();
-      isDepositRequired.value  =  data?.isDepositRequired ?? false;
-
-      _seedBusinessHoursFromData(data);
-      ensureBusinessHoursForOpenDays();
       await checkStripeStatusIfPossible();
 
     } catch (e) {
@@ -183,6 +163,49 @@ class BusinessOwnerProfileController extends GetxController {
         _initCompleter.complete();
       }
     }
+  }
+
+  /// Seeds all UI-bound observables from the current [profileDetails].
+  /// Called after initial fetch and after token refresh to ensure UI stays in sync.
+  void _seedUiFromProfileData() {
+    final data = profileDetails.value.data;
+    if (data == null) return;
+
+    // Open days
+    final fromApiOpenDays = data.openDays;
+    if (fromApiOpenDays != null && fromApiOpenDays.isNotEmpty) {
+      openDays
+        ..clear()
+        ..addAll(fromApiOpenDays.map(_normalizeDay));
+    }
+
+    // Times
+    startTime.value = data.startTime ?? '';
+    endTime.value   = data.endTime   ?? '';
+
+    // Cancellation policy (defaults when missing)
+    freeCancellationHours.value     = (data.freeCancellationHours ?? 24).toString();
+    cancellationFeePercentage.value = (data.cancellationFeePercentage ?? 0).toString();
+    noRefundHours.value             = (data.noRefundHours ?? 0).toString();
+
+    // Deposit
+    defaultDepositPercentage.value = (data.defaultDepositPercentage ?? 0).toString();
+    isDepositRequired.value = data.isDepositRequired ?? false;
+
+    // Timezone
+    if (data.timeZone != null && data.timeZone!.isNotEmpty) {
+      timeZone.value = data.timeZone!;
+    }
+
+    // Social links
+    instagramUrl.value = data.instagramUrl ?? '';
+    tiktokUrl.value = data.tiktokUrl ?? '';
+    youtubeUrl.value = data.youtubeUrl ?? '';
+    websiteUrl.value = data.websiteUrl ?? '';
+
+    // Business hours
+    _seedBusinessHoursFromData(data);
+    ensureBusinessHoursForOpenDays();
   }
 
 
