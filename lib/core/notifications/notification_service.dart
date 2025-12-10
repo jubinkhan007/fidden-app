@@ -80,7 +80,7 @@ class NotificationService {
     final slotId   = data['slot_id']?.toString();
 
     if (type == 'autofill_offer' && action == 'book_offer' && slotId != null && slotId.isNotEmpty) {
-      // Build the label from ISO so your _slotFmt parser isn’t needed here
+      // Build the label from ISO so your _slotFmt parser isn't needed here
       String selectedSlotLabel = '';
       final iso = data['start_time']?.toString();
       if (iso != null && iso.isNotEmpty) {
@@ -94,7 +94,7 @@ class NotificationService {
       int? toInt(dynamic v) => int.tryParse('$v');
       double? toDouble(dynamic v) => double.tryParse('$v');
 
-      // Map to the BookingSummaryScreen’s expected arguments
+      // Map to the BookingSummaryScreen's expected arguments
       final args = <String, dynamic>{
         'serviceName': data['serviceName'] ?? '',
         'service_img': data['service_img'] ?? '',
@@ -118,6 +118,23 @@ class NotificationService {
       Get.toNamed(AppRoute.bookingSummaryScreen, arguments: args); // e.g., '/booking-summary'
       return;
     }
+
+    // --- CHECKOUT NOTIFICATION HANDLING ---
+    // When owner initiates checkout, customer receives this notification type
+    if (type == 'checkout_ready' || type == 'checkout_initiated') {
+      final bookingId = data['booking_id']?.toString();
+      if (bookingId != null && bookingId.isNotEmpty) {
+        final id = int.tryParse(bookingId);
+        if (id != null) {
+          Get.toNamed(
+            AppRoute.checkoutScreen,
+            arguments: {'bookingId': id},
+          );
+          return;
+        }
+      }
+    }
+    // --- END CHECKOUT NOTIFICATION HANDLING ---
 
     // Deep link/web fallbacks (optional)
     final deeplink = data['deeplink']?.toString();

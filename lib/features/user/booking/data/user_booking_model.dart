@@ -101,7 +101,7 @@ class BookingItem {
   final String slotTimeIso;      // keep ISO string (as you do)
   final String serviceTitle;
   final String serviceDuration;  // minutes as string from API
-  final List<AddOnService> addOnServices; // NEW: Add-on services
+  final List<AddOnService> addOnServices; // Add-on services
   final String status;           // "active" / "completed" / "cancelled" etc.
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -109,6 +109,13 @@ class BookingItem {
   final int totalReviews;
   bool isReviewed;
   final String? shopTimezone; // Shop's IANA timezone (e.g., "America/New_York")
+  
+  // Checkout/Payment fields
+  final String? depositStatus;      // 'held', 'credited', 'forfeited', null
+  final double? depositAmount;      // Amount held as deposit
+  final double? servicePrice;       // Total service price
+  final double? remainingAmount;    // servicePrice - depositAmount
+  final bool checkoutInitiated;     // True when owner has initiated checkout
 
   BookingItem({
     required this.id,
@@ -123,7 +130,7 @@ class BookingItem {
     required this.slotTimeIso,
     required this.serviceTitle,
     required this.serviceDuration,
-    this.addOnServices = const [],  // NEW: Default to empty list
+    this.addOnServices = const [],
     required this.status,
     required this.createdAt,
     required this.updatedAt,
@@ -131,10 +138,17 @@ class BookingItem {
     required this.totalReviews,
     this.isReviewed = false,
     this.shopTimezone,
+    // Checkout fields
+    this.depositStatus,
+    this.depositAmount,
+    this.servicePrice,
+    this.remainingAmount,
+    this.checkoutInitiated = false,
   });
 
   factory BookingItem.fromJson(Map<String, dynamic> json) {
     double _toDouble(v) => v is num ? v.toDouble() : double.tryParse("$v") ?? 0.0;
+    double? _toDoubleOrNull(v) => v == null ? null : (v is num ? v.toDouble() : double.tryParse("$v"));
     int _toInt(v) => v is num ? v.toInt() : int.tryParse("$v") ?? 0;
 
     // Parse add-on services
@@ -160,7 +174,7 @@ class BookingItem {
       slotTimeIso: (json['slot_time'] ?? '').toString(),
       serviceTitle: json['service_title'] ?? '',
       serviceDuration: json['service_duration'] ?? '',
-      addOnServices: addOns, // NEW
+      addOnServices: addOns,
       status: (json['status'] ?? '').toString().toLowerCase(),
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
@@ -168,10 +182,15 @@ class BookingItem {
       totalReviews: _toInt(json['total_reviews']),
       isReviewed: json["is_reviewed"] ?? false,
       shopTimezone: json['shop_timezone']?.toString(),
+      // Checkout fields
+      depositStatus: json['deposit_status']?.toString(),
+      depositAmount: _toDoubleOrNull(json['deposit_amount']),
+      servicePrice: _toDoubleOrNull(json['service_price']),
+      remainingAmount: _toDoubleOrNull(json['remaining_amount']),
+      checkoutInitiated: json['checkout_initiated'] == true,
     );
   }
 
-  // ✅ Add this
   Map<String, dynamic> toJson() => {
         'id': id,
         'user': user,
@@ -185,7 +204,7 @@ class BookingItem {
         'slot_time': slotTimeIso,
         'service_title': serviceTitle,
         'service_duration': serviceDuration,
-        'add_on_services': addOnServices.map((e) => e.toJson()).toList(), // NEW
+        'add_on_services': addOnServices.map((e) => e.toJson()).toList(),
         'status': status,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -193,9 +212,19 @@ class BookingItem {
         'total_reviews': totalReviews,
         'is_reviewed': isReviewed,
         'shop_timezone': shopTimezone,
+        // Checkout fields
+        'deposit_status': depositStatus,
+        'deposit_amount': depositAmount,
+        'service_price': servicePrice,
+        'remaining_amount': remainingAmount,
+        'checkout_initiated': checkoutInitiated,
       };
 
-  BookingItem copyWith({String? status}) {
+  BookingItem copyWith({
+    String? status,
+    String? depositStatus,
+    bool? checkoutInitiated,
+  }) {
     return BookingItem(
       id: id,
       user: user,
@@ -209,7 +238,7 @@ class BookingItem {
       slotTimeIso: slotTimeIso,
       serviceTitle: serviceTitle,
       serviceDuration: serviceDuration,
-      addOnServices: addOnServices, // NEW
+      addOnServices: addOnServices,
       status: status ?? this.status,
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -217,6 +246,12 @@ class BookingItem {
       totalReviews: totalReviews,
       isReviewed: isReviewed,
       shopTimezone: shopTimezone,
+      // Checkout fields
+      depositStatus: depositStatus ?? this.depositStatus,
+      depositAmount: depositAmount,
+      servicePrice: servicePrice,
+      remainingAmount: remainingAmount,
+      checkoutInitiated: checkoutInitiated ?? this.checkoutInitiated,
     );
   }
 }
