@@ -157,6 +157,13 @@ class AppUrls {
   static const String saveCard = "$_baseUrl/payments/save-new-card";
   static String getMyCard(String customerId) =>
       '$_baseUrl/payments/$customerId';
+  
+  // Checkout (Fidden Pay)
+  static String initiateCheckout(int bookingId) =>
+      '$_baseUrl/payments/initiate-checkout/$bookingId/';
+  static String completeCheckout(int bookingId) =>
+      '$_baseUrl/payments/complete-checkout/$bookingId/';
+
   static String getMyCoupon(String couponCode) =>
       '$_baseUrl/coupon/check?code=$couponCode';
   static const String getOwnerCoupons = '$_baseUrl/api/coupons/';

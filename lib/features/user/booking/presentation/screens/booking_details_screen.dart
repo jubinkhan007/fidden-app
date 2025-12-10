@@ -4,6 +4,7 @@ import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/fallBack_image.dart'; // <-- fallback image
 import 'package:fidden/features/inbox/controller/chat_controller.dart';
+import 'package:fidden/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -312,7 +313,45 @@ class BookingDetailsScreen extends StatelessWidget {
               ],
             ),
 
-            // NOTE: No "Pay now" button (by request)
+            // Complete Payment button - shows when checkout has been initiated by owner
+            if (booking.checkoutInitiated && booking.depositStatus == 'held') ...[
+              SizedBox(height: getHeight(20)),
+              SizedBox(
+                width: double.infinity,
+                height: getHeight(52),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Get.toNamed(
+                      AppRoute.checkoutScreen,
+                      arguments: {'bookingId': booking.id},
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff7A49A5),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.payment, size: 20),
+                      SizedBox(width: getWidth(8)),
+                      Text(
+                        'Complete Payment',
+                        style: TextStyle(
+                          fontSize: getWidth(16),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
             SizedBox(height: getHeight(24)),
           ],
         ),
