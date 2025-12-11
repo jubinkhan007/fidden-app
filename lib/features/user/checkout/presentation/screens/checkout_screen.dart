@@ -425,9 +425,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       // Present payment sheet
       await Stripe.instance.presentPaymentSheet();
 
-      // Payment successful
-      AppSnackBar.showSuccess('Payment successful!');
-      Get.back(result: true);
+      // Payment successful - show success dialog
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            icon: const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 64),
+            title: const Text('Payment Successful!'),
+            content: Text(
+              'You paid ${_formatCurrency(_controller.totalDue)} including tip.',
+              textAlign: TextAlign.center,
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Get.until((route) => route.isFirst); // Go back to home
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7A49A5),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Done'),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
     } on StripeException catch (e) {
       if (e.error.code != FailureCode.Canceled) {
         AppSnackBar.showError(e.error.localizedMessage ?? 'Payment failed');

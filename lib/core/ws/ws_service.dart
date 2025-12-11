@@ -224,17 +224,14 @@ class WsService extends GetxService with WidgetsBindingObserver {
       final nType = notif['notification_type']?.toString();
       final msg = notif['message']?.toString() ?? 'New notification';
       final createdAt = notif['created_at']?.toString();
-      final id = '${notif['id'] ?? createdAt ?? msg}';
+      // Use message_id if available, fallback to notif id, with 'msg_' prefix for dedup
+      final msgId = notif['message_id']?.toString() ?? notif['id']?.toString() ?? createdAt ?? msg;
+      final dedupId = 'msg_$msgId';
 
-      if (nType == 'chat' && id.isNotEmpty && !_seenNotifyIds.contains(id)) {
-        _seenNotifyIds.add(id);
-        final payload = Map<String, dynamic>.from(notif['data'] ?? const {});
-        await NotificationService.I.showMessage(
-          title: 'New message',
-          body: msg,
-          payload: {'type': 'notification', ...payload},
-          uniqueId: id,
-        );
+      if (nType == 'chat' && dedupId.isNotEmpty && !_seenNotifyIds.contains(dedupId)) {
+        _seenNotifyIds.add(dedupId);
+        // Don't show notification here for chat - InboxController handles it via chat_message stream
+        // This prevents duplicate notifications
       }
       return;
     }
@@ -248,8 +245,32 @@ class WsService extends GetxService with WidgetsBindingObserver {
 
       final threadId = int.tryParse('${payload['thread_id'] ?? 0}') ?? 0;
       final m = MessageModel.fromJson(payload);
+      final dedupId = 'msg_${m.id}';
+      
+      // Add to seen IDs for dedup
       _seenNotifyIds.add('${m.id}');
+      
+      // Emit to stream for ChatController/InboxController
       _msgCtrl.add(IncomingMessage(threadId, m));
+      
+      // Show notification if not on chat screen
+      final currentRoute = Get.currentRoute;
+      final isOnChatScreen = currentRoute.toLowerCase().contains('chat');
+      print('[WS DEBUG] chat_message: route="$currentRoute", isOnChatScreen=$isOnChatScreen, msgId=${m.id}');
+      
+      if (!isOnChatScreen && !_seenNotifyIds.contains(dedupId)) {
+        _seenNotifyIds.add(dedupId);
+        await NotificationService.I.showMessage(
+          title: m.senderEmail.isNotEmpty ? m.senderEmail : 'New message',
+          body: m.content,
+          payload: {
+            'type': 'chat',
+            'thread_id': threadId,
+            'message_id': m.id,
+          },
+          uniqueId: dedupId,
+        );
+      }
       return;
     }
 

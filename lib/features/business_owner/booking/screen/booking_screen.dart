@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../home/controller/business_owner_controller.dart';
 import '../../../user/booking/presentation/api_time_format.dart';
+import '../../../user/checkout/controller/checkout_controller.dart';
 
 String _capitalize(String s) {
   if (s.isEmpty) return s;
@@ -145,13 +146,15 @@ return RefreshIndicator(
             ),
             builder: (_) => _BookingDetailsSheet(
               cs: cs,
-              bookingId: bookingId,              // <-- NEW
+              bookingId: bookingId,
               avatarUrl: b.profileImage,
               name: displayName,
               service: b.serviceTitle,
               when: "$time • $date",
               shop: b.shopName,
               status: bookingStatus,
+              depositStatus: b.depositStatus,
+              remainingAmount: b.remainingAmount,
             ),
           ),
         );
@@ -296,23 +299,27 @@ class _BookingCard extends StatelessWidget {
 class _BookingDetailsSheet extends StatelessWidget {
   const _BookingDetailsSheet({
     required this.cs,
-    required this.bookingId,   // <-- NEW
+    required this.bookingId,
     required this.avatarUrl,
     required this.name,
     required this.service,
     required this.when,
     required this.shop,
     required this.status,
+    this.depositStatus,
+    this.remainingAmount,
   });
 
   final ColorScheme cs;
-  final int bookingId;         // <-- NEW
+  final int bookingId;
   final String? avatarUrl;
   final String? name;
   final String? service;
   final String when;
   final String? shop;
   final String status;
+  final String? depositStatus;
+  final double? remainingAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -373,6 +380,76 @@ class _BookingDetailsSheet extends StatelessWidget {
           row('Status', _capitalize(status)),
 
           const SizedBox(height: 16),
+
+          // --- Checkout button (only when there's remaining balance to pay) ---
+          if (depositStatus?.toLowerCase() == 'held' && 
+              (remainingAmount ?? 0) > 0 &&
+              (st == 'active' || st == 'confirmed' || st == 'completed')) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: isBusy ? null : () async {
+                  // Show payment method options
+                  final result = await showDialog<String>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Checkout Payment Method'),
+                      content: const Text('How will the customer pay the remaining balance?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, 'cash'),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.money, color: Color(0xFF10B981)),
+                              SizedBox(width: 8),
+                              Text('Cash Payment'),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, 'app'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xff7A49A5),
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.credit_card),
+                              SizedBox(width: 8),
+                              Text('Pay via App'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  
+                  if (result == null) return; // User cancelled
+                  
+                  Get.back(); // Close bottom sheet
+                  
+                  final checkoutController = Get.put(CheckoutController());
+                  final success = await checkoutController.initiateCheckout(
+                    bookingId,
+                    paymentMethod: result, // 'cash' or 'app'
+                  );
+                  
+                  // Refresh bookings list to update button visibility
+                  if (success) {
+                    c.fetchBusinessOwnerBooking();
+                  }
+                },
+                icon: const Icon(Icons.payment),
+                label: const Text('Checkout Customer'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xff7A49A5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
 
           // --- Buttons row ---
           Row(

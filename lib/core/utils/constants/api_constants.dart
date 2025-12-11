@@ -161,6 +161,8 @@ class AppUrls {
   // Checkout (Fidden Pay)
   static String initiateCheckout(int bookingId) =>
       '$_baseUrl/payments/initiate-checkout/$bookingId/';
+  static String checkoutDetails(int bookingId) =>
+      '$_baseUrl/payments/checkout-details/$bookingId/';
   static String completeCheckout(int bookingId) =>
       '$_baseUrl/payments/complete-checkout/$bookingId/';
 

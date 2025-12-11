@@ -159,6 +159,21 @@ class Data {
     return lower[0].toUpperCase() + lower.substring(1);
   }
 
+  /// Normalize short day codes (mon, tue, wed) to full day names (monday, tuesday, wednesday)
+  static String _normalizeDayKey(String shortOrFull) {
+    const dayMap = {
+      'mon': 'monday',
+      'tue': 'tuesday',
+      'wed': 'wednesday',
+      'thu': 'thursday',
+      'fri': 'friday',
+      'sat': 'saturday',
+      'sun': 'sunday',
+    };
+    final lower = shortOrFull.toLowerCase();
+    return dayMap[lower] ?? lower; // Return mapped value or original if already full
+  }
+
   /// Convert "HH:mm:ss" -> "hh:mm AM/PM"
   static String? _toUiTime(String? hhmmss) {
     if (hhmmss == null || hhmmss.isEmpty) return null;
@@ -277,7 +292,8 @@ class Data {
     if (rawBH is Map) {
       bh = {};
       rawBH.forEach((key, ranges) {
-        final day = key.toString().toLowerCase();
+        // Normalize short day codes (mon, tue) to full day names (monday, tuesday)
+        final dayKey = _normalizeDayKey(key.toString().toLowerCase());
         final list = <(String,String)>[];
         if (ranges is List) {
           for (final r in ranges) {
@@ -291,7 +307,7 @@ class Data {
             }
           }
         }
-        bh![day] = list;
+        bh![dayKey] = list;
       });
     }
 

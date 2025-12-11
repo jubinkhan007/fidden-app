@@ -207,13 +207,18 @@ class InboxController extends GetxController {
       patchLastMessage(ev.threadId, ev.message);
     }
 
-    final isOnChatScreen = Get.currentRoute.contains('ChatScreen');
+    final currentRoute = Get.currentRoute;
+    print('[NOTIF DEBUG] Current route: "$currentRoute"');
+    final isOnChatScreen = currentRoute.toLowerCase().contains('chat');
+    print('[NOTIF DEBUG] _onRealtimeMessage: isOnChatScreen=$isOnChatScreen, threadId=${ev.threadId}, msgId=${ev.message.id}');
     if (!isOnChatScreen) {
+      // Use consistent 'msg_' prefix to dedup across FCM/WS/InboxController
+      print('[NOTIF DEBUG] Calling showMessage for msg_${ev.message.id}');
       await NotificationService.I.showMessage(
         title: ev.message.senderEmail.isNotEmpty ? ev.message.senderEmail : 'New message',
         body: ev.message.content,
         payload: {'type': 'chat', 'thread_id': ev.threadId, 'message_id': ev.message.id},
-        uniqueId: '${ev.message.id}',
+        uniqueId: 'msg_${ev.message.id}',
       );
     }
   }

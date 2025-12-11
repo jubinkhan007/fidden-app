@@ -74,13 +74,17 @@ class ChatController extends GetxController {
 
     _msgSub = _ws.messages$.listen((ev) {
       if (ev.threadId != threadId) return;
+      print('[CHAT DEBUG] WS message received: id=${ev.message.id}, sender=${ev.message.sender}, content="${ev.message.content}"');
+      print('[CHAT DEBUG] _myActorId=$_myActorId, message count before: ${messages.length}');
       _replaceOptimisticIfMatch(ev.message);
+      print('[CHAT DEBUG] After _replaceOptimisticIfMatch, count: ${messages.length}');
       if (ev.message.sender != _myActorId) {
         final already = messages.any((m) => m.id == ev.message.id);
         if (!already) messages.insert(0, ev.message);
         _touchInbox(ev.message);
         if (!ev.message.isRead) _markTheseRead([ev.message.id]);
       }
+      print('[CHAT DEBUG] Final message count: ${messages.length}');
     });
 
     _ackSub = _ws.markReadAcks$.listen((ack) {
@@ -250,16 +254,46 @@ final isInitialLoading = false.obs;
   /// Replace optimistic with server echo
   void _replaceOptimisticIfMatch(MessageModel incoming) {
     if (incoming.sender != _myActorId) return;
-    final i = messages.indexWhere((m) =>
-        m.status != MessageStatus.sent &&
-        m.sender == _myActorId &&
-        m.content == incoming.content &&
-        (m.timestamp.difference(incoming.timestamp).inSeconds).abs() <= 10);
-    if (i != -1) {
-      messages[i] = incoming.copyWith(status: MessageStatus.sent, localId: null);
-    } else {
-      if (!messages.any((m) => m.id == incoming.id)) messages.insert(0, incoming);
+    
+    print('[CHAT DEBUG] _replaceOptimisticIfMatch called for message id=${incoming.id}, content="${incoming.content}"');
+    print('[CHAT DEBUG] Current messages count: ${messages.length}');
+    
+    // FIRST: Check if this exact message ID already exists
+    final existingIdx = messages.indexWhere((m) => m.id == incoming.id);
+    if (existingIdx != -1) {
+      print('[CHAT DEBUG] Message with same ID already exists at index $existingIdx, skipping');
+      return;
     }
+    
+    // SECOND: Try to find and replace optimistic message by negative ID + content match
+    // Note: Time check removed because server sends UTC timestamps but client uses local time
+    final optimisticIdx = messages.indexWhere((m) =>
+        m.id < 0 && 
+        m.sender == _myActorId &&
+        m.content.trim() == incoming.content.trim());
+    
+    if (optimisticIdx != -1) {
+      print('[CHAT DEBUG] Found optimistic message at index $optimisticIdx, replacing');
+      messages[optimisticIdx] = incoming.copyWith(status: MessageStatus.sent, localId: null);
+      _touchInbox(incoming);
+      return;
+    }
+    
+    // THIRD: Check if a very similar message from same sender exists recently (prevent near-duplicates)
+    final recentDuplicateIdx = messages.indexWhere((m) =>
+        m.id > 0 && // Only check non-optimistic messages
+        m.sender == _myActorId &&
+        m.content.trim() == incoming.content.trim() &&
+        (m.timestamp.difference(incoming.timestamp).inSeconds).abs() <= 5);
+    
+    if (recentDuplicateIdx != -1) {
+      print('[CHAT DEBUG] Recent duplicate detected at index $recentDuplicateIdx, skipping');
+      return;
+    }
+    
+    // FOURTH: No match found, add as new message
+    print('[CHAT DEBUG] No match found, adding as new message');
+    messages.insert(0, incoming);
     _touchInbox(incoming);
   }
 

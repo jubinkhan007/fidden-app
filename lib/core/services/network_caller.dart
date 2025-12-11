@@ -62,7 +62,7 @@ class NetworkCaller {
       request.fields.addAll(body);
 
       if (photo != null) {
-        request.files.add(await http.MultipartFile.fromPath('image', photo.path));
+        request.files.add(await http.MultipartFile.fromPath('shop_img', photo.path));
       }
       if (documents != null && documents.isNotEmpty) {
         for (var doc in documents) {

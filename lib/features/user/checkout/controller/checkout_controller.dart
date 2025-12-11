@@ -43,17 +43,23 @@ class CheckoutController extends GetxController {
 
   /// Initiate checkout (called by owner)
   /// Returns true if successful
-  Future<bool> initiateCheckout(int bookingId) async {
+  /// [paymentMethod] can be 'cash' or 'app'
+  Future<bool> initiateCheckout(int bookingId, {String paymentMethod = 'app'}) async {
     try {
       isLoading(true);
       final response = await NetworkCaller().postRequest(
         AppUrls.initiateCheckout(bookingId),
         token: AuthService.accessToken,
-        body: {},
+        body: {
+          'payment_method': paymentMethod,
+        },
       );
 
       if (response.isSuccess) {
-        AppSnackBar.showSuccess('Checkout initiated. Customer will be notified.');
+        final message = paymentMethod == 'cash' 
+            ? 'Cash payment recorded. Checkout complete.'
+            : 'Checkout initiated. Customer will be notified.';
+        AppSnackBar.showSuccess(message);
         return true;
       } else {
         final detail = response.responseData?['detail'] ?? response.errorMessage;
@@ -74,7 +80,7 @@ class CheckoutController extends GetxController {
     try {
       isLoading(true);
       final response = await NetworkCaller().getRequest(
-        AppUrls.initiateCheckout(bookingId),
+        AppUrls.checkoutDetails(bookingId),
         token: AuthService.accessToken,
       );
 

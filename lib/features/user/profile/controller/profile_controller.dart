@@ -43,6 +43,12 @@ class ProfileController extends GetxController {
     super.onInit();
     log('🟢 ProfileController onInit called');
     fetchProfileDetails();
+    
+    // Re-fetch profile when token refreshes to ensure data is loaded with valid token
+    ever(AuthService.tokenRefreshCount, (_) async {
+      log('🔄 ProfileController: Token refreshed, re-fetching profile');
+      await fetchProfileDetails();
+    });
   }
 
   @override

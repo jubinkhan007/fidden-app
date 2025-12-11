@@ -210,13 +210,13 @@ class BusinessOwnerProfileController extends GetxController {
 
 
   void _seedBusinessHoursFromData(Data? d) {
-    // Prefer API business_hours
+    // Prefer API business_hours - already converted to AM/PM by the model
     if (d?.businessHours != null && d!.businessHours!.isNotEmpty) {
       businessHours
         ..clear()
         ..addAll(d.businessHours!.map((k, v) => MapEntry(
-          k.toLowerCase(),
-          v.map((pair) => Range(pair.$1, pair.$2)).toList(),
+          k.toLowerCase(), // Already full day name from model (e.g., "monday")
+          v.map((pair) => Range(pair.$1, pair.$2)).toList(), // Already AM/PM format
         )));
       return;
     }
@@ -244,6 +244,30 @@ class BusinessOwnerProfileController extends GetxController {
     businessHours
       ..clear()
       ..addAll(m);
+  }
+
+  /// Convert 24-hour time (e.g., "09:00", "18:30") to AM/PM format (e.g., "09:00 AM", "06:30 PM")
+  String _from24ToUi(String time24) {
+    // If already in AM/PM format, return as-is
+    if (time24.toUpperCase().contains('AM') || time24.toUpperCase().contains('PM')) {
+      return time24;
+    }
+
+    try {
+      final parts = time24.split(':');
+      if (parts.length < 2) return time24;
+
+      int hour = int.parse(parts[0]);
+      final minute = parts[1];
+
+      final period = hour >= 12 ? 'PM' : 'AM';
+      if (hour > 12) hour -= 12;
+      if (hour == 0) hour = 12;
+
+      return '${hour.toString().padLeft(2, '0')}:$minute $period';
+    } catch (e) {
+      return time24; // Return original if parsing fails
+    }
   }
 
   void onDefaultTimeChanged({required bool isStart, required String value}) {
@@ -988,6 +1012,13 @@ void syncOpenDaysFromBH() {
       final closeDaysFromBh = _deriveCloseDaysFromBH();
       final bhPayload = _serializeBusinessHoursForApi();
 
+      // DEBUG: Log what we're sending
+      log('=== UPDATE PROFILE DEBUG ===');
+      log('imagePath: "${imagePath.value}"');
+      log('instagramUrl: "${instagramUrl.value}"');
+      log('tiktokUrl: "${tiktokUrl.value}"');
+      log('===========================');
+
       final resp = await ShopApi().updateShopWithImage(
         id: id,
         name: businessName,
@@ -1005,10 +1036,11 @@ void syncOpenDaysFromBH() {
         extraJson: { 
           "business_hours": bhPayload,
           "time_zone": timeZone.value,
-          if (instagramUrl.value.isNotEmpty) "instagram_url": instagramUrl.value,
-          if (tiktokUrl.value.isNotEmpty) "tiktok_url": tiktokUrl.value,
-          if (youtubeUrl.value.isNotEmpty) "youtube_url": youtubeUrl.value,
-          if (websiteUrl.value.isNotEmpty) "website_url": websiteUrl.value,
+          // Always send social links (even empty) so backend can clear them
+          "instagram_url": instagramUrl.value,
+          "tiktok_url": tiktokUrl.value,
+          "youtube_url": youtubeUrl.value,
+          "website_url": websiteUrl.value,
         },
 
         // ✅ send policy only if allowed
@@ -1024,20 +1056,28 @@ void syncOpenDaysFromBH() {
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         AppSnackBar.showSuccess("Business Profile updated successfully!");
 
-        // 1) Fetch profile to get latest image URL
+        // FIX: Evict old image BEFORE fetching new data
+        final oldUrl = profileDetails.value.data?.image;
+        if (oldUrl != null && oldUrl.isNotEmpty) {
+          await CachedNetworkImage.evictFromCache(oldUrl);
+          try { await DefaultCacheManager().removeFile(oldUrl); } catch (_) {}
+        }
+
+        // 1) Fetch profile to get latest data (including new image URL)
         await fetchProfileDetails(silentAuthErrors: true);
 
-        // 2) Evict + bust cache if we have a URL
-        final rawUrl = profileDetails.value.data?.image; // or .shopImg if that's your field
-        if (rawUrl != null && rawUrl.isNotEmpty) {
-          await CachedNetworkImage.evictFromCache(rawUrl);
-          try { await DefaultCacheManager().removeFile(rawUrl); } catch (_) {}
-
-          final busted = '$rawUrl${rawUrl.contains('?') ? '&' : '?'}v=${DateTime.now().millisecondsSinceEpoch}';
-
+        // 2) Now evict NEW image URL with cache busting
+        final newUrl = profileDetails.value.data?.image;
+        if (newUrl != null && newUrl.isNotEmpty) {
+          // Evict the new URL
+          await CachedNetworkImage.evictFromCache(newUrl);
+          
+          // Also create a cache-busted version for the UI
+          final busted = '$newUrl${newUrl.contains('?') ? '&' : '?'}v=${DateTime.now().millisecondsSinceEpoch}';
+          
           final m = profileDetails.value;
           if (m.data != null) {
-            m.data!.image = busted; // or m.data!.shopImg = busted;
+            m.data!.image = busted;
             profileDetails.value = m; // trigger GetX update
             profileDetails.refresh();
           }
