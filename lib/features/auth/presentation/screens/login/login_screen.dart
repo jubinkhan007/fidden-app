@@ -66,42 +66,46 @@ class LoginScreen extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxW),
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: getWidth(16)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        VerticalSpace(height: getHeight(48)),
+                        const SizedBox(height: 48),
                         // Logo
                         Align(
                           alignment: Alignment.center,
                           child: Image.asset(
                             ImagePath.splashLogo,
-                            height: getHeight(124),
-                            width: getWidth(186),
+                            height: 100,
+                            width: 150,
                           ),
                         ),
-                        VerticalSpace(height: getHeight(16)),
+                        const SizedBox(height: 16),
                         // Big title
-                        Align(
+                        const Align(
                           alignment: Alignment.center,
-                          child: CustomText(
-                            text: "Welcome back",
-                            fontSize: getWidth(28), // matches mock
-                            fontWeight: FontWeight.w700,
+                          child: Text(
+                            "Welcome back",
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                        VerticalSpace(height: getHeight(40)),
+                        const SizedBox(height: 40),
 
                         // Email label + field
-                        CustomText(
-                          text: "Email",
-                          color: _label,
-                          fontSize: getWidth(15),
-                          fontWeight: FontWeight.w600,
+                        const Text(
+                          "Email",
+                          style: TextStyle(
+                            color: _label,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        SizedBox(height: getHeight(10)),
+                        const SizedBox(height: 10),
                         // Keep your widget; we style via InputDecoration
                         CustomTexFormField(
                           controller: loginController.emailController,
@@ -120,15 +124,17 @@ class LoginScreen extends StatelessWidget {
                           },
                         ),
 
-                        VerticalSpace(height: getHeight(20)),
+                        const SizedBox(height: 20),
                         // Password
-                        CustomText(
-                          text: "Password",
-                          color: _label,
-                          fontSize: getWidth(15),
-                          fontWeight: FontWeight.w600,
+                        const Text(
+                          "Password",
+                          style: TextStyle(
+                            color: _label,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        SizedBox(height: getHeight(10)),
+                        const SizedBox(height: 10),
                   Obx(() => CustomTexFormField(
                     controller: loginController.passwordController,
                     hintText: "Enter your password",
@@ -154,7 +160,7 @@ class LoginScreen extends StatelessWidget {
                         ),
                   ),
 
-                        SizedBox(height: getHeight(12)),
+                        SizedBox(height: 12),
                         Align(
                           alignment: Alignment.centerRight,
                           child: CustomTextButton(
@@ -168,10 +174,10 @@ class LoginScreen extends StatelessWidget {
                           ),
                         ),
 
-                        VerticalSpace(height: getHeight(18)),
+                        const SizedBox(height: 18),
                         // Primary button – pill radius
                         SizedBox(
-                          height: getHeight(66),
+                          height: 56,
                           width: double.infinity,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -187,10 +193,10 @@ class LoginScreen extends StatelessWidget {
                                 loginController.login();
                               }
                             },
-                            child: Text(
+                            child: const Text(
                               "Log in",
                               style: TextStyle(
-                                fontSize: getWidth(18),
+                                fontSize: 18,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
@@ -198,31 +204,33 @@ class LoginScreen extends StatelessWidget {
                           ),
                         ),
 
-                        VerticalSpace(height: getHeight(24)),
-                        Align(
+                        const SizedBox(height: 24),
+                        const Align(
                           alignment: Alignment.center,
-                          child: CustomText(
-                            text: "Or continue with",
-                            fontSize: getWidth(14),
-                            color: _label,
-                            fontWeight: FontWeight.w500,
+                          child: Text(
+                            "Or continue with",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _label,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                        VerticalSpace(height: getHeight(16)),
+                        const SizedBox(height: 16),
 
                         // Google button (exact look)
                         InkWell(
                           borderRadius: BorderRadius.circular(14),
                           onTap: () => Get.to(() => RoleSelectionScreen()),
                           child: Container(
-                            height: getHeight(56),
+                            height: 56,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: _divider),
                             ),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: getWidth(16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -230,16 +238,16 @@ class LoginScreen extends StatelessWidget {
                                 // Use your asset or the official vector
                                 Image.asset(
                                   "assets/images/google_logo.png",
-                                  height: getHeight(22),
-                                  width: getHeight(22),
+                                  height: 22,
+                                  width: 22,
                                 ),
-                                SizedBox(width: getWidth(10)),
-                                Text(
+                                const SizedBox(width: 10),
+                                const Text(
                                   "Google",
                                   style: TextStyle(
-                                    fontSize: getWidth(16),
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF1F1F1F),
+                                    color: Color(0xFF1F1F1F),
                                   ),
                                 ),
                               ],
@@ -247,21 +255,22 @@ class LoginScreen extends StatelessWidget {
                           ),
                         ),
 
-                        VerticalSpace(height: getHeight(28)),
+                        const SizedBox(height: 28),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            CustomText(
-                              // Matching the mock text literally
-                              text: "I don't have a account?",
-                              fontWeight: FontWeight.normal,
-                              fontSize: getWidth(16),
-                              color: const Color(0xFF677674),
+                            const Flexible(
+                              child: Text(
+                                "Don't have an account? ",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF677674),
+                                ),
+                              ),
                             ),
-                            HorizontalSpace(width: getWidth(5)),
                             CustomTextButton(
                               isUnderline: true,
-                              fontSize: getWidth(18),
+                              fontSize: 18,
                               onPressed: () =>
                                   Get.toNamed(AppRoute.signUpScreen),
                               text: "Sign up",
@@ -270,7 +279,7 @@ class LoginScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        VerticalSpace(height: getHeight(24)),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),

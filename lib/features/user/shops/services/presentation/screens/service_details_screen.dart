@@ -580,15 +580,15 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
             return;
           }
 
-          // find the selected slot to format the date/time
-          DateTime? slotStartLocal;
+          // find the selected slot to format the date/time using shop's timezone
+          DateTime? slotStartShopTz;
           try {
             final slot = c.slots.firstWhere((s) => s.id == slotId);
-            slotStartLocal = slot.startTimeUtc.toLocal();
+            slotStartShopTz = c.toShopTz(slot.startTimeUtc); // Use shop timezone, not device local
           } catch (_) {}
 
-          final slotLabel = (slotStartLocal != null)
-              ? DateFormat('MMMM d, yyyy, h.mm a').format(slotStartLocal)
+          final slotLabel = (slotStartShopTz != null)
+              ? DateFormat('MMMM d, yyyy, h.mm a').format(slotStartShopTz)
               : '—';
 
           String? currentPriceStr;

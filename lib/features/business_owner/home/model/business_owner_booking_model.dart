@@ -59,6 +59,14 @@ class OwnerBookingItem {
   final String status; // "active"
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? shopTimezone; // Shop's IANA timezone
+  final String slotTimeIso;   // Original ISO string for timezone-aware formatting
+  
+  // Checkout/Deposit fields
+  final String? depositStatus; // 'held', 'credited', 'forfeited'
+  final double? depositAmount;
+  final double? servicePrice;
+  final double? remainingAmount;
 
   OwnerBookingItem({
     required this.id,
@@ -75,6 +83,12 @@ class OwnerBookingItem {
     required this.status,
     required this.createdAt,
     required this.updatedAt,
+    this.shopTimezone,
+    required this.slotTimeIso,
+    this.depositStatus,
+    this.depositAmount,
+    this.servicePrice,
+    this.remainingAmount,
   });
 
   factory OwnerBookingItem.fromJson(Map<String, dynamic> j) {
@@ -100,12 +114,24 @@ class OwnerBookingItem {
       shopName: j['shop_name'] ?? '',
       slot: _toInt(j['slot']),
       slotTime: _dtKeepWall(j['slot_time']), // ← keeps 09:00 if payload had 09:00+06:00
+      slotTimeIso: (j['slot_time'] ?? '').toString(), // Keep original ISO string
       serviceTitle: j['service_title'] ?? '',
       serviceDuration: j['service_duration'] ?? '',
       status: (j['status'] ?? '').toString(),
       createdAt: _dtKeepWall(j['created_at']),
       updatedAt: _dtKeepWall(j['updated_at']),
+      shopTimezone: j['shop_timezone']?.toString(),
+      depositStatus: j['deposit_status']?.toString(),
+      depositAmount: _toDouble(j['deposit_amount']),
+      servicePrice: _toDouble(j['service_price']),
+      remainingAmount: _toDouble(j['remaining_amount']),
     );
+  }
+  
+  static double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse('$v');
   }
 
   Map<String, dynamic> toJson() => {
@@ -123,6 +149,7 @@ class OwnerBookingItem {
     'status': status,
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
+    'shop_timezone': shopTimezone,
   };
   OwnerBookingItem copyWith({
     int? id,
@@ -139,6 +166,8 @@ class OwnerBookingItem {
     String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? shopTimezone,
+    String? slotTimeIso,
   }) {
     return OwnerBookingItem(
       id: id ?? this.id,
@@ -155,6 +184,8 @@ class OwnerBookingItem {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      shopTimezone: shopTimezone ?? this.shopTimezone,
+      slotTimeIso: slotTimeIso ?? this.slotTimeIso,
     );
   }
 

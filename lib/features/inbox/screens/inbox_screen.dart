@@ -379,24 +379,34 @@ class _Avatar extends StatelessWidget {
   final String url;
   final bool unread;
 
+  static const _fallbackAsset = 'assets/images/profile_image.png';
+
   @override
   Widget build(BuildContext context) {
+    final hasUrl = url.isNotEmpty && !url.contains('null');
+    
     return Stack(
       children: [
         ClipOval(
-          child: Image.network(
-            url,
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              width: 48,
-              height: 48,
-              color: const Color(0xFFE6E8EC),
-              alignment: Alignment.center,
-              child: const Icon(Icons.person, color: Color(0xFF7A8494)),
-            ),
-          ),
+          child: hasUrl
+              ? Image.network(
+                  url,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    _fallbackAsset,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Image.asset(
+                  _fallbackAsset,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                ),
         ),
         if (unread)
           Positioned(

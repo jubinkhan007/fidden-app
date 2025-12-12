@@ -7,6 +7,9 @@ import 'package:fidden/core/utils/constants/icon_path.dart';
 import 'package:fidden/core/utils/constants/image_path.dart';
 import 'package:fidden/features/user/shops/controller/shop_details_controller.dart';
 import 'package:fidden/features/user/shops/data/shop_details_model.dart';
+import 'package:fidden/features/user/shops/presentation/widgets/gallery_preview_section.dart';
+import 'package:fidden/features/user/shops/presentation/widgets/social_links_row.dart';
+import 'package:fidden/features/user/shops/presentation/screens/full_gallery_screen.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:fidden/features/user/wishlist/data/wishlist_models.dart';
@@ -532,18 +535,51 @@ class _AboutSectionState extends State<_AboutSection> {
                 ),
               ],
             ),
-            // SizedBox(height: getHeight(16)),
-            // Divider(color: widget.divider, height: 1),
-            // SizedBox(height: getHeight(16)),
-            // _ServiceSection(
-            //   services: widget.data.services ?? [],
-            //   priceColor: widget.titleColor,
-            //   subtitleColor: widget.bodyColor,
-            // ),
+            
+            // --- Gallery Section ---
+            if (widget.data.galleryPreview != null && 
+                widget.data.galleryPreview!.isNotEmpty) ...[
+              SizedBox(height: getHeight(24)),
+              GalleryPreviewSection(
+                items: widget.data.galleryPreview!,
+                shopId: widget.data.id ?? 0,
+                onSeeAll: () {
+                  Get.to(() => FullGalleryScreen(
+                    items: widget.data.galleryPreview!,
+                    shopName: widget.data.name,
+                  ));
+                },
+              ),
+            ],
+            
+            // --- Social Links Section ---
+            if (_hasSocialLinks()) ...[
+              SizedBox(height: getHeight(24)),
+              CustomText(
+                text: "Connect With Us",
+                fontSize: getWidth(17),
+                fontWeight: FontWeight.w600,
+                color: widget.titleColor,
+              ),
+              SizedBox(height: getHeight(8)),
+              SocialLinksRow(
+                instagramUrl: widget.data.instagramUrl,
+                tiktokUrl: widget.data.tiktokUrl,
+                youtubeUrl: widget.data.youtubeUrl,
+                websiteUrl: widget.data.websiteUrl,
+              ),
+            ],
           ],
         );
       },
     );
+  }
+  
+  bool _hasSocialLinks() {
+    return widget.data.instagramUrl != null ||
+           widget.data.tiktokUrl != null ||
+           widget.data.youtubeUrl != null ||
+           widget.data.websiteUrl != null;
   }
 }
 

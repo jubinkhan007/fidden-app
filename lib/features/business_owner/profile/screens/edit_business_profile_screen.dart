@@ -23,6 +23,7 @@ import '../data/business_profile_model.dart';
 import '../widgets/per_day_hours_card.dart';
 import 'map_screen.dart';
 import 'package:fidden/core/services/location_service.dart';
+import '../../../../core/utils/timezone_helper.dart';
 
 class EditBusinessOwnerProfileScreen extends StatefulWidget {
   final String? id;
@@ -67,6 +68,12 @@ class _EditBusinessOwnerProfileScreenState
       controller1.defaultDepositPercentage.value = _depositPercentageCtrl.text;
 
       controller1.isDepositRequired.value = profileData?.isDepositRequired ?? false;
+      
+      // Load timezone from profile
+      if (profileData.timeZone != null && profileData.timeZone!.isNotEmpty) {
+        controller1.timeZone.value = profileData.timeZone!;
+      }
+      
       controller1.ensureBusinessHoursForOpenDays();
     }
     // <-- ADD THIS SUBSCRIPTION
@@ -94,6 +101,11 @@ class _EditBusinessOwnerProfileScreenState
       }
       controller1.isDepositRequired.value = d.isDepositRequired ?? false;
       controller1.defaultDepositPercentage.value = dep;
+      
+      // Load timezone from profile
+      if (d.timeZone != null && d.timeZone!.isNotEmpty) {
+        controller1.timeZone.value = d.timeZone!;
+      }
 
       setState(() {});
     });
@@ -142,6 +154,39 @@ class _EditBusinessOwnerProfileScreenState
 
 
   // ---------- UI Helpers ----------
+
+  Widget _socialLinkField({
+    required String label,
+    required String hint,
+    required IconData icon,
+    required String value,
+    required bool enabled,
+    void Function(String)? onChanged,
+  }) {
+    return TextFormField(
+      initialValue: value,
+      enabled: enabled,
+      keyboardType: TextInputType.url,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, size: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
+      onChanged: onChanged,
+    );
+  }
 
   Widget _buildFilePicker({required bool isDisabled}) {
     return Column(
@@ -853,6 +898,97 @@ ButtonStyle _saveBtnStyle() {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+
+                    // Timezone dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE0E0E0)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Obx(() => DropdownButtonFormField<String>(
+                        value: TimezoneHelper.isSupported(controller1.timeZone.value)
+                            ? controller1.timeZone.value
+                            : 'America/New_York',
+                        decoration: const InputDecoration(
+                          labelText: 'Shop Timezone',
+                          border: InputBorder.none,
+                          helperText: 'Timezone for slot generation',
+                          helperMaxLines: 2,
+                        ),
+                        items: TimezoneHelper.usTimezones.map((tz) => DropdownMenuItem(
+                          value: tz['value'],
+                          child: Text(tz['label']!),
+                        )).toList(),
+                        onChanged: isPending ? null : (value) {
+                          if (value != null) {
+                            controller1.timeZone.value = value;
+                          }
+                        },
+                      )),
+                    ),
+
+                    const SizedBox(height: 24),
+                    
+                    // ========== Social Links Section ==========
+                    CustomText(
+                      text: "Social Links",
+                      color: const Color(0xff141414),
+                      fontSize: getWidth(17),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    const SizedBox(height: 8),
+                    CustomText(
+                      text: "Help clients find you on social media",
+                      color: Colors.grey[600]!,
+                      fontSize: getWidth(13),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Instagram
+                    _socialLinkField(
+                      label: "Instagram URL",
+                      hint: "https://instagram.com/yourhandle",
+                      icon: Icons.camera_alt_outlined,
+                      value: controller1.instagramUrl.value,
+                      onChanged: isPending ? null : (v) => controller1.instagramUrl.value = v,
+                      enabled: !isPending,
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // TikTok
+                    _socialLinkField(
+                      label: "TikTok URL",
+                      hint: "https://tiktok.com/@yourhandle",
+                      icon: Icons.music_note_outlined,
+                      value: controller1.tiktokUrl.value,
+                      onChanged: isPending ? null : (v) => controller1.tiktokUrl.value = v,
+                      enabled: !isPending,
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // YouTube
+                    _socialLinkField(
+                      label: "YouTube URL",
+                      hint: "https://youtube.com/@yourchannel",
+                      icon: Icons.play_circle_outline,
+                      value: controller1.youtubeUrl.value,
+                      onChanged: isPending ? null : (v) => controller1.youtubeUrl.value = v,
+                      enabled: !isPending,
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Website
+                    _socialLinkField(
+                      label: "Website URL",
+                      hint: "https://yourwebsite.com",
+                      icon: Icons.language,
+                      value: controller1.websiteUrl.value,
+                      onChanged: isPending ? null : (v) => controller1.websiteUrl.value = v,
+                      enabled: !isPending,
+                    ),
+
                     const SizedBox(height: 12),
                     _daysMultiSelect(disabled: isPending),
                     const SizedBox(height: 12),

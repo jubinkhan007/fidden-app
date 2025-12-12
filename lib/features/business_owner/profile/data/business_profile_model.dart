@@ -97,6 +97,13 @@ class Data {
   String? status;
   List<UploadedFile>? verificationFiles;
   Map<String, List<(String,String)>>? businessHours; // e.g. {"monday":[("09:00 AM","02:00 PM"), ...]}
+  String? timeZone; // IANA timezone (e.g., "America/New_York")
+  
+  // Social Links
+  String? instagramUrl;
+  String? tiktokUrl;
+  String? youtubeUrl;
+  String? websiteUrl;
 
   Data({
     this.id,
@@ -127,6 +134,11 @@ class Data {
     this.status,
     this.verificationFiles,
     this.businessHours,
+    this.timeZone,
+    this.instagramUrl,
+    this.tiktokUrl,
+    this.youtubeUrl,
+    this.websiteUrl,
   });
 
   /// All 7 days for computing openDays
@@ -145,6 +157,21 @@ class Data {
     if (d.isEmpty) return d;
     final lower = d.toLowerCase();
     return lower[0].toUpperCase() + lower.substring(1);
+  }
+
+  /// Normalize short day codes (mon, tue, wed) to full day names (monday, tuesday, wednesday)
+  static String _normalizeDayKey(String shortOrFull) {
+    const dayMap = {
+      'mon': 'monday',
+      'tue': 'tuesday',
+      'wed': 'wednesday',
+      'thu': 'thursday',
+      'fri': 'friday',
+      'sat': 'saturday',
+      'sun': 'sunday',
+    };
+    final lower = shortOrFull.toLowerCase();
+    return dayMap[lower] ?? lower; // Return mapped value or original if already full
   }
 
   /// Convert "HH:mm:ss" -> "hh:mm AM/PM"
@@ -265,7 +292,8 @@ class Data {
     if (rawBH is Map) {
       bh = {};
       rawBH.forEach((key, ranges) {
-        final day = key.toString().toLowerCase();
+        // Normalize short day codes (mon, tue) to full day names (monday, tuesday)
+        final dayKey = _normalizeDayKey(key.toString().toLowerCase());
         final list = <(String,String)>[];
         if (ranges is List) {
           for (final r in ranges) {
@@ -279,7 +307,7 @@ class Data {
             }
           }
         }
-        bh![day] = list;
+        bh![dayKey] = list;
       });
     }
 
@@ -317,6 +345,12 @@ class Data {
           .toList()
           : null,
       businessHours: bh, // <-- add this line
+      timeZone: json['time_zone']?.toString() ?? 'America/New_York',
+      // Social Links
+      instagramUrl: json['instagram_url']?.toString(),
+      tiktokUrl: json['tiktok_url']?.toString(),
+      youtubeUrl: json['youtube_url']?.toString(),
+      websiteUrl: json['website_url']?.toString(),
     );
   }
 
@@ -356,6 +390,7 @@ class Data {
       'free_cancellation_hours': freeCancellationHours,
       'cancellation_fee_percentage': cancellationFeePercentage,
       'no_refund_hours': noRefundHours,
+      'time_zone': timeZone,
     };
   }
 }
@@ -406,6 +441,7 @@ class BusinessProfileModel {
   final int? freeCancellationHours;
   final int? cancellationFeePercentage;
   final int? noRefundHours;
+  final String timeZone; // IANA timezone
 
   List<String> get openDays {
     const allDays = [
@@ -439,6 +475,7 @@ class BusinessProfileModel {
     this.freeCancellationHours,
     this.cancellationFeePercentage,
     this.noRefundHours,
+    this.timeZone = 'America/New_York',
   });
 
   factory BusinessProfileModel.fromJson(Map<String, dynamic> json) {
@@ -468,6 +505,7 @@ class BusinessProfileModel {
       freeCancellationHours: Data._asInt(json['free_cancellation_hours']),
       cancellationFeePercentage: Data._asInt(json['cancellation_fee_percentage']),
       noRefundHours: Data._asInt(json['no_refund_hours']),
+      timeZone: json['time_zone']?.toString() ?? 'America/New_York',
     );
   }
 

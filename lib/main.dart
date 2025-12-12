@@ -15,6 +15,7 @@ import 'package:fidden/core/notifications/push.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/services/permission_handler.dart';
 import 'package:fidden/core/ws/ws_service.dart';
+import 'package:fidden/core/utils/timezone_helper.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 @pragma('vm:entry-point')
@@ -44,6 +45,9 @@ Future<void> main() async {
     // Initialize Firebase and other services before runApp
     await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(_bg);
+
+    // Initialize timezone database for proper time display
+    TimezoneHelper.ensureInitialized();
 
     Stripe.publishableKey =
     'pk_test_51SUjSZPvn52W2hluUeYJXFyQPFsXXBwwfB4KhWszroRPBhPx5lROrON6mYvQIAhtnWAaEo813nTRUbYUjvi2CUtW0048Gm4z91';

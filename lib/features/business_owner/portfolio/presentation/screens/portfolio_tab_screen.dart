@@ -25,18 +25,24 @@ class PortfolioTabScreen extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: controller.fetchPortfolioItems,
-          child: GridView.builder(
-            padding: EdgeInsets.all(getWidth(16)),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: getWidth(12),
-              mainAxisSpacing: getHeight(12),
-              childAspectRatio: 0.85,
-            ),
-            itemCount: controller.portfolioItems.length,
-            itemBuilder: (context, index) {
-              final item = controller.portfolioItems[index];
-              return _PortfolioCard(item: item);
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate columns: ~180px per card, min 2, max 4
+              final crossAxisCount = (constraints.maxWidth / 180).clamp(2, 4).toInt();
+              return GridView.builder(
+                padding: EdgeInsets.all(getWidth(16)),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: getWidth(12),
+                  mainAxisSpacing: getHeight(12),
+                  childAspectRatio: 0.85,
+                ),
+                itemCount: controller.portfolioItems.length,
+                itemBuilder: (context, index) {
+                  final item = controller.portfolioItems[index];
+                  return _PortfolioCard(item: item);
+                },
+              );
             },
           ),
         );

@@ -170,6 +170,15 @@ class AppUrls {
   static const String saveCard = "$_baseUrl/payments/save-new-card";
   static String getMyCard(String customerId) =>
       '$_baseUrl/payments/$customerId';
+  
+  // Checkout (Fidden Pay)
+  static String initiateCheckout(int bookingId) =>
+      '$_baseUrl/payments/initiate-checkout/$bookingId/';
+  static String checkoutDetails(int bookingId) =>
+      '$_baseUrl/payments/checkout-details/$bookingId/';
+  static String completeCheckout(int bookingId) =>
+      '$_baseUrl/payments/complete-checkout/$bookingId/';
+
   static String getMyCoupon(String couponCode) =>
       '$_baseUrl/coupon/check?code=$couponCode';
   static const String getOwnerCoupons = '$_baseUrl/api/coupons/';
@@ -225,6 +234,12 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   // Tattoo Artist - Portfolio
   static const String portfolioList = '$_baseUrl/api/portfolio/';
   static String portfolioItem(int id) => '$_baseUrl/api/portfolio/$id/';
+
+  // Gallery (Universal for all niches)
+  static const String galleryList = '$_baseUrl/api/gallery/';
+  static String galleryItem(int id) => '$_baseUrl/api/gallery/$id/';
+  static String shopGallery(int shopId, {int page = 1}) => 
+      '$_baseUrl/api/shops/$shopId/gallery/?page=$page';
 
   // Tattoo Artist - Design Requests
   static String designRequest(int id) => '$_baseUrl/api/design-requests/$id/';

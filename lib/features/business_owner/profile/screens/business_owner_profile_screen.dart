@@ -20,6 +20,7 @@ import '../../subscription/presentation/screens/subscription_screen.dart';
 import '../controller/busines_owner_profile_controller.dart';
 import 'add_business_owner_profile_screen.dart';
 import 'edit_business_profile_screen.dart';
+import '../../portfolio/presentation/screens/gallery_tab_screen.dart';
 
 class BusinessOwnerProfileScreen extends StatelessWidget {
   const BusinessOwnerProfileScreen({super.key});
@@ -156,6 +157,17 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                         Get.to(() => AddBusinessOwnerProfileScreen());
                       },
                     ),
+              // My Gallery Button
+              if (hasBusiness) ...[
+                SizedBox(height: getHeight(16)),
+                CustomProfileButton(
+                  title: 'My Gallery',
+                  firstImageString: IconPath.uploadImageIcon,
+                  onTap: () {
+                    Get.to(() => const GalleryTabScreen());
+                  },
+                ),
+              ],
               SizedBox(height: getHeight(16)),
               CustomProfileButton(
                 title: 'Manage Subscription',

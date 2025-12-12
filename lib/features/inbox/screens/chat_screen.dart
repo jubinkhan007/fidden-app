@@ -36,6 +36,14 @@ class _ChatScreenState extends State<ChatScreen> {
   late final int _myUserId;
   late final String _myEmail;
 
+  static const _fallbackAsset = 'assets/images/profile_image.png';
+
+  ImageProvider _getAvatarImage(String? url) {
+    if (url == null || url.isEmpty || url.contains('null')) {
+      return const AssetImage(_fallbackAsset);
+    }
+    return NetworkImage(url);
+  }
 
   // call after first page & after each paging
   Future<void> _autoFillIfShort({int maxLoops = 3}) async {
@@ -139,9 +147,9 @@ void _onScrollLoadMore() async {
           title: Row(
             children: [
               CircleAvatar(
-                backgroundImage: NetworkImage(widget.shopAvatarUrl),
+                backgroundImage: _getAvatarImage(widget.shopAvatarUrl),
                 radius: 18,
-                onBackgroundImageError: (_, __) {}, // handle error gracefully
+                backgroundColor: const Color(0xFFE6E8EC),
               ),
               const SizedBox(width: 12),
               Text(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:fidden/features/business_owner/home/model/business_owner_booking_model.dart';
+import 'package:fidden/features/user/checkout/controller/checkout_controller.dart';
 
 class BookingDetailsScreen extends StatelessWidget {
   const BookingDetailsScreen({super.key});
@@ -25,6 +26,7 @@ class BookingDetailsScreen extends StatelessWidget {
       shopName: '',
       slot: 0,
       slotTime: now,
+      slotTimeIso: now.toIso8601String(),
       serviceTitle: '',
       serviceDuration: '',
       status: 'scheduled',
@@ -162,15 +164,41 @@ class BookingDetailsScreen extends StatelessWidget {
             ),
           ),
 
-          // (Optional) actions row – placeholders you can wire later
-          // const SizedBox(height: 16),
-          // Row(
-          //   children: [
-          //     Expanded(child: _ActionBtn(icon: Icons.call, label: 'Call')),
-          //     const SizedBox(width: 12),
-          //     Expanded(child: _ActionBtn(icon: Icons.chat_bubble, label: 'Message')),
-          //   ],
-          // ),
+          // --- Payment/Deposit Section ---
+          if (b.depositStatus != null || b.depositAmount != null) ...[
+            const SizedBox(height: 12),
+            SectionCard(
+              title: 'Payment',
+              child: Column(
+                children: [
+                  if (b.servicePrice != null)
+                    KVRow(
+                      icon: Icons.attach_money_rounded,
+                      label: 'Service',
+                      value: '\$${b.servicePrice!.toStringAsFixed(2)}',
+                    ),
+                  if (b.depositAmount != null) ...[
+                    const SizedBox(height: 12),
+                    KVRow(
+                      icon: Icons.lock_rounded,
+                      label: 'Deposit',
+                      value: '\$${b.depositAmount!.toStringAsFixed(2)}',
+                    ),
+                  ],
+                  if (b.depositStatus != null) ...[
+                    const SizedBox(height: 12),
+                    _DepositStatusChip(status: b.depositStatus!),
+                  ],
+                ],
+              ),
+            ),
+          ],
+
+          // --- Checkout Button (only for held deposits) ---
+          if (b.depositStatus?.toLowerCase() == 'held') ...[
+            const SizedBox(height: 24),
+            _CheckoutButton(bookingId: b.id),
+          ],
         ],
       ),
     );
@@ -339,25 +367,132 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-// Optional call/message button (not wired)
-// class _ActionBtn extends StatelessWidget {
-//   const _ActionBtn({required this.icon, required this.label});
-//   final IconData icon;
-//   final String label;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return ElevatedButton.icon(
-//       onPressed: () {},
-//       icon: Icon(icon),
-//       label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-//       style: ElevatedButton.styleFrom(
-//         backgroundColor: const Color(0xFF111827),
-//         foregroundColor: Colors.white,
-//         padding: const EdgeInsets.symmetric(vertical: 14),
-//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//         elevation: 0,
-//       ),
-//     );
-//   }
-// }
+/// Deposit status chip with color coding
+class _DepositStatusChip extends StatelessWidget {
+  const _DepositStatusChip({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    String label;
+    IconData icon;
+
+    switch (status.toLowerCase()) {
+      case 'held':
+        color = const Color(0xFFF59E0B);
+        label = 'Deposit Held';
+        icon = Icons.schedule_rounded;
+        break;
+      case 'credited':
+        color = const Color(0xFF10B981);
+        label = 'Checked Out';
+        icon = Icons.check_circle_rounded;
+        break;
+      case 'forfeited':
+        color = const Color(0xFFEF4444);
+        label = 'Forfeited';
+        icon = Icons.cancel_rounded;
+        break;
+      default:
+        color = const Color(0xFF6B7280);
+        label = status;
+        icon = Icons.info_rounded;
+    }
+
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 10),
+        const SizedBox(
+          width: 92,
+          child: Text(
+            'Status',
+            maxLines: 1,
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Checkout button for owner to initiate customer checkout
+class _CheckoutButton extends StatefulWidget {
+  const _CheckoutButton({required this.bookingId});
+  final int bookingId;
+
+  @override
+  State<_CheckoutButton> createState() => _CheckoutButtonState();
+}
+
+class _CheckoutButtonState extends State<_CheckoutButton> {
+  bool _isLoading = false;
+
+  Future<void> _initiateCheckout() async {
+    setState(() => _isLoading = true);
+    
+    final controller = Get.put(CheckoutController());
+    final success = await controller.initiateCheckout(widget.bookingId);
+    
+    if (mounted) {
+      setState(() => _isLoading = false);
+      if (success) {
+        // Optionally: refresh the booking or pop back
+        Get.back(result: true);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ElevatedButton.icon(
+        onPressed: _isLoading ? null : _initiateCheckout,
+        icon: _isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.point_of_sale_rounded),
+        label: Text(
+          _isLoading ? 'Processing...' : 'Checkout Customer',
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF10B981),
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 56),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
+        ),
+      ),
+    );
+  }
+}

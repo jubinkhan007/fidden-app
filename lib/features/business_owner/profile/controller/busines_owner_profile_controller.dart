@@ -66,6 +66,15 @@ class BusinessOwnerProfileController extends GetxController {
   final isDepositRequired = false.obs;
   final defaultDepositPercentage = ''.obs;
 
+  // Shop timezone (IANA format, e.g., "America/New_York")
+  final timeZone = 'America/New_York'.obs;
+  
+  // Social Links
+  final instagramUrl = ''.obs;
+  final tiktokUrl = ''.obs;
+  final youtubeUrl = ''.obs;
+  final websiteUrl = ''.obs;
+
   final RxBool _fetchingProfile = false.obs;
 
   // ---- Subscription context ----
@@ -107,9 +116,10 @@ class BusinessOwnerProfileController extends GetxController {
     super.onInit();
     _init(); // keep onInit lean
 
-    // If tokens refresh after we mounted, refetch profile quietly
+    // If tokens refresh after we mounted, refetch profile quietly AND re-seed UI
     ever(AuthService.tokenRefreshCount, (_) async {
       await fetchProfileDetails(silentAuthErrors: true);
+      _seedUiFromProfileData(); // FIX: Re-seed UI observables after token refresh
       await checkStripeStatusIfPossible();
     });
 
@@ -140,29 +150,8 @@ class BusinessOwnerProfileController extends GetxController {
       await fetchProfileDetails(silentAuthErrors: true);
 
       // 2. NOW, seed the UI with the data we just fetched.
-      //    This is the key fix for your empty fields.
-      final data = profileDetails.value.data;
-      final fromApiOpenDays = data?.openDays;
-      if (fromApiOpenDays != null && fromApiOpenDays.isNotEmpty) {
-        openDays
-          ..clear()
-          ..addAll(fromApiOpenDays.map(_normalizeDay));
-      }
+      _seedUiFromProfileData();
 
-      startTime.value = data?.startTime ?? ''; // Use empty string, not old value
-      endTime.value   = data?.endTime   ?? ''; // Use empty string, not old value
-
-      // Cancellation policy (defaults when missing)
-      freeCancellationHours.value     = (data?.freeCancellationHours ?? 24).toString();
-      cancellationFeePercentage.value = (data?.cancellationFeePercentage ?? 0).toString();
-      noRefundHours.value             = (data?.noRefundHours ?? 0).toString();
-
-      // Deposit
-      defaultDepositPercentage.value = (data?.defaultDepositPercentage ?? 0).toString();
-      isDepositRequired.value  =  data?.isDepositRequired ?? false;
-
-      _seedBusinessHoursFromData(data);
-      ensureBusinessHoursForOpenDays();
       await checkStripeStatusIfPossible();
 
     } catch (e) {
@@ -176,15 +165,58 @@ class BusinessOwnerProfileController extends GetxController {
     }
   }
 
+  /// Seeds all UI-bound observables from the current [profileDetails].
+  /// Called after initial fetch and after token refresh to ensure UI stays in sync.
+  void _seedUiFromProfileData() {
+    final data = profileDetails.value.data;
+    if (data == null) return;
+
+    // Open days
+    final fromApiOpenDays = data.openDays;
+    if (fromApiOpenDays != null && fromApiOpenDays.isNotEmpty) {
+      openDays
+        ..clear()
+        ..addAll(fromApiOpenDays.map(_normalizeDay));
+    }
+
+    // Times
+    startTime.value = data.startTime ?? '';
+    endTime.value   = data.endTime   ?? '';
+
+    // Cancellation policy (defaults when missing)
+    freeCancellationHours.value     = (data.freeCancellationHours ?? 24).toString();
+    cancellationFeePercentage.value = (data.cancellationFeePercentage ?? 0).toString();
+    noRefundHours.value             = (data.noRefundHours ?? 0).toString();
+
+    // Deposit
+    defaultDepositPercentage.value = (data.defaultDepositPercentage ?? 0).toString();
+    isDepositRequired.value = data.isDepositRequired ?? false;
+
+    // Timezone
+    if (data.timeZone != null && data.timeZone!.isNotEmpty) {
+      timeZone.value = data.timeZone!;
+    }
+
+    // Social links
+    instagramUrl.value = data.instagramUrl ?? '';
+    tiktokUrl.value = data.tiktokUrl ?? '';
+    youtubeUrl.value = data.youtubeUrl ?? '';
+    websiteUrl.value = data.websiteUrl ?? '';
+
+    // Business hours
+    _seedBusinessHoursFromData(data);
+    ensureBusinessHoursForOpenDays();
+  }
+
 
   void _seedBusinessHoursFromData(Data? d) {
-    // Prefer API business_hours
+    // Prefer API business_hours - already converted to AM/PM by the model
     if (d?.businessHours != null && d!.businessHours!.isNotEmpty) {
       businessHours
         ..clear()
         ..addAll(d.businessHours!.map((k, v) => MapEntry(
-          k.toLowerCase(),
-          v.map((pair) => Range(pair.$1, pair.$2)).toList(),
+          k.toLowerCase(), // Already full day name from model (e.g., "monday")
+          v.map((pair) => Range(pair.$1, pair.$2)).toList(), // Already AM/PM format
         )));
       return;
     }
@@ -212,6 +244,30 @@ class BusinessOwnerProfileController extends GetxController {
     businessHours
       ..clear()
       ..addAll(m);
+  }
+
+  /// Convert 24-hour time (e.g., "09:00", "18:30") to AM/PM format (e.g., "09:00 AM", "06:30 PM")
+  String _from24ToUi(String time24) {
+    // If already in AM/PM format, return as-is
+    if (time24.toUpperCase().contains('AM') || time24.toUpperCase().contains('PM')) {
+      return time24;
+    }
+
+    try {
+      final parts = time24.split(':');
+      if (parts.length < 2) return time24;
+
+      int hour = int.parse(parts[0]);
+      final minute = parts[1];
+
+      final period = hour >= 12 ? 'PM' : 'AM';
+      if (hour > 12) hour -= 12;
+      if (hour == 0) hour = 12;
+
+      return '${hour.toString().padLeft(2, '0')}:$minute $period';
+    } catch (e) {
+      return time24; // Return original if parsing fails
+    }
   }
 
   void onDefaultTimeChanged({required bool isStart, required String value}) {
@@ -836,7 +892,10 @@ void syncOpenDaysFromBH() {
         cancellationFeePercentage: willSendPolicy ? feePct : null,
         noRefundHours: willSendPolicy ? noRefH : null,
         token: AuthService.accessToken ?? '',
-        extraJson: { "business_hours": bhPayload },
+        extraJson: { 
+          "business_hours": bhPayload,
+          "time_zone": timeZone.value,
+        },
         // ⬇️ IF ShopApi supports deposit, include it only when allowed:
         // isDepositRequired: canEditDeposit ? isDepositRequired.value : null,
         // depositAmount:     canEditDeposit ? depositAmount.value : null,
@@ -953,6 +1012,13 @@ void syncOpenDaysFromBH() {
       final closeDaysFromBh = _deriveCloseDaysFromBH();
       final bhPayload = _serializeBusinessHoursForApi();
 
+      // DEBUG: Log what we're sending
+      log('=== UPDATE PROFILE DEBUG ===');
+      log('imagePath: "${imagePath.value}"');
+      log('instagramUrl: "${instagramUrl.value}"');
+      log('tiktokUrl: "${tiktokUrl.value}"');
+      log('===========================');
+
       final resp = await ShopApi().updateShopWithImage(
         id: id,
         name: businessName,
@@ -967,7 +1033,15 @@ void syncOpenDaysFromBH() {
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
         documents: documents,
         token: AuthService.accessToken ?? '',
-        extraJson: { "business_hours": bhPayload },
+        extraJson: { 
+          "business_hours": bhPayload,
+          "time_zone": timeZone.value,
+          // Always send social links (even empty) so backend can clear them
+          "instagram_url": instagramUrl.value,
+          "tiktok_url": tiktokUrl.value,
+          "youtube_url": youtubeUrl.value,
+          "website_url": websiteUrl.value,
+        },
 
         // ✅ send policy only if allowed
         freeCancellationHours: sendPolicy ? freeH : null,
@@ -982,20 +1056,28 @@ void syncOpenDaysFromBH() {
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         AppSnackBar.showSuccess("Business Profile updated successfully!");
 
-        // 1) Fetch profile to get latest image URL
+        // FIX: Evict old image BEFORE fetching new data
+        final oldUrl = profileDetails.value.data?.image;
+        if (oldUrl != null && oldUrl.isNotEmpty) {
+          await CachedNetworkImage.evictFromCache(oldUrl);
+          try { await DefaultCacheManager().removeFile(oldUrl); } catch (_) {}
+        }
+
+        // 1) Fetch profile to get latest data (including new image URL)
         await fetchProfileDetails(silentAuthErrors: true);
 
-        // 2) Evict + bust cache if we have a URL
-        final rawUrl = profileDetails.value.data?.image; // or .shopImg if that's your field
-        if (rawUrl != null && rawUrl.isNotEmpty) {
-          await CachedNetworkImage.evictFromCache(rawUrl);
-          try { await DefaultCacheManager().removeFile(rawUrl); } catch (_) {}
-
-          final busted = '$rawUrl${rawUrl.contains('?') ? '&' : '?'}v=${DateTime.now().millisecondsSinceEpoch}';
-
+        // 2) Now evict NEW image URL with cache busting
+        final newUrl = profileDetails.value.data?.image;
+        if (newUrl != null && newUrl.isNotEmpty) {
+          // Evict the new URL
+          await CachedNetworkImage.evictFromCache(newUrl);
+          
+          // Also create a cache-busted version for the UI
+          final busted = '$newUrl${newUrl.contains('?') ? '&' : '?'}v=${DateTime.now().millisecondsSinceEpoch}';
+          
           final m = profileDetails.value;
           if (m.data != null) {
-            m.data!.image = busted; // or m.data!.shopImg = busted;
+            m.data!.image = busted;
             profileDetails.value = m; // trigger GetX update
             profileDetails.refresh();
           }

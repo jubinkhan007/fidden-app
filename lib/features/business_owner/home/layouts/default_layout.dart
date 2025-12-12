@@ -16,6 +16,7 @@ import '../../profile/screens/add_business_owner_profile_screen.dart';
 import '../../../../core/commom/widgets/custom_text.dart';
 import '../../../../core/utils/constants/app_sizes.dart';
 import '../../../../core/utils/constants/image_path.dart';
+import '../../../user/booking/presentation/api_time_format.dart';
 import 'package:intl/intl.dart';
 
 class DefaultLayout implements NicheLayoutStrategy {
@@ -239,7 +240,14 @@ class DefaultLayout implements NicheLayoutStrategy {
         final displayName = (booking.userName?.trim().isNotEmpty == true)
             ? booking.userName!.trim()
             : booking.userEmail;
-        final when = "${DateFormat('hh:mm a').format(booking.slotTime)} at ${DateFormat('d MMM yyyy').format(booking.slotTime)}";
+        // Use timezone-aware formatting for correct time display
+        final timeStr = booking.shopTimezone != null
+            ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+            : DateFormat('hh:mm a').format(booking.slotTime);
+        final dateStr = booking.shopTimezone != null
+            ? formatApiDateInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+            : DateFormat('d MMM yyyy').format(booking.slotTime);
+        final when = "$timeStr at $dateStr";
         final ImageProvider avatar = (booking.profileImage != null && booking.profileImage!.trim().isNotEmpty)
             ? NetworkImage(booking.profileImage!)
             : const AssetImage(ImagePath.profileImage);

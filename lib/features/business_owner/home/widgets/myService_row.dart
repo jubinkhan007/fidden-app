@@ -13,12 +13,12 @@ class ServicesShimmerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: getHeight(150),
+      height: 150,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: 4,
         padding: EdgeInsets.zero,
-        separatorBuilder: (_, __) => SizedBox(width: getWidth(12)),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (_, __) => _SkeletonCard(),
       ),
     );
@@ -29,7 +29,7 @@ class _SkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: getWidth(280),
+      width: 280,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -46,11 +46,11 @@ class _SkeletonCard extends StatelessWidget {
         children: [
           _pulse(
             child: Container(
-              width: getWidth(84),
-              height: getHeight(150),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: const BorderRadius.only(
+              width: 84,
+              height: 150,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(14),
                   bottomLeft: Radius.circular(14),
                 ),
@@ -78,7 +78,7 @@ class _SkeletonCard extends StatelessWidget {
                   _pulse(
                     child: Container(
                       height: 12,
-                      width: getWidth(160),
+                      width: 160,
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(6),
@@ -89,7 +89,7 @@ class _SkeletonCard extends StatelessWidget {
                   _pulse(
                     child: Container(
                       height: 16,
-                      width: getWidth(60),
+                      width: 60,
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(6),
@@ -234,12 +234,12 @@ class ServicesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: getHeight(120),
+      height: 120,
       child: ListView.separated(
         padding: EdgeInsets.zero,
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
-        separatorBuilder: (_, __) => SizedBox(width: getWidth(12)),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (_, i) => ServiceCard(item: items[i], onEdit: onEdit),
       ),
     );
@@ -266,8 +266,8 @@ class ServiceCard extends StatelessWidget {
       onTap: () => onEdit(id),
       child: SizedBox(
         // <-- clamp the card height so children know their budget
-        height: getHeight(120),
-        width: getWidth(300),
+        height: 120,
+        width: 280,
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -292,19 +292,19 @@ class ServiceCard extends StatelessWidget {
                 child: hasImage
                     ? SafeNetworkImage(
                         url: item.serviceImg,
-                        width: getWidth(90),
-                        height: getHeight(120), // <-- match the card height
+                        width: 90,
+                        height: 120, // <-- match the card height
                         fit: BoxFit.cover,
                       )
                     : Container(
-                        width: getWidth(90),
-                        height: getHeight(120), // <-- match the card height
+                        width: 90,
+                        height: 120, // <-- match the card height
                         color: const Color(0xFFF3F4F6),
                         alignment: Alignment.center,
                         child: Image.asset(
                           IconPath.serviceIcon,
-                          width: getWidth(32),
-                          height: getWidth(32),
+                          width: 32,
+                          height: 32,
                           color: const Color(0xFF9CA3AF),
                         ),
                       ),
@@ -332,10 +332,10 @@ class ServiceCard extends StatelessWidget {
                               item.title ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: getWidth(15),
+                              style: const TextStyle(
+                                fontSize: 15,
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF111827),
+                                color: Color(0xFF111827),
                                 height: 1.2, // slightly tighter line-height
                               ),
                             ),
@@ -356,9 +356,9 @@ class ServiceCard extends StatelessWidget {
                           item.description ?? '',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: getWidth(12.5),
-                            color: const Color(0xFF6B7280),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
                             height: 1.25,
                           ),
                         ),
@@ -382,10 +382,10 @@ class ServiceCard extends StatelessWidget {
                               price == 0
                                   ? 'Free'
                                   : '\$${price.toStringAsFixed(2)}',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w800,
-                                fontSize: getWidth(13.5),
-                                color: const Color(0xFF0F172A),
+                                fontSize: 13,
+                                color: Color(0xFF0F172A),
                               ),
                             ),
                           ),

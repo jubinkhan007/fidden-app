@@ -282,7 +282,15 @@ SizedBox(
                 child: Column(
                   children: [
                     _PriceRow(label: 'Service Price', amount: servicePrice),
-                    if (discountPrice != null)
+                    // Show coupon discount if applied
+                    if (_appliedCoupon != null && _couponDiscount > 0)
+                      _PriceRow(
+                        label: 'Coupon Discount (${_appliedCoupon!.inPercentage ? '${_appliedCoupon!.amount.toInt()}%' : ''})',
+                        amount: '-${_couponDiscount.toStringAsFixed(2)}',
+                        isDiscount: true,
+                      ),
+                    // Legacy discount (if discountPrice is different from servicePrice)
+                    if (discountPrice != null && _appliedCoupon == null)
                       _PriceRow(
                         label: 'Discount',
                         amount: '-${(servicePrice - (double.tryParse(discountPrice.toString()) ?? 0)).toStringAsFixed(2)}',
@@ -291,14 +299,14 @@ SizedBox(
                     const Divider(height: 24),
                     _PriceRow(
                       label: 'Total Amount',
-                      amount: servicePrice,
+                      amount: _payable, // ✅ Use discounted amount
                       isTotal: true,
                     ),
                     
                     // NEW: Deposit Amount Display
                     Obx(() {
                       if (controller.isDepositRequired.value) {
-                        final deposit = controller.getDepositAmount(servicePrice);
+                        final deposit = controller.getDepositAmount(_payable); // ✅ Use discounted amount
                         if (deposit > 0) {
                           return Column(
                             children: [
@@ -707,7 +715,7 @@ Future<void> _openScheduleSheet() async {
                       onPressed: canUpdate ? () {
                         final selId = c.selectedSlotId.value!;
                         final sel = c.slots.firstWhere((e) => e.id == selId);
-                        final localStart = sel.startTimeUtc.toLocal();
+                        final localStart = c.toShopTz(sel.startTimeUtc); // Use shop timezone, not device local
                         setState(() {
                           bookingId   = selId;
                           selectedSlot = _slotFmt.format(localStart);

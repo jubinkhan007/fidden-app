@@ -35,15 +35,15 @@ class BusinessOwnerNavBar extends StatelessWidget {
                 tooltip: navController.labels[index],
               );
             }),
-            selectedLabelStyle: TextStyle(
+            selectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.w400,
               fontSize: 13,
-              color: const Color(0xffFCC734),
+              color: Color(0xffFCC734),
             ),
-            unselectedLabelStyle: TextStyle(
+            unselectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 11,
-              color: const Color(0xffFCC734),
+              color: Color(0xffFCC734),
             ),
           );
         },

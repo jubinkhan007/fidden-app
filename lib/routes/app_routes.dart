@@ -9,6 +9,7 @@ import 'package:fidden/features/business_owner/transactions/screens/transactions
 import 'package:fidden/features/notifications/presentation/screens/notification_screen.dart';
 import 'package:fidden/features/user/booking/presentation/screens/booking_confirmation_screen.dart';
 import 'package:fidden/features/user/booking/presentation/screens/booking_summary_screen.dart';
+import 'package:fidden/features/user/checkout/presentation/screens/checkout_screen.dart';
 import 'package:fidden/features/user/coupons/presentation/screens/select_coupon_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/account_settings_screen.dart';
 import 'package:fidden/features/user/profile/presentation/screens/edit_profile_screen.dart';
@@ -82,6 +83,7 @@ class AppRoute {
   static const String subscriptionScreen = '/subscription';
   static const String serviceDetailsScreen = '/userServiceDetails';
   static const String shopDetailsScreen = '/shopDetailsScreen';
+  static const String checkoutScreen = '/checkout';
 
   // Niche Routes
   static const String portfolioScreen = '/portfolio';
@@ -184,6 +186,12 @@ GetPage(
       name: shopDetailsScreen,
       page: () => ShopDetailsScreen(id: Get.arguments['shopId']),
     ),
+
+    GetPage(
+      name: checkoutScreen,
+      page: () => CheckoutScreen(bookingId: Get.arguments['bookingId']),
+    ),
+
 
     // --- Niche Routes ---
     GetPage(name: portfolioScreen, page: () => const PortfolioGridScreen()),

@@ -11,8 +11,12 @@ import 'notification_service.dart';
 /// Background handler — must be a top-level or static function
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('[PUSH DEBUG] Background handler received: data=${message.data}, notification=${message.notification?.title}');
   // If backend sent a notification block, let OS show it. Do not mirror.
-  if (message.notification != null) return;
+  if (message.notification != null) {
+    print('[PUSH DEBUG] Background: Has notification block, letting OS handle');
+    return;
+  }
 
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -35,8 +39,12 @@ Future<void> initPush() async {
 
   // When app is in the FOREGROUND, listen for messages.
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+    print('[PUSH DEBUG] Foreground received: data=${message.data}, notification=${message.notification?.title}');
     // Foreground duplicate guard: ignore notification-messages.
-    if (message.notification != null) return;
+    if (message.notification != null) {
+      print('[PUSH DEBUG] Foreground: Has notification block, skipping (OS handles)');
+      return;
+    }
     await _showFromRemoteMessage(message);
   });
 
@@ -88,6 +96,9 @@ Future<void> _showFromRemoteMessage(RemoteMessage message) async {
 
   final uniqueId = data['message_id']?.toString();
 
+  // Use consistent ID format with 'msg_' prefix to dedup across all sources
+  final dedupId = uniqueId != null && uniqueId.isNotEmpty ? 'msg_$uniqueId' : null;
+
   await NotificationService.I.showMessage(
     title: title,
     body: body,
@@ -101,6 +112,6 @@ Future<void> _showFromRemoteMessage(RemoteMessage message) async {
       'is_owner': data['is_owner'],
       'content': data['content'],
     },
-    uniqueId: uniqueId,
+    uniqueId: dedupId,
   );
 }

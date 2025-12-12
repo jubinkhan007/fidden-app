@@ -3,9 +3,11 @@ import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
+import 'package:fidden/core/utils/timezone_helper.dart';
 import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:fidden/features/user/shops/services/data/service_details_model.dart';
 import 'package:fidden/features/user/shops/services/data/time_slots_model.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -37,6 +39,9 @@ class ServiceDetailsController extends GetxController {
   // ───────── NEW: Add-on Services Logic
   final shopServices = <Service>[].obs; // Available add-ons
   final selectedAddOns = <Service>[].obs; // Selected add-ons
+  
+  // Shop's timezone for displaying slot times
+  final shopTimeZone = 'America/New_York'.obs;
 
   void toggleAddOn(Service service) {
     if (selectedAddOns.contains(service)) {
@@ -86,12 +91,26 @@ class ServiceDetailsController extends GetxController {
   }
 
   String _fmtDate(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+  
+  /// Format slot time in shop's timezone
   String fmtTimeLocal(DateTime utc) =>
-      DateFormat('h:mm a').format(utc.toLocal());
+      TimezoneHelper.formatInTimezone(utc, shopTimeZone.value);
+  
+  /// Convert UTC DateTime to shop's timezone DateTime
+  DateTime toShopTz(DateTime utc) =>
+      TimezoneHelper.toTimezone(utc, shopTimeZone.value);
 
   // Helper to check if two dates are the same day
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+  
+  /// Check if slot falls on the given day in the shop's timezone
+  bool _isSlotOnDayInShopTz(SlotItem slot, DateTime selectedDay) {
+    final slotLocal = toShopTz(slot.startTimeUtc);
+    return slotLocal.year == selectedDay.year &&
+           slotLocal.month == selectedDay.month &&
+           slotLocal.day == selectedDay.day;
+  }
 
   Future<void> fetchServiceDetails() async {
     if (isLoadingDetails.value) return;
@@ -126,6 +145,11 @@ class ServiceDetailsController extends GetxController {
         if (shopResp.isSuccess && shopResp.responseData is Map<String, dynamic>) {
           final shop = ShopDetailsModel.fromJson(shopResp.responseData);
           applyClosedDays(shop.closeDays);
+          
+          // Store shop timezone for slot display
+          if (shop.timeZone != null && shop.timeZone!.isNotEmpty) {
+            shopTimeZone.value = shop.timeZone!;
+          }
           
           // Store other services as potential add-ons
           if (shop.services != null) {
@@ -183,6 +207,7 @@ Future<void> fetchSlotsForDate(
 
   isLoadingSlots.value = true;
   try {
+    // Fetch current date's slots
     final uri = Uri.parse('${AppUrls.serviceDetails}/${d.shopId}/slots/')
         .replace(queryParameters: {
       'service': serviceId.toString(),
@@ -193,40 +218,87 @@ Future<void> fetchSlotsForDate(
       uri.toString(),
       token: AuthService.accessToken,
     );
+    
+    List<SlotItem> allSlots = [];
 
     if (res.isSuccess && res.responseData is Map<String, dynamic>) {
       final parsed = SlotsResponse.fromJson(res.responseData);
-      final now = DateTime.now();
-      List<SlotItem> processed = parsed.slots;
-
-      // If "today", mark past times unavailable
-      if (_isSameDay(day, now)) {
-        processed = processed.map((slot) {
-          if (!slot.available) return slot;
-          if (slot.startTimeUtc.toLocal().isBefore(now)) {
-            return SlotItem(
-              id: slot.id,
-              shop: slot.shop,
-              service: slot.service,
-              startTimeUtc: slot.startTimeUtc,
-              endTimeUtc: slot.endTimeUtc,
-              capacityLeft: slot.capacityLeft,
-              available: false,
-            );
-          }
-          return slot;
-        }).toList();
+      allSlots.addAll(parsed.slots);
+      // Debug: Log first 3 slots to show UTC times from API
+      for (var i = 0; i < parsed.slots.length && i < 3; i++) {
+        final s = parsed.slots[i];
+        debugPrint('🎰 Slot[${s.id}]: UTC=${s.startTimeUtc} → ShopTz=${fmtTimeLocal(s.startTimeUtc)}');
       }
+    }
+    
+    // Also fetch next UTC day to capture slots that span timezone boundary
+    // e.g., Dec 9 ET spans Dec 9 UTC afternoon and Dec 10 UTC morning
+    final nextDay = day.add(const Duration(days: 1));
+    final nextKey = _fmtDate(nextDay);
+    
+    final nextUri = Uri.parse('${AppUrls.serviceDetails}/${d.shopId}/slots/')
+        .replace(queryParameters: {
+      'service': serviceId.toString(),
+      'date': nextKey,
+    });
+    
+    final nextRes = await NetworkCaller().getRequest(
+      nextUri.toString(),
+      token: AuthService.accessToken,
+    );
+    
+    if (nextRes.isSuccess && nextRes.responseData is Map<String, dynamic>) {
+      final nextParsed = SlotsResponse.fromJson(nextRes.responseData);
+      allSlots.addAll(nextParsed.slots);
+    }
+    
+    List<SlotItem> processed = allSlots;
 
-      // write-through cache
-      _slotsCache[key] = processed;
+    // Mark past times unavailable based on shop's current time
+    // Convert current time to shop timezone for accurate comparison
+    final nowInShopTz = toShopTz(DateTime.now().toUtc());
+    final todayInShopTz = DateTime(nowInShopTz.year, nowInShopTz.month, nowInShopTz.day);
+    
+    // Check if selected day is "today" in shop timezone
+    if (day.year == todayInShopTz.year && 
+        day.month == todayInShopTz.month && 
+        day.day == todayInShopTz.day) {
+      processed = processed.map((slot) {
+        if (!slot.available) return slot;
+        // Compare slot time with current time in shop timezone
+        final slotInShopTz = toShopTz(slot.startTimeUtc);
+        if (slotInShopTz.isBefore(nowInShopTz)) {
+          return SlotItem(
+            id: slot.id,
+            shop: slot.shop,
+            service: slot.service,
+            startTimeUtc: slot.startTimeUtc,
+            endTimeUtc: slot.endTimeUtc,
+            capacityLeft: slot.capacityLeft,
+            available: false,
+          );
+        }
+        return slot;
+      }).toList();
+    }
+    
+    // Filter slots that fall on the selected day in shop timezone
+    // This handles cases where UTC date ≠ shop timezone date
+    processed = processed.where((s) => _isSlotOnDayInShopTz(s, day)).toList();
+    
+    // Sort slots by their local time (shop timezone)
+    processed.sort((a, b) {
+      final aLocal = toShopTz(a.startTimeUtc);
+      final bLocal = toShopTz(b.startTimeUtc);
+      return aLocal.compareTo(bLocal);
+    });
 
-      // only update visible list if we're fetching the currently selected day
-      if (mutateSelection && _isSameDay(selectedDate.value, day)) {
-        slots.assignAll(processed);
-      }
-    } else {
-      AppSnackBar.showError(res.errorMessage ?? 'Failed to load slots.');
+    // write-through cache
+    _slotsCache[key] = processed;
+
+    // only update visible list if we're fetching the currently selected day
+    if (mutateSelection && _isSameDay(selectedDate.value, day)) {
+      slots.assignAll(processed);
     }
   } catch (e) {
     AppSnackBar.showError('Error loading slots: $e');

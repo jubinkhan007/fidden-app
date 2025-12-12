@@ -207,13 +207,18 @@ class InboxController extends GetxController {
       patchLastMessage(ev.threadId, ev.message);
     }
 
-    final isOnChatScreen = Get.currentRoute.contains('ChatScreen');
+    final currentRoute = Get.currentRoute;
+    print('[NOTIF DEBUG] Current route: "$currentRoute"');
+    final isOnChatScreen = currentRoute.toLowerCase().contains('chat');
+    print('[NOTIF DEBUG] _onRealtimeMessage: isOnChatScreen=$isOnChatScreen, threadId=${ev.threadId}, msgId=${ev.message.id}');
     if (!isOnChatScreen) {
+      // Use consistent 'msg_' prefix to dedup across FCM/WS/InboxController
+      print('[NOTIF DEBUG] Calling showMessage for msg_${ev.message.id}');
       await NotificationService.I.showMessage(
         title: ev.message.senderEmail.isNotEmpty ? ev.message.senderEmail : 'New message',
         body: ev.message.content,
         payload: {'type': 'chat', 'thread_id': ev.threadId, 'message_id': ev.message.id},
-        uniqueId: '${ev.message.id}',
+        uniqueId: 'msg_${ev.message.id}',
       );
     }
   }
@@ -263,8 +268,19 @@ class InboxController extends GetxController {
     return (currentUserRole == 'user') ? thread.shopName : (thread.userName ?? thread.userEmail);
   }
 
-  String getOtherPartyAvatar(Thread thread) =>
-      'https://i.pravatar.cc/150?u=${thread.id}';
+  /// Returns the avatar URL of the "other party" in the conversation
+  /// For users: show shop image
+  /// For owners: show user's profile image
+  String getOtherPartyAvatar(Thread thread) {
+    final currentUserRole = AuthService.role?.toLowerCase();
+    if (currentUserRole == 'user') {
+      // User sees the shop's avatar
+      return thread.shopImg ?? '';
+    } else {
+      // Owner sees the user's avatar
+      return thread.userImg ?? '';
+    }
+  }
 
   String getLastMessageText(Thread thread) => _getLast(thread)?.content ?? 'No messages yet.';
 

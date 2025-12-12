@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -9,8 +10,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
+import '../../features/business_owner/home/controller/business_owner_controller.dart';
 import '../../features/inbox/screens/chat_screen.dart';
 import '../../routes/app_routes.dart';
+import '../services/Auth_service.dart';
 
 class NotificationService {
   NotificationService._();
@@ -80,7 +83,7 @@ class NotificationService {
     final slotId   = data['slot_id']?.toString();
 
     if (type == 'autofill_offer' && action == 'book_offer' && slotId != null && slotId.isNotEmpty) {
-      // Build the label from ISO so your _slotFmt parser isn’t needed here
+      // Build the label from ISO so your _slotFmt parser isn't needed here
       String selectedSlotLabel = '';
       final iso = data['start_time']?.toString();
       if (iso != null && iso.isNotEmpty) {
@@ -94,7 +97,7 @@ class NotificationService {
       int? toInt(dynamic v) => int.tryParse('$v');
       double? toDouble(dynamic v) => double.tryParse('$v');
 
-      // Map to the BookingSummaryScreen’s expected arguments
+      // Map to the BookingSummaryScreen's expected arguments
       final args = <String, dynamic>{
         'serviceName': data['serviceName'] ?? '',
         'service_img': data['service_img'] ?? '',
@@ -119,6 +122,78 @@ class NotificationService {
       return;
     }
 
+    // --- CHAT MESSAGE NOTIFICATION HANDLING ---
+    // When user taps on a chat notification, navigate to chat screen
+    if (type == 'chat' || type == 'chat_message' || type == 'notification' || type == 'message') {
+      final threadId = int.tryParse('${data['thread_id'] ?? 0}') ?? 0;
+      final shopId = int.tryParse('${data['shop_id'] ?? 0}') ?? 0;
+      final shopName = data['shop_name']?.toString() ?? data['sender_email']?.toString() ?? 'Chat';
+      final isOwner = data['is_owner']?.toString().toLowerCase() == 'true' || 
+                      AuthService.role?.toLowerCase() == 'owner';
+      
+      if (threadId > 0) {
+        Get.to(() => ChatScreen(
+          threadId: threadId,
+          shopId: shopId,
+          shopName: shopName,
+          shopAvatarUrl: '',
+          isOwner: isOwner,
+        ));
+        return;
+      }
+    }
+    // --- END CHAT MESSAGE NOTIFICATION HANDLING ---
+
+    // --- CHECKOUT NOTIFICATION HANDLING ---
+    // When owner initiates checkout, customer receives this notification type
+    if (type == 'checkout_ready' || type == 'checkout_initiated') {
+      final bookingId = data['booking_id']?.toString();
+      if (bookingId != null && bookingId.isNotEmpty) {
+        final id = int.tryParse(bookingId);
+        if (id != null) {
+          Get.toNamed(
+            AppRoute.checkoutScreen,
+            arguments: {'bookingId': id},
+          );
+          return;
+        }
+      }
+    }
+    // --- END CHECKOUT NOTIFICATION HANDLING ---
+
+    // --- CHECKOUT COMPLETED HANDLER (Owner receives when customer pays) ---
+    if (type == 'checkout_completed') {
+      // Refresh the owner's bookings list so the "Checkout Customer" button disappears
+      if (Get.isRegistered<BusinessOwnerController>()) {
+        Get.find<BusinessOwnerController>().fetchBusinessOwnerBooking();
+      }
+      
+      // Show confirmation snackbar
+      final customerEmail = data['customer_email']?.toString() ?? 'Customer';
+      final totalPaid = data['total_paid']?.toString() ?? '';
+      final tipAmount = data['tip_amount']?.toString();
+      
+      String message = 'Payment received from $customerEmail';
+      if (totalPaid.isNotEmpty) {
+        message += ' - \$$totalPaid';
+        if (tipAmount != null && tipAmount.isNotEmpty && tipAmount != '0' && tipAmount != '0.0') {
+          message += ' (includes \$$tipAmount tip)';
+        }
+      }
+      
+      Get.snackbar(
+        'Payment Completed ✓',
+        message,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.shade600,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(12),
+      );
+      return;
+    }
+    // --- END CHECKOUT COMPLETED HANDLER ---
+
     // Deep link/web fallbacks (optional)
     final deeplink = data['deeplink']?.toString();
     final url      = data['url']?.toString();
@@ -140,12 +215,14 @@ class NotificationService {
     String? uniqueId, // e.g., message_id for de-dupe
   }) async {
     await init();
+    
+    print('[NOTIF DEBUG] showMessage called: title="$title", body="$body", uniqueId=$uniqueId');
 
     // --- DE-DUPLICATION CHECK ---
     // If we have a unique ID and we've already seen it, ignore this call.
     if (uniqueId != null && uniqueId.isNotEmpty) {
       if (_seenIds.contains(uniqueId)) {
-        print("Duplicate notification ignored with ID: $uniqueId");
+        print("[NOTIF DEBUG] Duplicate notification ignored with ID: $uniqueId");
         return; // Stop processing
       }
       // Clean up the cache to prevent it from growing indefinitely.
@@ -153,6 +230,8 @@ class NotificationService {
       _seenIds.add(uniqueId);
     }
     // --- END DE-DUPLICATION CHECK ---
+    
+    print('[NOTIF DEBUG] Showing notification...');
 
     final androidDetails = AndroidNotificationDetails(
       _channel.id,

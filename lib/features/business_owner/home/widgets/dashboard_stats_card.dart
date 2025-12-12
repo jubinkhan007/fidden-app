@@ -35,18 +35,18 @@ class DashboardStatsCard extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: getWidth(14),
+                      fontSize: 14,
                       color: Colors.grey.shade600,
                     ),
                   ),
                   Icon(icon, color: color, size: 20),
                 ],
               ),
-              SizedBox(height: getHeight(8)),
+              const SizedBox(height: 8),
               Text(
                 value,
-                style: TextStyle(
-                  fontSize: getWidth(22),
+                style: const TextStyle(
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),

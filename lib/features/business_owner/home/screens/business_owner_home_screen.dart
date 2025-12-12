@@ -68,46 +68,59 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
             await controller.refreshGuardsAndServices();
             await controller.fetchBusinessOwnerBooking();
           },
-          child: Column(
-            children: [
-              // 1. Context Chips
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: ContextChips(),
-              ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // For tablets, limit content width and center it
+              final isTablet = constraints.maxWidth > 600;
+              final maxContentWidth = isTablet ? 800.0 : double.infinity;
+              
+              return Column(
+                children: [
+                  // 1. Context Chips
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: ContextChips(),
+                  ),
 
-              // 2. Dynamic Content (DefaultLayout for "All", Tiles for specific niches)
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value) {
-                    return const FullScreenShimmerLoader();
-                  }
+                  // 2. Dynamic Content (DefaultLayout for "All", Tiles for specific niches)
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxContentWidth),
+                        child: Obx(() {
+                          if (controller.isLoading.value) {
+                            return const FullScreenShimmerLoader();
+                          }
 
-                  // Check if "All" is selected
-                  final selectedChip = dashboardController.selectedChip.value;
-                  
-                  if (selectedChip == 'All') {
-                    // Show the original general dashboard
-                    return ListView(
-                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                      children: DefaultLayout().buildContent(context, controller),
-                    );
-                  } else {
-                    // Show niche-specific tile dashboard
-                    final tiles = dashboardController.visibleTiles;
+                          // Check if "All" is selected
+                          final selectedChip = dashboardController.selectedChip.value;
+                          
+                          if (selectedChip == 'All') {
+                            // Show the original general dashboard
+                            return ListView(
+                              padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                              children: DefaultLayout().buildContent(context, controller),
+                            );
+                          } else {
+                            // Show niche-specific tile dashboard
+                            final tiles = dashboardController.visibleTiles;
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                      itemCount: tiles.length,
-                      itemBuilder: (context, index) {
-                        final tileType = tiles[index];
-                        return _buildTile(tileType);
-                      },
-                    );
-                  }
-                }),
-              ),
-            ],
+                            return ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                              itemCount: tiles.length,
+                              itemBuilder: (context, index) {
+                                final tileType = tiles[index];
+                                return _buildTile(tileType);
+                              },
+                            );
+                          }
+                        }),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
