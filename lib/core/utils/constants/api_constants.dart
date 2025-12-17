@@ -8,10 +8,10 @@ class AppUrls {
   AppUrls._();
 
   static const String _baseUrl =
-      'http://10.0.2.2:8000';
+      'https://phase2.fidden.io';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
-    return 'ws://10.0.2.2:8000/ws/chat/?token=$accessToken';
+    return 'wss://phase2.fidden.io/ws/chat/?token=$accessToken';
   }
 
   static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';
@@ -89,6 +89,24 @@ class AppUrls {
   static const String todayAppointments = '$_baseUrl/api/barber/today-appointments/';
   static const String dailyRevenue = '$_baseUrl/api/barber/daily-revenue/';
   static const String noShowAlerts = '$_baseUrl/api/barber/no-show-alerts/';
+  
+  // Walk-In Queue
+  static const String walkIns = '$_baseUrl/api/barber/walk-ins/';
+  static String walkInDetail(int id) => '$_baseUrl/api/barber/walk-ins/$id/';
+  
+  // Loyalty Program
+  static const String loyaltyProgram = '$_baseUrl/api/barber/loyalty/program/';
+  static const String loyaltyCustomers = '$_baseUrl/api/barber/loyalty/customers/';
+  static const String loyaltyAddPoints = '$_baseUrl/api/barber/loyalty/add-points/';
+  static const String loyaltyRedeem = '$_baseUrl/api/barber/loyalty/redeem/';
+
+  // Nail Tech Dashboard
+  static const String nailtechDashboard = '$_baseUrl/api/nailtech/dashboard/';
+  static const String styleRequests = '$_baseUrl/api/nailtech/style-requests/';
+  static String styleRequestDetail(int id) => '$_baseUrl/api/nailtech/style-requests/$id/';
+  static const String nailtechLookbook = '$_baseUrl/api/nailtech/lookbook/';
+  static const String bookingsByStyle = '$_baseUrl/api/nailtech/bookings-by-style/';
+  static const String tipSummary = '$_baseUrl/api/nailtech/tip-summary/';
 
   // register-device
   static String registerDevice = '${_baseUrl}/api/register-device/';

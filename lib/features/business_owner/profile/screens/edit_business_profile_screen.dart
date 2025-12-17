@@ -790,6 +790,91 @@ ButtonStyle _saveBtnStyle() {
                     ),
                   ],
                 ),
+                // Niche Selection Section
+                _sectionCard(
+                  title: 'Your Specialties',
+                  subtitle: 'Select your services. The first selected becomes your primary niche.',
+                  children: [
+                    Obx(() {
+                      final selected = controller1.selectedNiches;
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: BusinessOwnerProfileController.availableNiches.map((niche) {
+                          final key = niche['key']!;
+                          final label = niche['label']!;
+                          final emoji = niche['emoji']!;
+                          final isSelected = selected.contains(key);
+                          final isPrimary = selected.isNotEmpty && selected.first == key;
+                          
+                          return FilterChip(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('$emoji $label'),
+                                if (isPrimary) ...[
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text('Primary', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            selected: isSelected,
+                            onSelected: isPending ? null : (sel) {
+                              if (sel) {
+                                // Add to list (new selections go to end)
+                                selected.add(key);
+                              } else {
+                                // Remove from list
+                                selected.remove(key);
+                              }
+                            },
+                            selectedColor: Colors.black.withOpacity(0.1),
+                            checkmarkColor: Colors.black,
+                          );
+                        }).toList(),
+                      );
+                    }),
+                    const SizedBox(height: 12),
+                    Obx(() {
+                      final selected = controller1.selectedNiches;
+                      if (selected.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tip: First selected = primary niche.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: controller1.isLoading.value ? null : () async {
+                                await controller1.updateNiches(selected.toList());
+                              },
+                              icon: controller1.isLoading.value 
+                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.save),
+                              label: const Text('Save Niches'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.black,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
                 _sectionCard(
                   title: 'Location',
                   subtitle: 'Choose from map or use your current location.',

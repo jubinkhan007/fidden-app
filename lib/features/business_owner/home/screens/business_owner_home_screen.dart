@@ -3,6 +3,10 @@ import 'package:fidden/features/business_owner/home/dashboard/tile_registry.dart
 import 'package:fidden/features/business_owner/home/dashboard/widgets/context_chips.dart';
 import 'package:fidden/features/business_owner/home/dashboard/widgets/dashboard_tile.dart';
 import 'package:fidden/features/business_owner/home/layouts/default_layout.dart';
+import 'package:fidden/features/business_owner/home/layouts/niche_layout_strategy.dart';
+import 'package:fidden/features/business_owner/tattoo_dashboard/presentation/widgets/tattoo_artist_dashboard_content.dart';
+import 'package:fidden/features/business_owner/barber/presentation/widgets/barber_dashboard_content.dart';
+import 'package:fidden/features/business_owner/nailtech/presentation/widgets/nailtech_dashboard_content.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 import 'package:flutter/material.dart';
@@ -92,28 +96,31 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                             return const FullScreenShimmerLoader();
                           }
 
-                          // Check if "All" is selected
+                          // Check selected chip and primary niche
                           final selectedChip = dashboardController.selectedChip.value;
+                          final niche = selectedChip == 'All' 
+                              ? profileController.shopNiche.value 
+                              : selectedChip;
                           
-                          if (selectedChip == 'All') {
-                            // Show the original general dashboard
-                            return ListView(
-                              padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                              children: DefaultLayout().buildContent(context, controller),
-                            );
-                          } else {
-                            // Show niche-specific tile dashboard
-                            final tiles = dashboardController.visibleTiles;
-
-                            return ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                              itemCount: tiles.length,
-                              itemBuilder: (context, index) {
-                                final tileType = tiles[index];
-                                return _buildTile(tileType);
-                              },
-                            );
+                          // Use dedicated dashboard for specific niches
+                          if (niche == 'tattoo_artist') {
+                            return const TattooArtistDashboardContent();
                           }
+                          
+                          if (niche == 'barber') {
+                            return const BarberDashboardContent();
+                          }
+                          
+                          if (niche == 'nail_tech') {
+                            return const NailTechDashboardContent();
+                          }
+                          
+                          // For other niches, use the layout strategy pattern
+                          final layout = NicheLayoutFactory.getLayout(niche);
+                          return ListView(
+                            padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                            children: layout.buildContent(context, controller),
+                          );
                         }),
                       ),
                     ),

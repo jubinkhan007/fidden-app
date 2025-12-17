@@ -124,61 +124,77 @@ class _NoShowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final phone = noShow.customerPhone?.toString() ?? '';
+    final email = noShow.customerEmail?.toString() ?? '';
+    final hasPhone = phone.isNotEmpty && phone != 'null';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: Color(0xFFFFF3E0),
-          child: Icon(Icons.person_off, color: Colors.orange),
-        ),
-        title: Text(
-          noShow.customerName,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.email, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Expanded(child: Text(noShow.customerEmail)),
-              ],
+            // Avatar
+            const CircleAvatar(
+              backgroundColor: Color(0xFFFFF3E0),
+              child: Icon(Icons.person_off, color: Colors.orange),
             ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.phone, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(noShow.customerPhone),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.content_cut, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(noShow.serviceName),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text('${noShow.scheduledDate} at ${noShow.scheduledTime}'),
-              ],
+            const SizedBox(width: 12),
+            
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    noShow.customerName ?? 'Unknown',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Email row
+                  if (email.isNotEmpty)
+                    Row(
+                      children: [
+                        const Icon(Icons.email, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(child: Text(email, style: TextStyle(color: Colors.grey[700]))),
+                      ],
+                    ),
+                  
+                  // Phone row - only show if exists
+                  if (hasPhone) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.phone, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(phone, style: TextStyle(color: Colors.grey[700])),
+                      ],
+                    ),
+                  ],
+                  
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.content_cut, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(noShow.serviceName ?? 'Service'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text('${noShow.scheduledDate ?? ''} at ${noShow.scheduledTime ?? ''}'),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
-        ),
-        isThreeLine: true,
-        trailing: IconButton(
-          icon: const Icon(Icons.phone, color: Colors.blue),
-          onPressed: () {
-            // TODO: Implement phone call functionality
-            Get.snackbar('Contact', 'Call ${noShow.customerName}');
-          },
         ),
       ),
     );

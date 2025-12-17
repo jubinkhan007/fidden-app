@@ -7,12 +7,34 @@ class DashboardController extends GetxController {
 
   // Selected chip (e.g., "All", "Barber", "Tattoo Artist")
   final RxString selectedChip = 'All'.obs;
+  
+  // Reactive list of available chips - this will trigger UI updates
+  final RxList<String> availableChips = <String>['All'].obs;
 
-  // Available chips derived from profile
-  List<String> get availableChips {
+  @override
+  void onInit() {
+    super.onInit();
+    // Initialize chips from current profile
+    _updateChipsFromProfile();
+    
+    // Listen to shopNiches changes and update chips reactively
+    ever(_profileController.shopNiches, (_) {
+      _updateChipsFromProfile();
+    });
+  }
+
+  void _updateChipsFromProfile() {
     final niches = _profileController.shopNiches;
-    if (niches.isEmpty) return ['All'];
-    return ['All', ...niches.map((e) => e.trim())];
+    if (niches.isEmpty) {
+      availableChips.value = ['All'];
+    } else {
+      availableChips.value = ['All', ...niches.map((e) => e.trim())];
+    }
+  }
+  
+  /// Call this to force refresh chips (e.g., after updating niches)
+  void refreshChips() {
+    _updateChipsFromProfile();
   }
 
   // Get ordered list of tile types based on selection
@@ -72,3 +94,4 @@ class DashboardController extends GetxController {
     selectedChip.value = chip;
   }
 }
+

@@ -105,6 +105,12 @@ class Data {
   String? youtubeUrl;
   String? websiteUrl;
 
+  // Niche fields
+  String? primaryNiche;        // e.g., "tattoo_artist"
+  List<String>? capabilities;  // e.g., ["nail_tech", "makeup_artist"]
+  List<String>? niches;        // Combined list [primary, ...capabilities]
+
+
   Data({
     this.id,
     this.userId,
@@ -139,6 +145,9 @@ class Data {
     this.tiktokUrl,
     this.youtubeUrl,
     this.websiteUrl,
+    this.primaryNiche,
+    this.capabilities,
+    this.niches,
   });
 
   /// All 7 days for computing openDays
@@ -351,6 +360,10 @@ class Data {
       tiktokUrl: json['tiktok_url']?.toString(),
       youtubeUrl: json['youtube_url']?.toString(),
       websiteUrl: json['website_url']?.toString(),
+      // Niche fields
+      primaryNiche: json['primary_niche']?.toString(),
+      capabilities: (json['capabilities'] as List?)?.cast<String>(),
+      niches: (json['niches'] as List?)?.cast<String>(),
     );
   }
 

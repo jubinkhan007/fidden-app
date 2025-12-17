@@ -23,6 +23,9 @@ import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../../subscription/controller/subscription_controller.dart';
 import '../data/business_profile_model.dart';
+import '../../../user/profile/controller/profile_controller.dart';
+import '../../home/dashboard/dashboard_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 /// Simple, UI-friendly (start,end) for a day. Stored as "hh:mm AM/PM".
@@ -74,6 +77,21 @@ class BusinessOwnerProfileController extends GetxController {
   final tiktokUrl = ''.obs;
   final youtubeUrl = ''.obs;
   final websiteUrl = ''.obs;
+
+  // Niche selection
+  final RxList<String> selectedNiches = <String>[].obs; // First = primary, rest = capabilities
+  
+  static const List<Map<String, String>> availableNiches = [
+    {'key': 'tattoo_artist', 'label': 'Tattoo Artist', 'emoji': '🖋️'},
+    {'key': 'barber', 'label': 'Barber', 'emoji': '✂️'},
+    {'key': 'hairstylist', 'label': 'Hairstylist/Loctician', 'emoji': '💇'},
+    {'key': 'nail_tech', 'label': 'Nail Tech', 'emoji': '💅'},
+    {'key': 'makeup_artist', 'label': 'Makeup Artist', 'emoji': '💄'},
+    {'key': 'esthetician', 'label': 'Esthetician', 'emoji': '🧖'},
+    {'key': 'massage_therapist', 'label': 'Massage Therapist', 'emoji': '💆'},
+    {'key': 'fitness_trainer', 'label': 'Fitness Trainer', 'emoji': '🏋️'},
+    {'key': 'other', 'label': 'Other', 'emoji': '🔧'},
+  ];
 
   final RxBool _fetchingProfile = false.obs;
 
@@ -202,6 +220,17 @@ class BusinessOwnerProfileController extends GetxController {
     tiktokUrl.value = data.tiktokUrl ?? '';
     youtubeUrl.value = data.youtubeUrl ?? '';
     websiteUrl.value = data.websiteUrl ?? '';
+
+    // Niches (first = primary, rest = capabilities)
+    if (data.niches != null && data.niches!.isNotEmpty) {
+      selectedNiches.value = List<String>.from(data.niches!);
+    } else if (data.primaryNiche != null) {
+      // Fallback to primary_niche + capabilities if niches not available
+      selectedNiches.value = [
+        data.primaryNiche!,
+        ...?data.capabilities,
+      ];
+    }
 
     // Business hours
     _seedBusinessHoursFromData(data);
@@ -581,6 +610,93 @@ class BusinessOwnerProfileController extends GetxController {
       _fetchingProfile.value = false;
       isLoading.value = false;
       if (!_initCompleter.isCompleted) _initCompleter.complete();
+    }
+  }
+
+  /// Update shop niches via PATCH /api/shop/{id}/
+  /// The first niche becomes primary_niche, the rest become capabilities.
+  Future<bool> updateNiches(List<String> niches) async {
+    if (niches.isEmpty) {
+      AppSnackBar.showError('Please select at least one niche.');
+      return false;
+    }
+    
+    final shopId = profileDetails.value.data?.id;
+    if (shopId == null) {
+      AppSnackBar.showError('Shop ID not found.');
+      return false;
+    }
+    
+    final token = await AuthService.getValidAccessToken();
+    if (token == null) {
+      AppSnackBar.showError('Unauthorized. Please login again.');
+      return false;
+    }
+    
+    isLoading.value = true;
+    try {
+      final url = AppUrls.editBusinessProfile(shopId.toString());
+      final response = await http.patch(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'niches': niches}),
+      );
+      
+      log('PATCH niches: $url -> ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        // Update local state
+        selectedNiches.value = List<String>.from(niches);
+        
+        // Re-fetch full profile to get updated data
+        await fetchProfileDetails();
+        
+        // Also update ProfileController so dashboard chips update
+        if (Get.isRegistered<ProfileController>()) {
+          final pc = Get.find<ProfileController>();
+          pc.shopNiches.value = List<String>.from(niches);
+          if (niches.isNotEmpty) {
+            pc.shopNiche.value = niches.first;
+          }
+          
+          // Cache the updated niches for persistence
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setStringList('cached_shop_niches', niches);
+          if (niches.isNotEmpty) {
+            await prefs.setString('selected_niche', niches.first);
+          }
+        }
+        
+        // Refresh DashboardController if available
+        if (Get.isRegistered<DashboardController>()) {
+          Get.find<DashboardController>().refreshChips();
+        }
+        
+        AppSnackBar.showSuccess('Niches updated successfully!');
+        return true;
+      } else {
+        // Log the full response for debugging
+        log('PATCH niches failed: ${response.statusCode}');
+        log('Response body: ${response.body}');
+        
+        try {
+          final errorBody = jsonDecode(response.body);
+          final msg = errorBody['detail'] ?? errorBody['error'] ?? errorBody.toString();
+          AppSnackBar.showError('Failed: $msg');
+        } catch (_) {
+          AppSnackBar.showError('Failed to update niches: ${response.body}');
+        }
+        return false;
+      }
+    } catch (e) {
+      log('updateNiches error: $e');
+      AppSnackBar.showError('Error updating niches: $e');
+      return false;
+    } finally {
+      isLoading.value = false;
     }
   }
 

@@ -1,6 +1,8 @@
 import '../data/today_appointments_model.dart';
 import '../data/daily_revenue_model.dart';
 import '../data/no_show_alerts_model.dart';
+import '../data/walk_in_model.dart';
+import '../data/loyalty_model.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/services/Auth_service.dart';
@@ -9,9 +11,14 @@ class BarberDashboardService {
   final NetworkCaller _networkCaller = NetworkCaller();
 
   /// Get today's appointments with stats
-  Future<TodayAppointmentsResponse> getTodayAppointments() async {
+  Future<TodayAppointmentsResponse> getTodayAppointments({String? date}) async {
+    String url = AppUrls.todayAppointments;
+    if (date != null) {
+      url = '$url?date=$date';
+    }
+    
     final response = await _networkCaller.getRequest(
-      AppUrls.todayAppointments,
+      url,
       token: AuthService.accessToken,
     );
 
@@ -23,9 +30,14 @@ class BarberDashboardService {
   }
 
   /// Get daily revenue metrics
-  Future<DailyRevenueResponse> getDailyRevenue() async {
+  Future<DailyRevenueResponse> getDailyRevenue({String? date}) async {
+    String url = AppUrls.dailyRevenue;
+    if (date != null) {
+      url = '$url?date=$date';
+    }
+    
     final response = await _networkCaller.getRequest(
-      AppUrls.dailyRevenue,
+      url,
       token: AuthService.accessToken,
     );
 
@@ -54,4 +66,186 @@ class BarberDashboardService {
 
     throw Exception('Failed to fetch no-show alerts');
   }
+
+  // =====================
+  // WALK-IN QUEUE METHODS
+  // =====================
+
+  /// Get walk-in queue
+  Future<WalkInQueueResponse> getWalkInQueue() async {
+    final response = await _networkCaller.getRequest(
+      AppUrls.walkIns,
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return WalkInQueueResponse.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to fetch walk-in queue');
+  }
+
+  /// Add customer to walk-in queue
+  Future<WalkInEntry> addToWalkInQueue({
+    required String customerName,
+    String? customerPhone,
+    int? serviceId,
+    String? notes,
+  }) async {
+    final response = await _networkCaller.postRequest(
+      AppUrls.walkIns,
+      body: {
+        'customer_name': customerName,
+        if (customerPhone != null) 'customer_phone': customerPhone,
+        if (serviceId != null) 'service': serviceId,
+        if (notes != null) 'notes': notes,
+      },
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return WalkInEntry.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to add to walk-in queue');
+  }
+
+  /// Update walk-in status (call, complete, no-show, cancel)
+  Future<WalkInEntry> updateWalkInStatus(int id, WalkInStatus status) async {
+    final response = await _networkCaller.patchRequest(
+      AppUrls.walkInDetail(id),
+      body: {'status': status.toApiString()},
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return WalkInEntry.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to update walk-in status');
+  }
+
+  /// Remove customer from walk-in queue
+  Future<void> removeFromWalkInQueue(int id) async {
+    final response = await _networkCaller.deleteRequest(
+      AppUrls.walkInDetail(id),
+      token: AuthService.accessToken,
+    );
+
+    if (!response.isSuccess) {
+      throw Exception('Failed to remove from walk-in queue');
+    }
+  }
+
+  // =========================
+  // LOYALTY PROGRAM METHODS
+  // =========================
+
+  /// Get loyalty program settings
+  Future<LoyaltyProgram> getLoyaltyProgram() async {
+    final response = await _networkCaller.getRequest(
+      AppUrls.loyaltyProgram,
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return LoyaltyProgram.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to fetch loyalty program');
+  }
+
+  /// Update loyalty program settings
+  Future<LoyaltyProgram> updateLoyaltyProgram({
+    bool? isActive,
+    double? pointsPerDollar,
+    int? pointsForRedemption,
+    String? rewardType,
+    double? rewardValue,
+  }) async {
+    final response = await _networkCaller.patchRequest(
+      AppUrls.loyaltyProgram,
+      body: {
+        if (isActive != null) 'is_active': isActive,
+        if (pointsPerDollar != null) 'points_per_dollar': pointsPerDollar,
+        if (pointsForRedemption != null) 'points_for_redemption': pointsForRedemption,
+        if (rewardType != null) 'reward_type': rewardType,
+        if (rewardValue != null) 'reward_value': rewardValue,
+      },
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess) {
+      dynamic data = response.responseData;
+      
+      // Handle string responses that need parsing
+      if (data is String) {
+        try {
+          data = Map<String, dynamic>.from(
+            (data.isNotEmpty) ? {} : {},
+          );
+        } catch (_) {}
+      }
+      
+      if (data is Map<String, dynamic>) {
+        return LoyaltyProgram.fromJson(data);
+      }
+      
+      // If we got 200 but can't parse, refetch the program
+      return await getLoyaltyProgram();
+    }
+
+    throw Exception('Failed to update loyalty program');
+  }
+
+  /// Get list of loyal customers
+  Future<LoyaltyCustomersResponse> getLoyaltyCustomers() async {
+    final response = await _networkCaller.getRequest(
+      AppUrls.loyaltyCustomers,
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return LoyaltyCustomersResponse.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to fetch loyalty customers');
+  }
+
+  /// Add loyalty points for a customer
+  Future<AddPointsResponse> addLoyaltyPoints({
+    required int userId,
+    required double amountSpent,
+  }) async {
+    final response = await _networkCaller.postRequest(
+      AppUrls.loyaltyAddPoints,
+      body: {
+        'user_id': userId,
+        'amount_spent': amountSpent,
+      },
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return AddPointsResponse.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to add loyalty points');
+  }
+
+  /// Redeem loyalty points for a customer
+  Future<RedeemResponse> redeemLoyaltyPoints({required int userId}) async {
+    final response = await _networkCaller.postRequest(
+      AppUrls.loyaltyRedeem,
+      body: {'user_id': userId},
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return RedeemResponse.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to redeem loyalty points');
+  }
 }
+
