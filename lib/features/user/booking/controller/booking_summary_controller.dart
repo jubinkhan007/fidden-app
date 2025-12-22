@@ -1,4 +1,4 @@
-// booking_summary_controller.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
@@ -7,7 +7,7 @@ import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 
 import '../presentation/paypal_webview_screen.dart';
-// import your confirmation screen route or widget
+import 'package:fidden/features/user/design_requests/services/client_design_request_service.dart';
 
 // booking_summary_controller.dart
 
@@ -15,9 +15,12 @@ class ShopPolicy {
   final int freeH;
   final int feePct;
   final int noRefundH;
-  const ShopPolicy({required this.freeH, required this.feePct, required this.noRefundH});
+  const ShopPolicy({
+    required this.freeH,
+    required this.feePct,
+    required this.noRefundH,
+  });
 }
-
 
 class BookingSummaryController extends GetxController {
   final isTermsAgreed = false.obs;
@@ -36,26 +39,70 @@ class BookingSummaryController extends GetxController {
     selectedPaymentMethod.value = method;
   }
 
-
   // NEW: Deposit logic
   final RxBool isDepositRequired = false.obs;
   final RxInt defaultDepositPercentage = 0.obs;
 
   double getDepositAmount(double totalAmount) {
-    if (!isDepositRequired.value || defaultDepositPercentage.value <= 0) return 0;
+    if (!isDepositRequired.value || defaultDepositPercentage.value <= 0)
+      return 0;
     return (totalAmount * defaultDepositPercentage.value) / 100;
+  }
+
+  // NEW: Design Request Link
+  final designRequestData = <String, dynamic>{}.obs;
+
+  Future<void> submitDesignRequest(int shopId, int bookingId) async {
+    final desc = designRequestData['description'] as String?;
+    if (desc == null || desc.trim().isEmpty) return;
+    try {
+      final service = Get.find<ClientDesignRequestService>();
+      final request = await service.createDesignRequest(
+        shopId: shopId,
+        description: desc,
+        bookingId: bookingId,
+        placement: designRequestData['placement'],
+        sizeApprox: designRequestData['size'],
+      );
+
+      final image = designRequestData['image'];
+      if (image != null && image is File) {
+        try {
+          await service.uploadDesignImage(request.id, image);
+        } catch (e) {
+          print('Failed to upload design request image: $e');
+        }
+      }
+    } catch (_) {
+      // If service not found or other error, try direct instantiation if import available
+      // or just swallow to avoid blocking user flow
+      print("Failed to auto-submit design request");
+    }
   }
 
   Future<void> processPayment({
     required int slotId,
+    required int shopId, // NEW
     int? couponId,
-    List<int>? addOnIds, // NEW
+    List<int>? addOnIds,
     Map<String, dynamic>? successArgs,
   }) async {
     if (selectedPaymentMethod.value == 'paypal') {
-      await _payWithPayPal(slotId: slotId, couponId: couponId, addOnIds: addOnIds, successArgs: successArgs);
+      await _payWithPayPal(
+        slotId: slotId,
+        shopId: shopId,
+        couponId: couponId,
+        addOnIds: addOnIds,
+        successArgs: successArgs,
+      );
     } else {
-      await _payWithStripe(slotId: slotId, couponId: couponId, addOnIds: addOnIds, successArgs: successArgs);
+      await _payWithStripe(
+        slotId: slotId,
+        shopId: shopId,
+        couponId: couponId,
+        addOnIds: addOnIds,
+        successArgs: successArgs,
+      );
     }
   }
 
@@ -72,23 +119,35 @@ class BookingSummaryController extends GetxController {
 
       // keys must be present in your ShopDetailSerializer (backend):
       // free_cancellation_hours, cancellation_fee_percentage, no_refund_hours
-      final freeH   = (m['free_cancellation_hours'] as num?)?.toInt() ?? 24;
-      final feePct  = (m['cancellation_fee_percentage'] as num?)?.toInt() ?? 0;
-      final noRefH  = (m['no_refund_hours'] as num?)?.toInt() ?? 0;
+      final freeH = (m['free_cancellation_hours'] as num?)?.toInt() ?? 24;
+      final feePct = (m['cancellation_fee_percentage'] as num?)?.toInt() ?? 0;
+      final noRefH = (m['no_refund_hours'] as num?)?.toInt() ?? 0;
 
-      policy.value = ShopPolicy(freeH: freeH, feePct: feePct, noRefundH: noRefH);
+      policy.value = ShopPolicy(
+        freeH: freeH,
+        feePct: feePct,
+        noRefundH: noRefH,
+      );
 
       // NEW: Deposit settings
-      isDepositRequired.value = m['is_deposit_required'] == true || m['is_deposit_required'] == 'true';
-      defaultDepositPercentage.value = (m['default_deposit_percentage'] as num?)?.toInt() ?? 0;
-
+      isDepositRequired.value =
+          m['is_deposit_required'] == true ||
+          m['is_deposit_required'] == 'true';
+      defaultDepositPercentage.value =
+          (m['default_deposit_percentage'] as num?)?.toInt() ?? 0;
     } catch (_) {
       // swallow or log
     }
   }
 
   // --- STRIPE LOGIC (Your existing payForBooking logic moved here) ---
-  Future<void> _payWithStripe({required int slotId, int? couponId, List<int>? addOnIds, Map<String, dynamic>? successArgs}) async {
+  Future<void> _payWithStripe({
+    required int slotId,
+    required int shopId,
+    int? couponId,
+    List<int>? addOnIds,
+    Map<String, dynamic>? successArgs,
+  }) async {
     if (slotId == 0) {
       Get.snackbar('Error', 'Missing booking id');
       return;
@@ -102,14 +161,15 @@ class BookingSummaryController extends GetxController {
       // ---------------------------------------------------
       final body = <String, dynamic>{};
       if (couponId != null && couponId > 0) body['coupon_id'] = couponId;
-      if (addOnIds != null && addOnIds.isNotEmpty) body['add_on_ids'] = addOnIds;
-      
+      if (addOnIds != null && addOnIds.isNotEmpty)
+        body['add_on_ids'] = addOnIds;
+
       // NEW: Send deposit info if applicable
       if (isDepositRequired.value && defaultDepositPercentage.value > 0) {
         body['is_deposit'] = true;
         // Optional: you can send the percentage or let backend look it up.
         // Sending 'deposit_percentage' might be safer if backend logic varies.
-        body['deposit_percentage'] = defaultDepositPercentage.value; 
+        body['deposit_percentage'] = defaultDepositPercentage.value;
       }
 
       final res = await NetworkCaller().postRequest(
@@ -144,6 +204,11 @@ class BookingSummaryController extends GetxController {
 
       await Stripe.instance.presentPaymentSheet();
 
+      // AUTO-SUBMIT DESIGN REQUEST
+      if (bookingId != null) {
+        await submitDesignRequest(shopId, bookingId);
+      }
+
       final mergedArgs = <String, dynamic>{
         if (successArgs != null) ...successArgs!,
         if (bookingId != null) 'bookingId': bookingId,
@@ -151,7 +216,6 @@ class BookingSummaryController extends GetxController {
 
       Get.offAllNamed('/booking-confirmation', arguments: mergedArgs);
       // ---------------------------------------------------
-
     } on StripeException catch (e) {
       if (e.error.code != FailureCode.Canceled) {
         Get.snackbar('Payment Error', e.error.message ?? 'Payment failed');
@@ -164,13 +228,20 @@ class BookingSummaryController extends GetxController {
   }
 
   // --- NEW PAYPAL LOGIC ---
-  Future<void> _payWithPayPal({required int slotId, int? couponId, List<int>? addOnIds, Map<String, dynamic>? successArgs}) async {
+  Future<void> _payWithPayPal({
+    required int slotId,
+    required int shopId,
+    int? couponId,
+    List<int>? addOnIds,
+    Map<String, dynamic>? successArgs,
+  }) async {
     isPaying.value = true;
     try {
       final body = <String, dynamic>{};
       if (couponId != null && couponId > 0) body['coupon_id'] = couponId;
-      if (addOnIds != null && addOnIds.isNotEmpty) body['add_on_ids'] = addOnIds;
-      
+      if (addOnIds != null && addOnIds.isNotEmpty)
+        body['add_on_ids'] = addOnIds;
+
       // NEW: Send deposit info if applicable
       if (isDepositRequired.value && defaultDepositPercentage.value > 0) {
         body['is_deposit'] = true;
@@ -198,11 +269,13 @@ class BookingSummaryController extends GetxController {
       paymentBookingId.value = bookingId; // Store for cancel logic
 
       // 2. Open WebView©∫
-      final bool? approved = await Get.to(() => PayPalWebViewScreen(url: approveUrl));
+      final bool? approved = await Get.to(
+        () => PayPalWebViewScreen(url: approveUrl),
+      );
 
       if (approved == true) {
         // 3. Capture Order
-        await _capturePayPalOrder(orderId, bookingId, successArgs);
+        await _capturePayPalOrder(orderId, bookingId, shopId, successArgs);
       } else {
         Get.snackbar('Cancelled', 'PayPal payment cancelled');
         isPaying.value = false;
@@ -213,8 +286,15 @@ class BookingSummaryController extends GetxController {
     }
   }
 
-  Future<void> _capturePayPalOrder(String orderId, int bookingId, Map<String, dynamic>? successArgs) async {
-    print('🔍 DEBUG: Starting PayPal capture for order: $orderId, booking: $bookingId');
+  Future<void> _capturePayPalOrder(
+    String orderId,
+    int bookingId,
+    int shopId,
+    Map<String, dynamic>? successArgs,
+  ) async {
+    print(
+      '🔍 DEBUG: Starting PayPal capture for order: $orderId, booking: $bookingId',
+    );
     try {
       final res = await NetworkCaller().postRequest(
         AppUrls.capturePayPalOrder,
@@ -222,30 +302,42 @@ class BookingSummaryController extends GetxController {
         body: {'order_id': orderId},
       );
 
-      print('🔍 DEBUG: Capture response - isSuccess: ${res.isSuccess}, statusCode: ${res.statusCode}');
+      print(
+        '🔍 DEBUG: Capture response - isSuccess: ${res.isSuccess}, statusCode: ${res.statusCode}',
+      );
 
       if (res.isSuccess) {
+        // AUTO-SUBMIT DESIGN REQUEST
+        await submitDesignRequest(shopId, bookingId);
+
         final mergedArgs = <String, dynamic>{
           if (successArgs != null) ...successArgs!,
           'bookingId': bookingId,
         };
-        print('🔍 DEBUG: Navigating to booking-confirmation with args: $mergedArgs');
-        
+        print(
+          '🔍 DEBUG: Navigating to booking-confirmation with args: $mergedArgs',
+        );
+
         // Navigate to confirmation screen
         Get.offAllNamed('/booking-confirmation', arguments: mergedArgs);
       } else {
         print('🔍 DEBUG: Capture failed - ${res.errorMessage}');
-        Get.snackbar('Error', res.errorMessage ?? 'Payment Verification Failed');
+        Get.snackbar(
+          'Error',
+          res.errorMessage ?? 'Payment Verification Failed',
+        );
       }
     } catch (e) {
       print('🔍 DEBUG: Capture exception: $e');
-      Get.snackbar('Error', 'An error occurred during payment verification: $e');
+      Get.snackbar(
+        'Error',
+        'An error occurred during payment verification: $e',
+      );
     } finally {
       isPaying.value = false;
       print('🔍 DEBUG: isPaying set to false');
     }
   }
-
 
   Future<void> cancelBooking(int bookingId) async {
     if (bookingId <= 0) return;

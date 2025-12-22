@@ -7,6 +7,10 @@ import 'package:fidden/features/business_owner/home/layouts/niche_layout_strateg
 import 'package:fidden/features/business_owner/tattoo_dashboard/presentation/widgets/tattoo_artist_dashboard_content.dart';
 import 'package:fidden/features/business_owner/barber/presentation/widgets/barber_dashboard_content.dart';
 import 'package:fidden/features/business_owner/nailtech/presentation/widgets/nailtech_dashboard_content.dart';
+import 'package:fidden/features/business_owner/mua/presentation/widgets/mua_dashboard_content.dart';
+import 'package:fidden/features/business_owner/hairstylist/presentation/widgets/hairstylist_dashboard_content.dart';
+import 'package:fidden/features/business_owner/esthetician/presentation/widgets/esthetician_dashboard_content.dart';
+import 'package:fidden/features/business_owner/massage/presentation/widgets/massage_dashboard_content.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 import 'package:flutter/material.dart';
@@ -77,7 +81,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
               // For tablets, limit content width and center it
               final isTablet = constraints.maxWidth > 600;
               final maxContentWidth = isTablet ? 800.0 : double.infinity;
-              
+
               return Column(
                 children: [
                   // 1. Context Chips
@@ -97,28 +101,50 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
                           }
 
                           // Check selected chip and primary niche
-                          final selectedChip = dashboardController.selectedChip.value;
-                          final niche = selectedChip == 'All' 
-                              ? profileController.shopNiche.value 
+                          final selectedChip =
+                              dashboardController.selectedChip.value;
+                          final niche = selectedChip == 'All'
+                              ? profileController.shopNiche.value
                               : selectedChip;
-                          
+
                           // Use dedicated dashboard for specific niches
                           if (niche == 'tattoo_artist') {
                             return const TattooArtistDashboardContent();
                           }
-                          
+
                           if (niche == 'barber') {
                             return const BarberDashboardContent();
                           }
-                          
+
                           if (niche == 'nail_tech') {
                             return const NailTechDashboardContent();
                           }
-                          
+
+                          if (niche == 'makeup_artist') {
+                            return const MUADashboardContent();
+                          }
+
+                          if (niche == 'hairstylist') {
+                            return const HairstylistDashboardContent();
+                          }
+
+                          if (niche == 'esthetician') {
+                            return const EstheticianDashboardContent();
+                          }
+
+                          if (niche == 'massage_therapist') {
+                            return const MassageDashboardContent();
+                          }
+
                           // For other niches, use the layout strategy pattern
                           final layout = NicheLayoutFactory.getLayout(niche);
                           return ListView(
-                            padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                            padding: const EdgeInsets.fromLTRB(
+                              16.0,
+                              0,
+                              16.0,
+                              16.0,
+                            ),
                             children: layout.buildContent(context, controller),
                           );
                         }),
@@ -142,10 +168,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
             ),
             builder: (ctx) {
               final height = MediaQuery.of(ctx).size.height * 0.9; // tall sheet
-              return SizedBox(
-                height: height,
-                child: const AiAssistantScreen(),
-              );
+              return SizedBox(height: height, child: const AiAssistantScreen());
             },
           );
         },
@@ -162,7 +185,10 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
         return const DashboardTile(
           title: "Daily Revenue",
           subtitle: "Today's earnings",
-          child: Text("\$0.00", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          child: Text(
+            "\$0.00",
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
         );
       case DashboardTileType.todaysAppointments:
         return const DashboardTile(
@@ -183,7 +209,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
             // Navigate to Portfolio
-             Get.toNamed(AppRoute.portfolioScreen);
+            Get.toNamed(AppRoute.portfolioScreen);
           },
         );
       case DashboardTileType.designRequests:
@@ -193,7 +219,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
             // Navigate to Design Requests
-             Get.toNamed(AppRoute.designRequestsScreen);
+            Get.toNamed(AppRoute.designRequestsScreen);
           },
         );
       case DashboardTileType.consentForms:
@@ -203,7 +229,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
             // Navigate to Consent Forms
-             Get.toNamed(AppRoute.consentFormsScreen);
+            Get.toNamed(AppRoute.consentFormsScreen);
           },
         );
       case DashboardTileType.idVerification:
@@ -213,7 +239,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
             // Navigate to ID Verification
-             Get.toNamed(AppRoute.idVerificationScreen);
+            Get.toNamed(AppRoute.idVerificationScreen);
           },
         );
       case DashboardTileType.consultationCalendar:
@@ -222,7 +248,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           subtitle: "Manage consultations",
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
-             Get.toNamed(AppRoute.consultationCalendarScreen);
+            Get.toNamed(AppRoute.consultationCalendarScreen);
           },
         );
       case DashboardTileType.depositManagement:
@@ -231,7 +257,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           subtitle: "Track deposits",
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
-             Get.toNamed(AppRoute.depositManagementScreen);
+            Get.toNamed(AppRoute.depositManagementScreen);
           },
         );
       case DashboardTileType.reviews:
@@ -240,7 +266,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           subtitle: "Client feedback",
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
-             Get.toNamed(AppRoute.reviewsScreen);
+            Get.toNamed(AppRoute.reviewsScreen);
           },
         );
       case DashboardTileType.noShowAlerts:
@@ -249,7 +275,7 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           subtitle: "Recent no-shows",
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
-             Get.toNamed(AppRoute.noShowAlertsScreen);
+            Get.toNamed(AppRoute.noShowAlertsScreen);
           },
         );
       case DashboardTileType.serviceMenu:
@@ -258,13 +284,9 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
           subtitle: "Manage services",
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
-             Get.toNamed(AppRoute.serviceMenuScreen);
+            Get.toNamed(AppRoute.serviceMenuScreen);
           },
         );
-      
-
     }
   }
 }
-
-

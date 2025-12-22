@@ -9,18 +9,23 @@ class DailyRevenueController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
+  /// The niche to filter revenue by (set this before calling fetchRevenue)
+  String? niche;
+
   @override
   void onInit() {
     super.onInit();
-    fetchRevenue();
+    // Don't auto-fetch here - let the dashboard set the niche first and trigger fetch
   }
 
-  Future<void> fetchRevenue() async {
+  Future<void> fetchRevenue({String? forNiche}) async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
-      
-      final data = await _service.getDailyRevenue();
+
+      // Use provided niche or the one set on controller
+      final nicheToUse = forNiche ?? niche;
+      final data = await _service.getDailyRevenue(niche: nicheToUse);
       revenueData.value = data;
     } catch (e) {
       errorMessage.value = e.toString();
@@ -28,4 +33,10 @@ class DailyRevenueController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  // Convenience getters
+  double get totalRevenue => revenueData.value?.totalRevenue ?? 0.0;
+  int get bookingCount => revenueData.value?.bookingCount ?? 0;
+  double get averageBookingValue =>
+      revenueData.value?.averageBookingValue ?? 0.0;
 }

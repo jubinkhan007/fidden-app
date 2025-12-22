@@ -47,6 +47,59 @@ class GalleryController extends GetxController {
     }
   }
 
+  /// Fetch gallery items filtered by niche and optional tags
+  /// [niche] - tattoo, nail, makeup, barber, hair
+  /// [tags] - optional list of tags to filter by (e.g., ['face_chart', 'bridal'])
+  /// [category] - optional category_tag filter
+  Future<void> fetchGalleryByNiche({
+    required String niche,
+    List<String>? tags,
+    String? category,
+  }) async {
+    try {
+      isLoading(true);
+      
+      // Build query parameters
+      final queryParams = <String, String>{'niche': niche};
+      if (tags != null && tags.isNotEmpty) {
+        queryParams['tags'] = tags.join(',');
+      }
+      if (category != null && category.isNotEmpty) {
+        queryParams['category'] = category;
+      }
+      
+      final queryString = queryParams.entries
+          .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+          .join('&');
+      final url = '${AppUrls.galleryList}?$queryString';
+      
+      final response = await NetworkCaller().getRequest(url);
+
+      if (response.isSuccess) {
+        List<dynamic> data;
+        if (response.responseData is List) {
+          data = response.responseData as List<dynamic>;
+        } else if (response.responseData is Map && 
+                   response.responseData['results'] != null) {
+          data = response.responseData['results'] as List<dynamic>;
+        } else {
+          data = [];
+        }
+        galleryItems.value = data
+            .map((json) => GalleryItemModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        if (response.statusCode != 401) {
+          AppSnackBar.showError('Failed to load gallery');
+        }
+      }
+    } catch (e) {
+      AppSnackBar.showError('Error loading gallery: $e');
+    } finally {
+      isLoading(false);
+    }
+  }
+
   /// Upload a new gallery item
   /// [imagePath] - The image file path to upload
   /// [caption] - Optional caption for the image
@@ -81,6 +134,7 @@ class GalleryController extends GetxController {
         method: 'POST',
         body: body,
         photo: File(imagePath),
+        photoFieldName: 'image',
       );
 
       if (response.isSuccess) {

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:fidden/features/business_owner/home/model/business_owner_booking_model.dart';
 import 'package:fidden/features/user/checkout/controller/checkout_controller.dart';
+import 'package:fidden/features/business_owner/hairstylist/services/hairstylist_service.dart';
 
 class BookingDetailsScreen extends StatelessWidget {
   const BookingDetailsScreen({super.key});
@@ -37,8 +38,7 @@ class BookingDetailsScreen extends StatelessWidget {
 
   String _fmtDate(DateTime dt) => DateFormat('EEE, MMM d, yyyy').format(dt);
   String _fmtTime(DateTime dt) => DateFormat('h:mm a').format(dt);
-  String _fmtMeta(DateTime dt) =>
-    DateFormat('MMM d, yyyy • h:mm a').format(dt);
+  String _fmtMeta(DateTime dt) => DateFormat('MMM d, yyyy • h:mm a').format(dt);
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +52,10 @@ class BookingDetailsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: const Text('Booking Details',
-            style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Booking Details',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
@@ -73,19 +75,26 @@ class BookingDetailsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name,
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (b.userEmail.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          b.userEmail,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w900)),
-                      if (b.userEmail.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(b.userEmail,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Color(0xFF6B7280),
-                                fontWeight: FontWeight.w600)),
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 10),
                       Wrap(
@@ -159,7 +168,6 @@ class BookingDetailsScreen extends StatelessWidget {
                   value: _fmtMeta(b.createdAt),
                 ),
                 const SizedBox(height: 12),
-          
               ],
             ),
           ),
@@ -199,6 +207,12 @@ class BookingDetailsScreen extends StatelessWidget {
             const SizedBox(height: 24),
             _CheckoutButton(bookingId: b.id),
           ],
+
+          // --- Prep Notes Section (hairstylist niche only) ---
+          if (b.shopNiche == 'hairstylist') ...[
+            const SizedBox(height: 12),
+            _PrepNotesSection(bookingId: b.id, initialNotes: b.prepNotes ?? ''),
+          ],
         ],
       ),
     );
@@ -228,9 +242,13 @@ class SectionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (title != null) ...[
-              Text(title!,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w900, fontSize: 16)),
+              Text(
+                title!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
               const SizedBox(height: 12),
             ],
             child,
@@ -325,22 +343,13 @@ class _DateTimeGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        KVRow(
-          icon: Icons.calendar_month_rounded,
-          label: 'Date',
-          value: date,
-        ),
+        KVRow(icon: Icons.calendar_month_rounded, label: 'Date', value: date),
         const SizedBox(height: 12),
-        KVRow(
-          icon: Icons.access_time_rounded,
-          label: 'Time',
-          value: time,
-        ),
+        KVRow(icon: Icons.access_time_rounded, label: 'Time', value: time),
       ],
     );
   }
 }
-
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.imageUrl});
@@ -452,10 +461,10 @@ class _CheckoutButtonState extends State<_CheckoutButton> {
 
   Future<void> _initiateCheckout() async {
     setState(() => _isLoading = true);
-    
+
     final controller = Get.put(CheckoutController());
     final success = await controller.initiateCheckout(widget.bookingId);
-    
+
     if (mounted) {
       setState(() => _isLoading = false);
       if (success) {
@@ -489,9 +498,122 @@ class _CheckoutButtonState extends State<_CheckoutButton> {
           backgroundColor: const Color(0xFF10B981),
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           elevation: 0,
         ),
+      ),
+    );
+  }
+}
+
+/// Prep Notes section for hairstylist bookings
+class _PrepNotesSection extends StatefulWidget {
+  const _PrepNotesSection({
+    required this.bookingId,
+    required this.initialNotes,
+  });
+  final int bookingId;
+  final String initialNotes;
+
+  @override
+  State<_PrepNotesSection> createState() => _PrepNotesSectionState();
+}
+
+class _PrepNotesSectionState extends State<_PrepNotesSection> {
+  late TextEditingController _controller;
+  bool _isSaving = false;
+  bool _hasChanges = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialNotes);
+    _controller.addListener(() {
+      final changed = _controller.text != widget.initialNotes;
+      if (changed != _hasChanges) {
+        setState(() => _hasChanges = changed);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveNotes() async {
+    if (!_hasChanges) return;
+    setState(() => _isSaving = true);
+
+    try {
+      final service = HairstylistService();
+      await service.updatePrepNotes(widget.bookingId, _controller.text.trim());
+      if (mounted) {
+        setState(() => _hasChanges = false);
+        Get.snackbar(
+          'Saved',
+          'Prep notes updated',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to save prep notes');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: 'Prep Notes',
+      child: Column(
+        children: [
+          TextField(
+            controller: _controller,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Add prep notes for this appointment...',
+              hintStyle: TextStyle(color: Colors.grey[400]),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+          if (_hasChanges) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _saveNotes,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Save Notes'),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

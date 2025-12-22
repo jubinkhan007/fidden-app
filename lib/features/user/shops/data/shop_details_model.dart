@@ -31,13 +31,13 @@ class ShopDetailsModel {
   bool? isDepositRequired; // NEW
   int? defaultDepositPercentage; // NEW
   String? timeZone; // IANA timezone (e.g., "America/New_York")
-  
+
   // Social Links
   String? instagramUrl;
   String? tiktokUrl;
   String? youtubeUrl;
   String? websiteUrl;
-  
+
   // Gallery Preview (first 5 public items)
   List<GalleryPreviewItem>? galleryPreview;
 
@@ -72,9 +72,7 @@ class ShopDetailsModel {
     this.galleryPreview,
   });
 
-  factory ShopDetailsModel.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory ShopDetailsModel.fromJson(Map<String, dynamic> json) {
     // Parse niches with backward compatibility
     List<String>? parsedNiches;
     if (json['niches'] != null && json['niches'] is List) {
@@ -82,7 +80,7 @@ class ShopDetailsModel {
     } else if (json['niche'] != null) {
       parsedNiches = [json['niche'] as String];
     }
-    
+
     // Parse gallery preview
     List<GalleryPreviewItem>? galleryItems;
     if (json['gallery_preview'] != null && json['gallery_preview'] is List) {
@@ -90,7 +88,7 @@ class ShopDetailsModel {
           .map((e) => GalleryPreviewItem.fromJson(e as Map<String, dynamic>))
           .toList();
     }
-    
+
     return ShopDetailsModel(
       id: json["id"],
       name: json["name"],
@@ -109,7 +107,9 @@ class ShopDetailsModel {
       reviewCount: json["review_count"],
       services: json["services"] == null
           ? []
-          : List<Service>.from(json["services"]!.map((x) => Service.fromJson(x))),
+          : List<Service>.from(
+              json["services"]!.map((x) => Service.fromJson(x)),
+            ),
       reviews: json["reviews"] == null
           ? []
           : List<Review>.from(json["reviews"]!.map((x) => Review.fromJson(x))),
@@ -118,8 +118,11 @@ class ShopDetailsModel {
       noRefundHours: json['no_refund_hours'] as int?,
       niche: json["niche"], // Deprecated
       niches: parsedNiches, // NEW
-      isDepositRequired: json['is_deposit_required'] == true || json['is_deposit_required'] == 'true',
-      defaultDepositPercentage: (json['default_deposit_percentage'] as num?)?.toInt(),
+      isDepositRequired:
+          json['is_deposit_required'] == true ||
+          json['is_deposit_required'] == 'true',
+      defaultDepositPercentage: (json['default_deposit_percentage'] as num?)
+          ?.toInt(),
       timeZone: json['time_zone']?.toString(),
       // Social Links
       instagramUrl: json['instagram_url']?.toString(),
@@ -130,6 +133,17 @@ class ShopDetailsModel {
       galleryPreview: galleryItems,
     );
   }
+
+  /// Check if this shop offers tattoo services
+  bool get isTattooShop {
+    if (niches != null && niches!.contains('tattoo_artist')) return true;
+    if (niche == 'tattoo_artist' || niche == 'tattoo') return true;
+    return false;
+  }
+
+  /// Get the primary niche
+  String get primaryNiche =>
+      niches?.isNotEmpty == true ? niches!.first : (niche ?? 'other');
 }
 
 class Review {
@@ -180,7 +194,7 @@ class ReviewReply {
   factory ReviewReply.fromJson(Map<String, dynamic> json) {
     return ReviewReply(
       id: json['id'] as int,
-      message: json['message'] .toString(),
+      message: json['message'].toString(),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -201,7 +215,6 @@ class Service {
   bool requiresAge18Plus;
   int? duration; // NEW
 
-
   Service({
     this.id,
     this.title,
@@ -214,7 +227,6 @@ class Service {
     this.serviceImg,
     this.requiresAge18Plus = false,
     this.duration,
-
   });
 
   factory Service.fromJson(Map<String, dynamic> json) => Service(

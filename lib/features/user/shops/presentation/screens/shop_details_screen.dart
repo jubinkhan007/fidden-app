@@ -13,6 +13,7 @@ import 'package:fidden/features/user/shops/presentation/screens/full_gallery_scr
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:fidden/features/user/wishlist/data/wishlist_models.dart';
+import 'package:fidden/features/user/design_requests/presentation/screens/design_request_form_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -34,14 +35,11 @@ class ShopDetailsScreen extends StatelessWidget {
   Color get _warning => const Color(0xffFACC15);
   Color get _cta => const Color(0xffDC143C);
 
-
   String? _normalizeUrl(String? u) {
     if (u == null) return null;
     final t = u.trim();
     return (t.isEmpty || t.toLowerCase() == 'null') ? null : t;
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -49,12 +47,12 @@ class ShopDetailsScreen extends StatelessWidget {
     final wishlistController = Get.find<WishlistController>();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!controller.isLoading.value && controller.shopDetails.value.id == null) {
+      if (!controller.isLoading.value &&
+          controller.shopDetails.value.id == null) {
         controller.fetchShopDetails(id);
       }
     });
 
-    
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
@@ -102,13 +100,21 @@ class ShopDetailsScreen extends StatelessWidget {
                         aspectRatio: 16 / 10,
                         child: Image.network(
                           heroUrl,
-                          key: ValueKey(heroUrl),           // ← forces rebuild when URL changes
+                          key: ValueKey(
+                            heroUrl,
+                          ), // ← forces rebuild when URL changes
                           fit: BoxFit.cover,
-                          loadingBuilder: (c, child, prog) =>
-                          prog == null ? child : Container(color: const Color(0xffE5E7EB)),
+                          loadingBuilder: (c, child, prog) => prog == null
+                              ? child
+                              : Container(color: const Color(0xffE5E7EB)),
                           errorBuilder: (c, err, st) {
-                            debugPrint('Shop image load failed: $err');  // helpful log
-                            return Image.network(fallbackImg, fit: BoxFit.cover);
+                            debugPrint(
+                              'Shop image load failed: $err',
+                            ); // helpful log
+                            return Image.network(
+                              fallbackImg,
+                              fit: BoxFit.cover,
+                            );
                           },
                         ),
                       ),
@@ -278,7 +284,17 @@ class ShopDetailsScreen extends StatelessWidget {
         );
       }),
       bottomNavigationBar: Obx(() {
+        final data = controller.shopDetails.value;
         bool isServiceSelected = controller.selectedServiceId.value != null;
+
+        // robustly check if shop offers tattoo services
+        bool isTattoo = data.isTattooShop;
+        if (!isTattoo && data.services != null) {
+          isTattoo = data.services!.any(
+            (s) => s.categoryName?.toLowerCase().contains('tattoo') == true,
+          );
+        }
+
         return Padding(
           padding: EdgeInsets.fromLTRB(
             getWidth(24),
@@ -289,35 +305,117 @@ class ShopDetailsScreen extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
             child: SizedBox(
-              width: double.infinity,
               height: getHeight(54),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  backgroundColor: isServiceSelected ? _cta : Colors.grey,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 0,
-                ),
-                onPressed: isServiceSelected
-                    ? () {
-                        Get.to(() => ServiceDetailsScreen(
-                            serviceId: controller.selectedServiceId.value!));
-                      }
-                    : () {
-                        Get.snackbar('No Service Selected',
-                            'Please select a service to continue.');
-                      },
-                child: Text(
-                  "Book Now",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: getWidth(16),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              child: isTattoo
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: _brand, width: 2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: EdgeInsets.zero,
+                            ),
+                            onPressed: () {
+                              if (data.id != null) {
+                                Get.to(
+                                  () => DesignRequestFormScreen(
+                                    shopId: data.id!,
+                                    shopName: data.name,
+                                  ),
+                                );
+                              }
+                            },
+                            child: Text(
+                              "Request Design",
+                              style: TextStyle(
+                                color: _brand,
+                                fontSize: getWidth(14),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: getWidth(12)),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              backgroundColor: isServiceSelected
+                                  ? _cta
+                                  : Colors.grey,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            onPressed: isServiceSelected
+                                ? () {
+                                    Get.to(
+                                      () => ServiceDetailsScreen(
+                                        serviceId:
+                                            controller.selectedServiceId.value!,
+                                      ),
+                                    );
+                                  }
+                                : () {
+                                    Get.snackbar(
+                                      'No Service Selected',
+                                      'Please select a service to continue.',
+                                    );
+                                  },
+                            child: Text(
+                              "Book Now",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: getWidth(16),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          backgroundColor: isServiceSelected
+                              ? _cta
+                              : Colors.grey,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: isServiceSelected
+                            ? () {
+                                Get.to(
+                                  () => ServiceDetailsScreen(
+                                    serviceId:
+                                        controller.selectedServiceId.value!,
+                                  ),
+                                );
+                              }
+                            : () {
+                                Get.snackbar(
+                                  'No Service Selected',
+                                  'Please select a service to continue.',
+                                );
+                              },
+                        child: Text(
+                          "Book Now",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: getWidth(16),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
             ),
           ),
         );
@@ -535,23 +633,25 @@ class _AboutSectionState extends State<_AboutSection> {
                 ),
               ],
             ),
-            
+
             // --- Gallery Section ---
-            if (widget.data.galleryPreview != null && 
+            if (widget.data.galleryPreview != null &&
                 widget.data.galleryPreview!.isNotEmpty) ...[
               SizedBox(height: getHeight(24)),
               GalleryPreviewSection(
                 items: widget.data.galleryPreview!,
                 shopId: widget.data.id ?? 0,
                 onSeeAll: () {
-                  Get.to(() => FullGalleryScreen(
-                    items: widget.data.galleryPreview!,
-                    shopName: widget.data.name,
-                  ));
+                  Get.to(
+                    () => FullGalleryScreen(
+                      items: widget.data.galleryPreview!,
+                      shopName: widget.data.name,
+                    ),
+                  );
                 },
               ),
             ],
-            
+
             // --- Social Links Section ---
             if (_hasSocialLinks()) ...[
               SizedBox(height: getHeight(24)),
@@ -574,12 +674,12 @@ class _AboutSectionState extends State<_AboutSection> {
       },
     );
   }
-  
+
   bool _hasSocialLinks() {
     return widget.data.instagramUrl != null ||
-           widget.data.tiktokUrl != null ||
-           widget.data.youtubeUrl != null ||
-           widget.data.websiteUrl != null;
+        widget.data.tiktokUrl != null ||
+        widget.data.youtubeUrl != null ||
+        widget.data.websiteUrl != null;
   }
 }
 
@@ -676,8 +776,8 @@ class _ServiceSection extends StatelessWidget {
 
               final ImageProvider avatarImage =
                   (s.serviceImg != null && s.serviceImg!.isNotEmpty)
-                      ? NetworkImage(s.serviceImg!)
-                      : const AssetImage(ImagePath.profileImage);
+                  ? NetworkImage(s.serviceImg!)
+                  : const AssetImage(ImagePath.profileImage);
 
               return Material(
                 color: Colors.transparent,

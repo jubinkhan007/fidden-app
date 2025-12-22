@@ -104,16 +104,16 @@ class DesignRequestDetailScreen extends StatelessWidget {
                       Expanded(
                         child: _buildDetailItem(
                           label: 'Placement',
-                          value: request.placement.isNotEmpty 
-                              ? request.placement 
+                          value: request.placement.isNotEmpty
+                              ? request.placement
                               : 'Not specified',
                         ),
                       ),
                       Expanded(
                         child: _buildDetailItem(
                           label: 'Size (Approx.)',
-                          value: request.sizeApprox.isNotEmpty 
-                              ? request.sizeApprox 
+                          value: request.sizeApprox.isNotEmpty
+                              ? request.sizeApprox
                               : 'Not specified',
                         ),
                       ),
@@ -145,38 +145,40 @@ class DesignRequestDetailScreen extends StatelessWidget {
 
                   // === ACTION BUTTONS ===
                   if (request.isPending || request.isDiscussing) ...[
-                    Obx(() => SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: controller.isLoading.value
-                            ? null
-                            : () => _showApproveDialog(context, controller),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE63946),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    Obx(
+                      () => SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: controller.isLoading.value
+                              ? null
+                              : () => _showApproveDialog(context, controller),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE63946),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
+                          child: controller.isLoading.value
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Approve',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
-                        child: controller.isLoading.value
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text(
-                                'Approve',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
                       ),
-                    )),
+                    ),
                     const SizedBox(height: 12),
                   ],
 
@@ -206,12 +208,24 @@ class DesignRequestDetailScreen extends StatelessWidget {
                   // Reject option for pending requests
                   if (request.isPending || request.isDiscussing) ...[
                     const SizedBox(height: 12),
-                    Center(
-                      child: TextButton(
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
                         onPressed: () => _showRejectDialog(context, controller),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                         child: const Text(
                           'Reject Request',
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -347,20 +361,11 @@ class DesignRequestDetailScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -369,29 +374,31 @@ class DesignRequestDetailScreen extends StatelessWidget {
   void _openChat(BuildContext context) async {
     // Find the shop details
     final shopId = request.shopId;
-    
+
     // Get or initialize inbox controller to find existing thread
     final inboxController = Get.put(InboxController());
-    
+
     // Check if threads are loaded
     if (inboxController.threads.isEmpty) {
       await inboxController.fetchConversations();
     }
-    
+
     // Find existing thread with this user
     final existingThread = inboxController.threads.firstWhereOrNull(
-      (thread) => thread.user == request.userId
+      (thread) => thread.user == request.userId,
     );
-    
+
     if (existingThread != null) {
       // Navigate to existing chat
-      Get.to(() => ChatScreen(
-        threadId: existingThread.id,
-        shopId: shopId,
-        shopName: existingThread.userName ?? request.customerName,
-        shopAvatarUrl: existingThread.userImg ?? '',
-        isOwner: true,
-      ));
+      Get.to(
+        () => ChatScreen(
+          threadId: existingThread.id,
+          shopId: shopId,
+          shopName: existingThread.userName ?? request.customerName,
+          shopAvatarUrl: existingThread.userImg ?? '',
+          isOwner: true,
+        ),
+      );
     } else {
       // No existing thread - show coming soon or create one
       Get.snackbar(
@@ -406,16 +413,18 @@ class DesignRequestDetailScreen extends StatelessWidget {
     }
   }
 
-  void _showApproveDialog(BuildContext context, DesignRequestController controller) {
+  void _showApproveDialog(
+    BuildContext context,
+    DesignRequestController controller,
+  ) {
     Get.dialog(
       AlertDialog(
         title: const Text('Approve Design Request'),
-        content: const Text('Are you sure you want to approve this design request?'),
+        content: const Text(
+          'Are you sure you want to approve this design request?',
+        ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               Get.back();
@@ -432,16 +441,18 @@ class DesignRequestDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showRejectDialog(BuildContext context, DesignRequestController controller) {
+  void _showRejectDialog(
+    BuildContext context,
+    DesignRequestController controller,
+  ) {
     Get.dialog(
       AlertDialog(
         title: const Text('Reject Design Request'),
-        content: const Text('Are you sure you want to reject this design request?'),
+        content: const Text(
+          'Are you sure you want to reject this design request?',
+        ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               Get.back();

@@ -9,19 +9,23 @@ class PortfolioController extends GetxController {
   final RxList<PortfolioItem> portfolioItems = <PortfolioItem>[].obs;
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
+  final RxString currentNiche = ''.obs;  // Track current niche filter
 
   @override
   void onInit() {
     super.onInit();
-    fetchPortfolioItems();
+    // Don't auto-fetch; let dashboard controllers fetch with their niche
   }
 
-  Future<void> fetchPortfolioItems() async {
+  /// Fetch portfolio items, optionally filtered by niche
+  /// [niche] - 'tattoo', 'nail', 'makeup', 'barber', 'hair'
+  Future<void> fetchPortfolioItems({String? niche}) async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+      currentNiche.value = niche ?? '';
       
-      final items = await _portfolioService.getPortfolioItems();
+      final items = await _portfolioService.getPortfolioItems(niche: niche);
       portfolioItems.value = items;
     } catch (e) {
       errorMessage.value = e.toString();
@@ -34,15 +38,20 @@ class PortfolioController extends GetxController {
     required File image,
     required List<String> tags,
     required String description,
+    String? categoryTag,
   }) async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
       
+      // Use provided categoryTag or fall back to currentNiche
+      final effectiveTag = categoryTag ?? (currentNiche.value.isNotEmpty ? currentNiche.value : null);
+      
       final newItem = await _portfolioService.createPortfolioItem(
         image: image,
         tags: tags,
         description: description,
+        categoryTag: effectiveTag,
       );
       
       portfolioItems.insert(0, newItem); // Add to beginning

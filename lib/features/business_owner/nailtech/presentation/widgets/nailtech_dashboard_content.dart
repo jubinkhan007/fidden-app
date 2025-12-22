@@ -31,6 +31,14 @@ class NailTechDashboardContent extends StatelessWidget {
     final dashboardController = Get.put(NailTechDashboardController());
     final portfolioController = Get.put(PortfolioController());
     
+    // Always fetch portfolio with nail niche when dashboard loads
+    // Use WidgetsBinding to avoid calling setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (portfolioController.currentNiche.value != 'nail' || portfolioController.portfolioItems.isEmpty) {
+        portfolioController.fetchPortfolioItems(niche: 'nail');
+      }
+    });
+    
     // Get shop ID for reviews
     final shopIdValue = myShopId.value;
     final shopId = shopIdValue?.toString() ?? '';
@@ -45,7 +53,7 @@ class NailTechDashboardContent extends StatelessWidget {
         revenueController.fetchRevenue();
         styleRequestController.fetchStyleRequests();
         dashboardController.fetchAll();
-        portfolioController.fetchPortfolioItems();
+        portfolioController.fetchPortfolioItems(niche: 'nail');
         boController.fetchBusinessOwnerBooking();
       },
       child: ListView(

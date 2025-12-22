@@ -60,13 +60,17 @@ class OwnerBookingItem {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? shopTimezone; // Shop's IANA timezone
-  final String slotTimeIso;   // Original ISO string for timezone-aware formatting
-  
+  final String slotTimeIso; // Original ISO string for timezone-aware formatting
+
   // Checkout/Deposit fields
   final String? depositStatus; // 'held', 'credited', 'forfeited'
   final double? depositAmount;
   final double? servicePrice;
   final double? remainingAmount;
+
+  // Hairstylist prep notes fields
+  final String? prepNotes; // Stylist prep notes for booking
+  final String? shopNiche; // Shop niche: "hairstylist", "barber", etc.
 
   OwnerBookingItem({
     required this.id,
@@ -89,6 +93,8 @@ class OwnerBookingItem {
     this.depositAmount,
     this.servicePrice,
     this.remainingAmount,
+    this.prepNotes,
+    this.shopNiche,
   });
 
   factory OwnerBookingItem.fromJson(Map<String, dynamic> j) {
@@ -113,8 +119,11 @@ class OwnerBookingItem {
       shop: _toInt(j['shop']),
       shopName: j['shop_name'] ?? '',
       slot: _toInt(j['slot']),
-      slotTime: _dtKeepWall(j['slot_time']), // ← keeps 09:00 if payload had 09:00+06:00
-      slotTimeIso: (j['slot_time'] ?? '').toString(), // Keep original ISO string
+      slotTime: _dtKeepWall(
+        j['slot_time'],
+      ), // ← keeps 09:00 if payload had 09:00+06:00
+      slotTimeIso: (j['slot_time'] ?? '')
+          .toString(), // Keep original ISO string
       serviceTitle: j['service_title'] ?? '',
       serviceDuration: j['service_duration'] ?? '',
       status: (j['status'] ?? '').toString(),
@@ -125,9 +134,11 @@ class OwnerBookingItem {
       depositAmount: _toDouble(j['deposit_amount']),
       servicePrice: _toDouble(j['service_price']),
       remainingAmount: _toDouble(j['remaining_amount']),
+      prepNotes: j['prep_notes']?.toString(),
+      shopNiche: j['shop_niche']?.toString(),
     );
   }
-  
+
   static double? _toDouble(dynamic v) {
     if (v == null) return null;
     if (v is num) return v.toDouble();
@@ -150,6 +161,8 @@ class OwnerBookingItem {
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
     'shop_timezone': shopTimezone,
+    'prep_notes': prepNotes,
+    'shop_niche': shopNiche,
   };
   OwnerBookingItem copyWith({
     int? id,
@@ -168,6 +181,8 @@ class OwnerBookingItem {
     DateTime? updatedAt,
     String? shopTimezone,
     String? slotTimeIso,
+    String? prepNotes,
+    String? shopNiche,
   }) {
     return OwnerBookingItem(
       id: id ?? this.id,
@@ -186,9 +201,10 @@ class OwnerBookingItem {
       updatedAt: updatedAt ?? this.updatedAt,
       shopTimezone: shopTimezone ?? this.shopTimezone,
       slotTimeIso: slotTimeIso ?? this.slotTimeIso,
+      prepNotes: prepNotes ?? this.prepNotes,
+      shopNiche: shopNiche ?? this.shopNiche,
     );
   }
-
 }
 
 /// NEW: stats model matching the API payload
@@ -205,12 +221,13 @@ class OwnerBookingStats {
     required this.completed,
   });
 
-  factory OwnerBookingStats.fromJson(Map<String, dynamic> j) => OwnerBookingStats(
-    totalBookings: (j['total_bookings'] as num?)?.toInt() ?? 0,
-    newBookings: (j['new_bookings'] as num?)?.toInt() ?? 0,
-    cancelled: (j['cancelled'] as num?)?.toInt() ?? 0,
-    completed: (j['completed'] as num?)?.toInt() ?? 0,
-  );
+  factory OwnerBookingStats.fromJson(Map<String, dynamic> j) =>
+      OwnerBookingStats(
+        totalBookings: (j['total_bookings'] as num?)?.toInt() ?? 0,
+        newBookings: (j['new_bookings'] as num?)?.toInt() ?? 0,
+        cancelled: (j['cancelled'] as num?)?.toInt() ?? 0,
+        completed: (j['completed'] as num?)?.toInt() ?? 0,
+      );
 
   Map<String, dynamic> toJson() => {
     'total_bookings': totalBookings,

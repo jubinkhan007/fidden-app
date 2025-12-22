@@ -16,7 +16,7 @@ class BarberDashboardService {
     if (date != null) {
       url = '$url?date=$date';
     }
-    
+
     final response = await _networkCaller.getRequest(
       url,
       token: AuthService.accessToken,
@@ -29,13 +29,25 @@ class BarberDashboardService {
     throw Exception('Failed to fetch today\'s appointments');
   }
 
-  /// Get daily revenue metrics
-  Future<DailyRevenueResponse> getDailyRevenue({String? date}) async {
+  /// Get daily revenue metrics with optional filters
+  /// [date] - Filter by specific date (YYYY-MM-DD)
+  /// [niche] - Filter by niche: 'esthetician', 'massage', 'hair', 'nail', 'barber', 'tattoo'
+  /// [serviceType] - Filter by specific service type
+  Future<DailyRevenueResponse> getDailyRevenue({
+    String? date,
+    String? niche,
+    String? serviceType,
+  }) async {
+    final queryParams = <String, String>{};
+    if (date != null) queryParams['date'] = date;
+    if (niche != null) queryParams['niche'] = niche;
+    if (serviceType != null) queryParams['service_type'] = serviceType;
+
     String url = AppUrls.dailyRevenue;
-    if (date != null) {
-      url = '$url?date=$date';
+    if (queryParams.isNotEmpty) {
+      url = Uri.parse(url).replace(queryParameters: queryParams).toString();
     }
-    
+
     final response = await _networkCaller.getRequest(
       url,
       token: AuthService.accessToken,
@@ -168,7 +180,8 @@ class BarberDashboardService {
       body: {
         if (isActive != null) 'is_active': isActive,
         if (pointsPerDollar != null) 'points_per_dollar': pointsPerDollar,
-        if (pointsForRedemption != null) 'points_for_redemption': pointsForRedemption,
+        if (pointsForRedemption != null)
+          'points_for_redemption': pointsForRedemption,
         if (rewardType != null) 'reward_type': rewardType,
         if (rewardValue != null) 'reward_value': rewardValue,
       },
@@ -177,20 +190,18 @@ class BarberDashboardService {
 
     if (response.isSuccess) {
       dynamic data = response.responseData;
-      
+
       // Handle string responses that need parsing
       if (data is String) {
         try {
-          data = Map<String, dynamic>.from(
-            (data.isNotEmpty) ? {} : {},
-          );
+          data = Map<String, dynamic>.from((data.isNotEmpty) ? {} : {});
         } catch (_) {}
       }
-      
+
       if (data is Map<String, dynamic>) {
         return LoyaltyProgram.fromJson(data);
       }
-      
+
       // If we got 200 but can't parse, refetch the program
       return await getLoyaltyProgram();
     }
@@ -219,10 +230,7 @@ class BarberDashboardService {
   }) async {
     final response = await _networkCaller.postRequest(
       AppUrls.loyaltyAddPoints,
-      body: {
-        'user_id': userId,
-        'amount_spent': amountSpent,
-      },
+      body: {'user_id': userId, 'amount_spent': amountSpent},
       token: AuthService.accessToken,
     );
 
@@ -248,4 +256,3 @@ class BarberDashboardService {
     throw Exception('Failed to redeem loyalty points');
   }
 }
-

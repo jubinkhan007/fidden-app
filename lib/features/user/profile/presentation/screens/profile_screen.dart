@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 
+import 'package:fidden/features/user/design_requests/presentation/screens/my_design_requests_screen.dart';
 import '../../../../../core/utils/constants/icon_path.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -99,6 +100,14 @@ class ProfileScreen extends StatelessWidget {
                       firstImageString: IconPath.settingsGear,
                       onTap: () {
                         Get.toNamed(AppRoute.accountSettingsScreen);
+                      },
+                    ),
+                    SizedBox(height: getHeight(16)),
+                    CustomProfileButton(
+                      title: 'My Design Requests',
+                      firstImageString: IconPath.serviceIcon,
+                      onTap: () {
+                        Get.to(() => const MyDesignRequestsScreen());
                       },
                     ),
                     SizedBox(height: getHeight(16)),

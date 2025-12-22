@@ -2,13 +2,10 @@
 
 import 'dart:developer';
 
-
-
 class AppUrls {
   AppUrls._();
 
-  static const String _baseUrl =
-      'https://phase2.fidden.io';
+  static const String _baseUrl = 'https://phase2.fidden.io';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
     return 'wss://phase2.fidden.io/ws/chat/?token=$accessToken';
@@ -34,7 +31,8 @@ class AppUrls {
   static const String activeBooking = '$_baseUrl/booking/users?status=pending';
   static const String completeBooking =
       '$_baseUrl/booking/users?status=completed';
-  static String cancelBooking(int bookingId) => '$_baseUrl/payments/bookings/cancel/$bookingId/';
+  static String cancelBooking(int bookingId) =>
+      '$_baseUrl/payments/bookings/cancel/$bookingId/';
 
   static String userBookings(String email, {bool excludeActive = false}) {
     final base = '$_baseUrl/payments/bookings/';
@@ -44,17 +42,17 @@ class AppUrls {
     };
     return Uri.parse(base).replace(queryParameters: qp).toString();
   }
+
   static const String createReview = '$_baseUrl/api/reviews/';
   static const String allShops = '$_baseUrl/api/users/shops/';
   static const String serviceDetails =
       '$_baseUrl/api/shops'; // ✅ Added this line
 
+  // transactions
+  static String transactions(int shopId) =>
+      '$_baseUrl/payments/transactions/?shop=$shopId';
 
-// transactions
-  static String transactions (int shopId) => '$_baseUrl/payments/transactions/?shop=$shopId';
-
-// owner-booking
-  
+  // owner-booking
 
   //inbox-messaging
   static const String threads = '$_baseUrl/api/threads/';
@@ -80,33 +78,65 @@ class AppUrls {
   // Tattoo Artist Features
   static const String portfolio = '$_baseUrl/api/portfolio/';
   static const String designRequests = '$_baseUrl/api/design-requests/';
-  static const String consentTemplates = '$_baseUrl/api/consent-forms/templates/';
+  static const String consentTemplates =
+      '$_baseUrl/api/consent-forms/templates/';
   static const String signedConsents = '$_baseUrl/api/consent-forms/signed/';
   static const String idVerification = '$_baseUrl/api/id-verification/';
   static const String consultations = '$_baseUrl/api/consultations/';
 
   // Barber Dashboard Features
-  static const String todayAppointments = '$_baseUrl/api/barber/today-appointments/';
+  static const String todayAppointments =
+      '$_baseUrl/api/barber/today-appointments/';
   static const String dailyRevenue = '$_baseUrl/api/barber/daily-revenue/';
   static const String noShowAlerts = '$_baseUrl/api/barber/no-show-alerts/';
-  
+
   // Walk-In Queue
   static const String walkIns = '$_baseUrl/api/barber/walk-ins/';
   static String walkInDetail(int id) => '$_baseUrl/api/barber/walk-ins/$id/';
-  
+
   // Loyalty Program
   static const String loyaltyProgram = '$_baseUrl/api/barber/loyalty/program/';
-  static const String loyaltyCustomers = '$_baseUrl/api/barber/loyalty/customers/';
-  static const String loyaltyAddPoints = '$_baseUrl/api/barber/loyalty/add-points/';
+  static const String loyaltyCustomers =
+      '$_baseUrl/api/barber/loyalty/customers/';
+  static const String loyaltyAddPoints =
+      '$_baseUrl/api/barber/loyalty/add-points/';
   static const String loyaltyRedeem = '$_baseUrl/api/barber/loyalty/redeem/';
 
   // Nail Tech Dashboard
   static const String nailtechDashboard = '$_baseUrl/api/nailtech/dashboard/';
   static const String styleRequests = '$_baseUrl/api/nailtech/style-requests/';
-  static String styleRequestDetail(int id) => '$_baseUrl/api/nailtech/style-requests/$id/';
+  static String styleRequestDetail(int id) =>
+      '$_baseUrl/api/nailtech/style-requests/$id/';
   static const String nailtechLookbook = '$_baseUrl/api/nailtech/lookbook/';
-  static const String bookingsByStyle = '$_baseUrl/api/nailtech/bookings-by-style/';
+  static const String bookingsByStyle =
+      '$_baseUrl/api/nailtech/bookings-by-style/';
   static const String tipSummary = '$_baseUrl/api/nailtech/tip-summary/';
+
+  // MUA Dashboard 💄
+  static const String muaDashboard = '$_baseUrl/api/mua/dashboard/';
+  static const String muaFaceCharts = '$_baseUrl/api/mua/face-charts/';
+  static const String muaClientProfiles = '$_baseUrl/api/mua/client-profiles/';
+  static String muaClientProfileDetail(int id) =>
+      '$_baseUrl/api/mua/client-profiles/$id/';
+  static const String muaProductKit = '$_baseUrl/api/mua/product-kit/';
+  static String muaProductKitDetail(int id) =>
+      '$_baseUrl/api/mua/product-kit/$id/';
+
+  // Hairstylist Dashboard 💇‍♀️
+  static const String hairstylistDashboard =
+      '$_baseUrl/api/hairstylist/dashboard/';
+  static const String hairstylistWeeklySchedule =
+      '$_baseUrl/api/hairstylist/weekly-schedule/';
+  static const String hairstylistPrepNotes =
+      '$_baseUrl/api/hairstylist/prep-notes/';
+  static const String hairstylistClientProfiles =
+      '$_baseUrl/api/hairstylist/client-profiles/';
+  static String hairstylistClientProfileDetail(int id) =>
+      '$_baseUrl/api/hairstylist/client-profiles/$id/';
+  static const String hairstylistRecommendations =
+      '$_baseUrl/api/hairstylist/recommendations/';
+  static String hairstylistRecommendationDetail(int id) =>
+      '$_baseUrl/api/hairstylist/recommendations/$id/';
 
   // register-device
   static String registerDevice = '${_baseUrl}/api/register-device/';
@@ -118,7 +148,7 @@ class AppUrls {
   static const String businessProfile = '$_baseUrl/api/shop/';
   static editBusinessProfile(String id) => '$_baseUrl/api/shop/$id/';
   static deleteShop(String id) => '$_baseUrl/api/shop/$id/';
-  static getSingleService(String id) => '$_baseUrl/api/services/$id/';  
+  static getSingleService(String id) => '$_baseUrl/api/services/$id/';
   static updateService(String id) => '$_baseUrl/api/services/$id/';
 
   // Service
@@ -163,20 +193,28 @@ class AppUrls {
 
   static const String subscriptionPlans = '$_baseUrl/subscriptions/plans/';
   static const String subscriptionDetails = '$_baseUrl/subscriptions/details/';
-  static const String createCheckoutSession = '$_baseUrl/subscriptions/create-checkout-session/';
-  static const String cancelSubscription = '$_baseUrl/subscriptions/cancel-subscription/';
+  static const String createCheckoutSession =
+      '$_baseUrl/subscriptions/create-checkout-session/';
+  static const String cancelSubscription =
+      '$_baseUrl/subscriptions/cancel-subscription/';
 
   // Owner PayPal Subscription
-  static const String createPayPalSubOrder = '$_baseUrl/payments/paypal/subscription/create-order/';
-  static const String capturePayPalSubOrder = '$_baseUrl/payments/paypal/subscription/capture-order/';
+  static const String createPayPalSubOrder =
+      '$_baseUrl/payments/paypal/subscription/create-order/';
+  static const String capturePayPalSubOrder =
+      '$_baseUrl/payments/paypal/subscription/capture-order/';
 
   // Owner PayPal AI Add-on
-  static const String createPayPalAiOrder = '$_baseUrl/payments/paypal/ai-addon/create-order/';
-  static const String capturePayPalAiOrder = '$_baseUrl/payments/paypal/ai-addon/capture-order/';
+  static const String createPayPalAiOrder =
+      '$_baseUrl/payments/paypal/ai-addon/create-order/';
+  static const String capturePayPalAiOrder =
+      '$_baseUrl/payments/paypal/ai-addon/capture-order/';
 
-
-  static String ownerSlots({required int shopId, required int serviceId, required String date})
-  => '${_baseUrl}/api/shops/$shopId/slots/?service=$serviceId&date=$date';
+  static String ownerSlots({
+    required int shopId,
+    required int serviceId,
+    required String date,
+  }) => '${_baseUrl}/api/shops/$shopId/slots/?service=$serviceId&date=$date';
   // payment
   static String paymentIntent(int bookingId) =>
       '$_baseUrl/payments/payment-intent/$bookingId/';
@@ -188,7 +226,7 @@ class AppUrls {
   static const String saveCard = "$_baseUrl/payments/save-new-card";
   static String getMyCard(String customerId) =>
       '$_baseUrl/payments/$customerId';
-  
+
   // Checkout (Fidden Pay)
   static String initiateCheckout(int bookingId) =>
       '$_baseUrl/payments/initiate-checkout/$bookingId/';
@@ -202,10 +240,12 @@ class AppUrls {
   static const String getOwnerCoupons = '$_baseUrl/api/coupons/';
   static String updateCoupon(int id) => '$_baseUrl/api/coupons/$id/';
 
-// user coupons
-static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/coupons/?shop_id=$shopId&service_id=$serviceId';
+  // user coupons
+  static String UserCoupon(int shopId, int serviceId) =>
+      '${_baseUrl}/api/users/coupons/?shop_id=$shopId&service_id=$serviceId';
   // seller booking
-  static String ownerBooking (String shop_id) => '$_baseUrl/payments/bookings/?shop_id=$shop_id';
+  static String ownerBooking(String shop_id) =>
+      '$_baseUrl/payments/bookings/?shop_id=$shop_id';
 
   // Add reminder
   static createReminder(String userId) =>
@@ -225,13 +265,14 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   static String searchBusinessProfile = "$_baseUrl/business-profile";
 
   //analytics
- static const analytics = '$_baseUrl/api/analytics';
+  static const analytics = '$_baseUrl/api/analytics';
 
- // ai
+  // ai
 
   static const String aiReport = '$_baseUrl/api/weekly-summary/latest/';
   static const String generateContent = '$_baseUrl/api/weekly-summary/';
-  static const String checkoutAiAddon = '$_baseUrl/subscriptions/create-ai-addon-checkout-session/';
+  static const String checkoutAiAddon =
+      '$_baseUrl/subscriptions/create-ai-addon-checkout-session/';
   static const cancelAiAddon = '$_baseUrl/subscriptions/cancel-ai-addon/';
 
   static String markNoShow(int bookingId) =>
@@ -248,7 +289,7 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
       '$_baseUrl/payments/paypal/capture-order/';
 
   // ========== Niche-Specific Endpoints ==========
-  
+
   // Tattoo Artist - Portfolio
   static const String portfolioList = '$_baseUrl/api/portfolio/';
   static String portfolioItem(int id) => '$_baseUrl/api/portfolio/$id/';
@@ -256,19 +297,64 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   // Gallery (Universal for all niches)
   static const String galleryList = '$_baseUrl/api/gallery/';
   static String galleryItem(int id) => '$_baseUrl/api/gallery/$id/';
-  static String shopGallery(int shopId, {int page = 1}) => 
+  static String shopGallery(int shopId, {int page = 1}) =>
       '$_baseUrl/api/shops/$shopId/gallery/?page=$page';
 
   // Tattoo Artist - Design Requests
   static String designRequest(int id) => '$_baseUrl/api/design-requests/$id/';
+  static String designRequestImages(int id) =>
+      '$_baseUrl/api/design-requests/$id/images/';
 
   // Tattoo Artist - Consent Forms
-  static String consentTemplate(int id) => '$_baseUrl/api/consent-forms/templates/$id/';
-  static const String signedConsentForms = '$_baseUrl/api/consent-forms/signed/';
-  static String signedConsentForm(int id) => '$_baseUrl/api/consent-forms/signed/$id/';
+  static String consentTemplate(int id) =>
+      '$_baseUrl/api/consent-forms/templates/$id/';
+  static const String signedConsentForms =
+      '$_baseUrl/api/consent-forms/signed/';
+  static String signedConsentForm(int id) =>
+      '$_baseUrl/api/consent-forms/signed/$id/';
 
   // Tattoo Artist - ID Verification
   static const String idVerificationList = '$_baseUrl/api/id-verification/';
-  static String idVerificationItem(int id) => '$_baseUrl/api/id-verification/$id/';
+  static String idVerificationItem(int id) =>
+      '$_baseUrl/api/id-verification/$id/';
 
+  // ========== Esthetician Endpoints 🧖 ==========
+  static const String estheticianDashboard =
+      '$_baseUrl/api/esthetician/dashboard/';
+  static const String estheticianClientProfiles =
+      '$_baseUrl/api/esthetician/client-profiles/';
+  static String estheticianClientProfileDetail(int id) =>
+      '$_baseUrl/api/esthetician/client-profiles/$id/';
+  static const String estheticianHealthDisclosures =
+      '$_baseUrl/api/esthetician/health-disclosures/';
+  static String estheticianHealthDisclosureDetail(int id) =>
+      '$_baseUrl/api/esthetician/health-disclosures/$id/';
+  static const String estheticianTreatmentNotes =
+      '$_baseUrl/api/esthetician/treatment-notes/';
+  static String estheticianTreatmentNoteDetail(int id) =>
+      '$_baseUrl/api/esthetician/treatment-notes/$id/';
+  static const String estheticianRetailProducts =
+      '$_baseUrl/api/esthetician/retail-products/';
+  static String estheticianRetailProductDetail(int id) =>
+      '$_baseUrl/api/esthetician/retail-products/$id/';
+
+  // ========== Massage Therapist Endpoints 💆 ==========
+  static const String massageDashboard = '$_baseUrl/api/massage/dashboard/';
+  static const String massageClientProfiles =
+      '$_baseUrl/api/massage/client-profiles/';
+  static String massageClientProfileDetail(int id) =>
+      '$_baseUrl/api/massage/client-profiles/$id/';
+  static const String massageHealthDisclosures =
+      '$_baseUrl/api/massage/health-disclosures/';
+  static String massageHealthDisclosureDetail(int id) =>
+      '$_baseUrl/api/massage/health-disclosures/$id/';
+  static const String massageTreatmentNotes =
+      '$_baseUrl/api/massage/treatment-notes/';
+  static String massageTreatmentNoteDetail(int id) =>
+      '$_baseUrl/api/massage/treatment-notes/$id/';
+
+  // ========== Client Self-Service (Skin/Health) ==========
+  static const String mySkinProfile = '$_baseUrl/api/my-skin-profile/';
+  static const String myHealthDisclosure =
+      '$_baseUrl/api/my-health-disclosure/';
 }

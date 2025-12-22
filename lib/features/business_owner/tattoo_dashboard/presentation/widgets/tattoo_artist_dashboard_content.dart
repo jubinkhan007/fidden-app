@@ -5,6 +5,7 @@ import 'package:fidden/core/utils/timezone_helper.dart';
 import '../../controller/tattoo_artist_dashboard_controller.dart';
 import '../../widgets/week_calendar_widget.dart';
 import '../../widgets/dashboard_portfolio_grid.dart';
+import '../../../portfolio/controller/portfolio_controller.dart';
 import '../../../portfolio/presentation/screens/portfolio_grid_screen.dart';
 import '../../../design_requests/presentation/screens/design_requests_list_screen.dart';
 import '../../../design_requests/presentation/screens/design_request_detail_screen.dart';
@@ -25,7 +26,16 @@ class TattooArtistDashboardContent extends StatelessWidget {
     final controller = Get.put(TattooArtistDashboardController());
     final boController = Get.find<BusinessOwnerController>();
     final reviewController = Get.put(ReviewController());
-    
+
+    // Ensure portfolio is loaded with tattoo niche when this widget builds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final portfolioController = Get.find<PortfolioController>();
+      if (portfolioController.currentNiche.value != 'tattoo' ||
+          portfolioController.portfolioItems.isEmpty) {
+        portfolioController.fetchPortfolioItems(niche: 'tattoo');
+      }
+    });
+
     // Initialize reviews for shop
     final shopId = myShopId.value?.toString() ?? '';
     if (shopId.isNotEmpty && reviewController.reviews.isEmpty) {
@@ -52,11 +62,15 @@ class TattooArtistDashboardContent extends StatelessWidget {
             const SizedBox(height: 20),
 
             // === TODAY'S SCHEDULE ===
-            _buildSectionTitle('Today\'s Schedule', trailing: _buildMonthLabel()),
+            _buildSectionTitle(
+              'Today\'s Schedule',
+              trailing: _buildMonthLabel(),
+            ),
             const SizedBox(height: 8),
             WeekCalendarWidget(
               selectedDate: DateTime.now(),
-              onDateSelected: (date) => _showDayAppointments(context, date, boController),
+              onDateSelected: (date) =>
+                  _showDayAppointments(context, date, boController),
               getConsultationsCount: (date) =>
                   controller.getConsultationsCountForDate(date),
             ),
@@ -66,18 +80,25 @@ class TattooArtistDashboardContent extends StatelessWidget {
             // === REVENUE & EARNINGS ===
             _buildSectionTitle('Revenue & Earnings'),
             const SizedBox(height: 8),
-            _buildRevenueCards(boController),
+            _buildRevenueCards(controller),
 
             const SizedBox(height: 12),
-            _buildStatsRow(boController),
+            _buildStatsRow(controller),
 
             const SizedBox(height: 20),
 
             // === CLIENT PROGRESS TRACKER ===
-            _buildSectionTitle('Client Progress Tracker', 
+            _buildSectionTitle(
+              'Design Requests',
               trailing: GestureDetector(
                 onTap: () => Get.to(() => const DesignRequestsListScreen()),
-                child: const Text('View All', style: TextStyle(color: Color(0xFFE63946), fontWeight: FontWeight.w500)),
+                child: const Text(
+                  'View All',
+                  style: TextStyle(
+                    color: Color(0xFFE63946),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -86,10 +107,17 @@ class TattooArtistDashboardContent extends StatelessWidget {
             const SizedBox(height: 20),
 
             // === PORTFOLIO MANAGER ===
-            _buildSectionTitle('Portfolio Manager',
+            _buildSectionTitle(
+              'Portfolio Manager',
               trailing: GestureDetector(
                 onTap: () => Get.to(() => const PortfolioGridScreen()),
-                child: const Text('Open Portfolio', style: TextStyle(color: Color(0xFFE63946), fontWeight: FontWeight.w500)),
+                child: const Text(
+                  'Open Portfolio',
+                  style: TextStyle(
+                    color: Color(0xFFE63946),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -101,10 +129,17 @@ class TattooArtistDashboardContent extends StatelessWidget {
             const SizedBox(height: 20),
 
             // === REVIEWS ===
-            _buildSectionTitle('Reviews',
+            _buildSectionTitle(
+              'Reviews',
               trailing: GestureDetector(
                 onTap: () => Get.to(() => ReviewsScreen(shopId: shopId)),
-                child: const Text('See all reviews', style: TextStyle(color: Color(0xFFE63946), fontWeight: FontWeight.w500)),
+                child: const Text(
+                  'See all reviews',
+                  style: TextStyle(
+                    color: Color(0xFFE63946),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -144,14 +179,14 @@ class TattooArtistDashboardContent extends StatelessWidget {
   Widget _buildUpcomingAppointment(BusinessOwnerController boController) {
     final now = DateTime.now();
     final bookings = boController.allBusinessOwnerBookingOne.value.results;
-    
+
     // Filter for upcoming appointments using shop timezone for comparison
     // This ensures times are compared in the shop's local time, not device time
     final upcomingBookings = bookings.where((b) {
       // Get current time in shop's timezone
       final shopTz = b.shopTimezone ?? 'America/New_York';
       final nowUtc = DateTime.now().toUtc();
-      
+
       // Parse the slot time ISO string as UTC
       DateTime slotTimeUtc;
       try {
@@ -159,28 +194,39 @@ class TattooArtistDashboardContent extends StatelessWidget {
       } catch (_) {
         slotTimeUtc = b.slotTime.toUtc();
       }
-      
+
       // Compare in UTC (both times normalized)
       final isFuture = slotTimeUtc.isAfter(nowUtc);
-      
+
       // Check if it's today in shop timezone
       final shopNow = TimezoneHelper.toTimezone(nowUtc, shopTz);
       final shopSlot = TimezoneHelper.toTimezone(slotTimeUtc, shopTz);
-      final isToday = shopSlot.year == shopNow.year && 
-                      shopSlot.month == shopNow.month && 
-                      shopSlot.day == shopNow.day;
-      
-      final isActive = b.status.toLowerCase() == 'active' || 
-                       b.status.toLowerCase() == 'confirmed';
-      
-      // Include if: future appointment OR today's active/confirmed appointment
-      return isFuture || (isToday && isActive);
+      final isToday =
+          shopSlot.year == shopNow.year &&
+          shopSlot.month == shopNow.month &&
+          shopSlot.day == shopNow.day;
+
+      final isActive =
+          b.status.toLowerCase() == 'active' ||
+          b.status.toLowerCase() == 'confirmed';
+
+      // Niche filter: only show tattoo-related bookings
+      final isTattooService =
+          b.shopNiche?.toLowerCase() == 'tattoo' ||
+          b.serviceTitle.toLowerCase().contains('tattoo') ||
+          b.serviceTitle.toLowerCase().contains('ink') ||
+          b.serviceTitle.toLowerCase().contains('piercing');
+
+      // Include if: future appointment OR today's active/confirmed appointment AND is tattoo service
+      return (isFuture || (isToday && isActive)) && isTattooService;
     }).toList();
-    
+
     // Sort by slot time (earliest first)
     upcomingBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));
-    
-    final nextBooking = upcomingBookings.isNotEmpty ? upcomingBookings.first : null;
+
+    final nextBooking = upcomingBookings.isNotEmpty
+        ? upcomingBookings.first
+        : null;
 
     if (nextBooking == null) {
       return GestureDetector(
@@ -210,10 +256,14 @@ class TattooArtistDashboardContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('No upcoming appointments', 
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                    Text('View all bookings', 
-                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                      'No upcoming appointments',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      'View all bookings',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                   ],
                 ),
               ),
@@ -226,7 +276,10 @@ class TattooArtistDashboardContent extends StatelessWidget {
 
     // Use timezone-aware formatting if shop timezone is available
     final timeText = nextBooking.shopTimezone != null
-        ? formatApiTimeInTimezone(nextBooking.slotTimeIso, nextBooking.shopTimezone!)
+        ? formatApiTimeInTimezone(
+            nextBooking.slotTimeIso,
+            nextBooking.shopTimezone!,
+          )
         : DateFormat('hh:mm a').format(nextBooking.slotTime);
 
     return GestureDetector(
@@ -246,11 +299,11 @@ class TattooArtistDashboardContent extends StatelessWidget {
             CircleAvatar(
               radius: 24,
               backgroundColor: Colors.grey.shade200,
-              backgroundImage: nextBooking.profileImage != null 
-                  ? NetworkImage(nextBooking.profileImage!) 
+              backgroundImage: nextBooking.profileImage != null
+                  ? NetworkImage(nextBooking.profileImage!)
                   : null,
-              child: nextBooking.profileImage == null 
-                  ? const Icon(Icons.person, color: Colors.grey) 
+              child: nextBooking.profileImage == null
+                  ? const Icon(Icons.person, color: Colors.grey)
                   : null,
             ),
             const SizedBox(width: 12),
@@ -260,14 +313,20 @@ class TattooArtistDashboardContent extends StatelessWidget {
                 children: [
                   Text(
                     nextBooking.userName ?? 'Customer',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
                   Row(
                     children: [
                       Flexible(
                         child: Text(
                           nextBooking.serviceTitle,
-                          style: const TextStyle(color: Colors.grey, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -283,7 +342,10 @@ class TattooArtistDashboardContent extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         timeText,
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -297,12 +359,11 @@ class TattooArtistDashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildRevenueCards(BusinessOwnerController boController) {
-    // Use totalRevenue from controller (from revenue API)
-    final total = boController.totalRevenue.value;
-    // Monthly projection = weekly * 4 (approximation)
-    final monthlyProjection = total * 4;
-    
+  Widget _buildRevenueCards(TattooArtistDashboardController controller) {
+    // Use niche-specific revenue from controller
+    final total = controller.todayRevenue;
+    final monthlyProjection = controller.monthlyProjection;
+
     return Row(
       children: [
         Expanded(
@@ -354,22 +415,23 @@ class TattooArtistDashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsRow(BusinessOwnerController boController) {
-    final stats = boController.allBusinessOwnerBookingOne.value.stats;
+  Widget _buildStatsRow(TattooArtistDashboardController controller) {
+    // Use niche-specific booking count from revenue data
+    final bookingCount = controller.todayBookingCount;
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
-            label: 'Top booked services',
-            value: '${stats?.totalBookings ?? 0}',
+            label: 'Today\'s Bookings',
+            value: '$bookingCount',
             valueColor: const Color(0xFFE63946),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            label: 'Reschedule counts',
-            value: '${stats?.cancelled ?? 0}',
+            label: 'Avg Booking Value',
+            value: '\$${controller.averageBookingValue.toStringAsFixed(2)}',
             valueColor: const Color(0xFF52B788),
           ),
         ),
@@ -407,7 +469,9 @@ class TattooArtistDashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildClientProgressTracker(TattooArtistDashboardController controller) {
+  Widget _buildClientProgressTracker(
+    TattooArtistDashboardController controller,
+  ) {
     final requests = controller.pendingDesignRequests;
 
     if (requests.isEmpty) {
@@ -419,7 +483,10 @@ class TattooArtistDashboardContent extends StatelessWidget {
           border: Border.all(color: Colors.grey.shade200),
         ),
         child: const Center(
-          child: Text('No design requests yet', style: TextStyle(color: Colors.grey)),
+          child: Text(
+            'No design requests yet',
+            style: TextStyle(color: Colors.grey),
+          ),
         ),
       );
     }
@@ -427,7 +494,8 @@ class TattooArtistDashboardContent extends StatelessWidget {
     return Column(
       children: requests.map((request) {
         return GestureDetector(
-          onTap: () => Get.to(() => DesignRequestDetailScreen(request: request)),
+          onTap: () =>
+              Get.to(() => DesignRequestDetailScreen(request: request)),
           child: Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
@@ -455,7 +523,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        request.description.length > 30 
+                        request.description.length > 30
                             ? '${request.description.substring(0, 30)}...'
                             : request.description,
                         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -464,14 +532,20 @@ class TattooArtistDashboardContent extends StatelessWidget {
                       ),
                       Text(
                         'By ${request.customerName}',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 // Status badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: request.isPending
                         ? const Color(0xFFFFF3CD)
@@ -500,7 +574,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
   Widget _buildReviewsSection(ReviewController reviewController) {
     return Obx(() {
       final reviews = reviewController.reviews;
-      
+
       if (reviewController.isLoading.value && reviews.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(24),
@@ -512,7 +586,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
           child: const Center(child: CircularProgressIndicator()),
         );
       }
-      
+
       if (reviews.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(24),
@@ -529,7 +603,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
 
       // Show first 2 reviews
       final displayReviews = reviews.take(2).toList();
-      
+
       return Column(
         children: displayReviews.map((review) {
           return Container(
@@ -552,7 +626,11 @@ class TattooArtistDashboardContent extends StatelessWidget {
                           ? NetworkImage(review.avatarUrl!)
                           : null,
                       child: review.avatarUrl == null
-                          ? const Icon(Icons.person, color: Colors.grey, size: 20)
+                          ? const Icon(
+                              Icons.person,
+                              color: Colors.grey,
+                              size: 20,
+                            )
                           : null,
                     ),
                     const SizedBox(width: 12),
@@ -589,24 +667,49 @@ class TattooArtistDashboardContent extends StatelessWidget {
     });
   }
 
-  void _showDayAppointments(BuildContext context, DateTime date, BusinessOwnerController boController) {
+  void _showDayAppointments(
+    BuildContext context,
+    DateTime date,
+    BusinessOwnerController boController,
+  ) {
     final bookings = boController.allBusinessOwnerBookingOne.value.results;
-    
-    // Filter bookings for the selected date
+
+    // Filter bookings for the selected date AND by tattoo niche
     final dayBookings = bookings.where((b) {
-      return b.slotTime.year == date.year &&
-             b.slotTime.month == date.month &&
-             b.slotTime.day == date.day;
+      // Parse slot time and convert to shop timezone for accurate date comparison
+      final shopTz = b.shopTimezone ?? 'America/New_York';
+      DateTime slotTimeUtc;
+      try {
+        slotTimeUtc = DateTime.parse(b.slotTimeIso).toUtc();
+      } catch (_) {
+        slotTimeUtc = b.slotTime.toUtc();
+      }
+      final shopSlotTime = TimezoneHelper.toTimezone(slotTimeUtc, shopTz);
+
+      final isMatchingDate =
+          shopSlotTime.year == date.year &&
+          shopSlotTime.month == date.month &&
+          shopSlotTime.day == date.day;
+
+      // Niche filter: check shopNiche first, then fallback to serviceTitle
+      final isTattooService =
+          b.shopNiche?.toLowerCase() == 'tattoo' ||
+          b.serviceTitle.toLowerCase().contains('tattoo') ||
+          b.serviceTitle.toLowerCase().contains('ink') ||
+          b.serviceTitle.toLowerCase().contains('piercing');
+
+      return isMatchingDate && isTattooService;
     }).toList();
-    
+
     // Sort by time
     dayBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));
-    
+
     final dateLabel = DateFormat('EEEE, MMM d').format(date);
-    final isToday = date.day == DateTime.now().day && 
-                    date.month == DateTime.now().month && 
-                    date.year == DateTime.now().year;
-    
+    final isToday =
+        date.day == DateTime.now().day &&
+        date.month == DateTime.now().month &&
+        date.year == DateTime.now().year;
+
     Get.bottomSheet(
       Container(
         constraints: BoxConstraints(
@@ -629,7 +732,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Header
             Padding(
               padding: const EdgeInsets.all(16),
@@ -648,10 +751,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
                       ),
                       Text(
                         '${dayBookings.length} ${dayBookings.length == 1 ? 'appointment' : 'appointments'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -662,9 +762,9 @@ class TattooArtistDashboardContent extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const Divider(height: 1),
-            
+
             // Appointments list
             Flexible(
               child: dayBookings.isEmpty
@@ -686,13 +786,14 @@ class TattooArtistDashboardContent extends StatelessWidget {
       isScrollControlled: true,
     );
   }
-  
+
   Widget _buildEmptyState(DateTime date) {
-    final isToday = date.day == DateTime.now().day && 
-                    date.month == DateTime.now().month && 
-                    date.year == DateTime.now().year;
+    final isToday =
+        date.day == DateTime.now().day &&
+        date.month == DateTime.now().month &&
+        date.year == DateTime.now().year;
     final isFuture = date.isAfter(DateTime.now());
-    
+
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -705,11 +806,11 @@ class TattooArtistDashboardContent extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            isToday 
+            isToday
                 ? 'No appointments today'
-                : isFuture 
-                    ? 'No appointments scheduled'
-                    : 'No appointments were booked',
+                : isFuture
+                ? 'No appointments scheduled'
+                : 'No appointments were booked',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
@@ -721,24 +822,21 @@ class TattooArtistDashboardContent extends StatelessWidget {
             isToday || isFuture
                 ? 'Your schedule is free!'
                 : 'This day had no bookings',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[400],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[400]),
           ),
         ],
       ),
     );
   }
-  
+
   Widget _buildAppointmentCard(dynamic booking) {
     final status = booking.status.toString().toLowerCase();
-    
+
     // Get status styling based on actual booking status
     Color statusBgColor;
     Color statusTextColor;
     String statusText;
-    
+
     switch (status) {
       case 'completed':
       case 'confirmed':
@@ -763,12 +861,12 @@ class TattooArtistDashboardContent extends StatelessWidget {
         statusText = 'Pending';
         break;
     }
-    
+
     // Use timezone-aware formatting if shop timezone is available
     final timeText = booking.shopTimezone != null
         ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
         : DateFormat('hh:mm a').format(booking.slotTime);
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -795,7 +893,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          
+
           // Customer info
           Expanded(
             child: Column(
@@ -812,10 +910,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   booking.serviceTitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -823,16 +918,13 @@ class TattooArtistDashboardContent extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${booking.serviceDuration} min',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[400],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                   ),
                 ],
               ],
             ),
           ),
-          
+
           // Status indicator - using actual booking status
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -854,4 +946,3 @@ class TattooArtistDashboardContent extends StatelessWidget {
     );
   }
 }
-

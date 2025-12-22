@@ -47,7 +47,7 @@ class NailTechLookbookScreen extends StatelessWidget {
                 Text(controller.errorMessage.value),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () => controller.fetchPortfolioItems(),
+                  onPressed: () => controller.fetchPortfolioItems(niche: 'nail'),
                   child: const Text('Retry'),
                 ),
               ],
@@ -77,7 +77,7 @@ class NailTechLookbookScreen extends StatelessWidget {
         }
 
         return RefreshIndicator(
-          onRefresh: () => controller.fetchPortfolioItems(),
+          onRefresh: () => controller.fetchPortfolioItems(niche: 'nail'),
           child: GridView.builder(
             padding: const EdgeInsets.all(12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

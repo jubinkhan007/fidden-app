@@ -52,7 +52,7 @@ class NetworkCaller {
     });
   }
 
-  Future<ResponseData> multipartRequest(String endpoint, {String method = 'POST', required Map<String, String> body, String? token, File? photo, List<File>? documents}) {
+  Future<ResponseData> multipartRequest(String endpoint, {String method = 'POST', required Map<String, String> body, String? token, File? photo, String photoFieldName = 'shop_img', List<File>? documents}) {
     return _makeRequestWithRetry(() async {
       log('Multipart Request: $endpoint');
       // --- MODIFIED: Reliably get token if not provided ---
@@ -62,7 +62,7 @@ class NetworkCaller {
       request.fields.addAll(body);
 
       if (photo != null) {
-        request.files.add(await http.MultipartFile.fromPath('shop_img', photo.path));
+        request.files.add(await http.MultipartFile.fromPath(photoFieldName, photo.path));
       }
       if (documents != null && documents.isNotEmpty) {
         for (var doc in documents) {

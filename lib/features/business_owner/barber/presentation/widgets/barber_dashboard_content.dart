@@ -27,15 +27,18 @@ class BarberDashboardContent extends StatelessWidget {
     // Initialize controllers
     final boController = Get.find<BusinessOwnerController>();
     final todayController = Get.put(TodayAppointmentsController());
-    final revenueController = Get.put(DailyRevenueController());
+    final revenueController = Get.put(DailyRevenueController(), tag: 'barber');
+    // Always fetch with barber niche to ensure fresh, correctly-filtered data
+    revenueController.niche = 'barber';
+    revenueController.fetchRevenue();
     final noShowController = Get.put(NoShowAlertsController());
     final walkInController = Get.put(WalkInController());
     final loyaltyController = Get.put(LoyaltyController());
-    
+
     // Get shop ID for reviews - use the non-reactive value to avoid GetX issues
     final shopIdValue = myShopId.value;
     final shopId = shopIdValue?.toString() ?? '';
-    
+
     if (shopId.isNotEmpty) {
       Get.put(ReviewController())..fetchReviews(shopId);
     }
@@ -43,7 +46,7 @@ class BarberDashboardContent extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: () async {
         todayController.fetchAppointments();
-        revenueController.fetchRevenue();
+        revenueController.fetchRevenue(forNiche: 'barber');
         noShowController.fetchAlerts();
         walkInController.fetchQueue();
         loyaltyController.fetchProgram();
@@ -67,28 +70,42 @@ class BarberDashboardContent extends StatelessWidget {
           const SizedBox(height: 8),
           WeekCalendarWidget(
             selectedDate: DateTime.now(),
-            onDateSelected: (date) => _showDayAppointments(context, date, boController),
+            onDateSelected: (date) =>
+                _showDayAppointments(context, date, boController),
             getConsultationsCount: (date) {
-              // Using non-reactive access for the callback
-              final appointments = todayController.appointmentsData.value?.appointments ?? [];
-              return appointments.where((a) =>
-                a.startTime.year == date.year &&
-                a.startTime.month == date.month &&
-                a.startTime.day == date.day
-              ).length;
+              // Filter bookings by date AND barber niche
+              final bookings =
+                  boController.allBusinessOwnerBookingOne.value.results;
+              return bookings.where((b) {
+                // Date filter
+                final isMatchingDate =
+                    b.slotTime.year == date.year &&
+                    b.slotTime.month == date.month &&
+                    b.slotTime.day == date.day;
+
+                // Niche filter: only count barber-related bookings
+                final isBarberService =
+                    b.shopNiche?.toLowerCase() == 'barber' ||
+                    b.serviceTitle.toLowerCase().contains('barber') ||
+                    b.serviceTitle.toLowerCase().contains('haircut') ||
+                    b.serviceTitle.toLowerCase().contains('shave') ||
+                    b.serviceTitle.toLowerCase().contains('beard') ||
+                    b.serviceTitle.toLowerCase().contains('fade');
+
+                return isMatchingDate && isBarberService;
+              }).length;
             },
           ),
 
           const SizedBox(height: 20),
 
-          // === REVENUE TODAY & WALK-INS (Side by Side) ===
-          Row(
-            children: [
-              Expanded(child: _buildRevenueCard(revenueController)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildWalkInCard(walkInController)),
-            ],
-          ),
+          // === REVENUE & EARNINGS ===
+          _buildSectionTitle('Revenue & Earnings'),
+          const SizedBox(height: 8),
+          _buildRevenueCards(revenueController),
+
+          const SizedBox(height: 12),
+          _buildStatsRow(revenueController, walkInController),
 
           const SizedBox(height: 20),
 
@@ -106,7 +123,9 @@ class BarberDashboardContent extends StatelessWidget {
           _buildSectionTitle(
             'Reviews',
             trailing: shopId.isNotEmpty
-                ? _buildViewAllButton(() => Get.to(() => ReviewsScreen(shopId: shopId)))
+                ? _buildViewAllButton(
+                    () => Get.to(() => ReviewsScreen(shopId: shopId)),
+                  )
                 : null,
           ),
           const SizedBox(height: 8),
@@ -159,7 +178,7 @@ class BarberDashboardContent extends StatelessWidget {
     return Obx(() {
       final now = DateTime.now();
       final bookings = boController.allBusinessOwnerBookingOne.value.results;
-      
+
       final upcomingBookings = bookings.where((b) {
         final shopTz = b.shopTimezone ?? 'America/New_York';
         final nowUtc = DateTime.now().toUtc();
@@ -169,21 +188,34 @@ class BarberDashboardContent extends StatelessWidget {
         } catch (_) {
           slotTimeUtc = b.slotTime.toUtc();
         }
-        
+
         final isFuture = slotTimeUtc.isAfter(nowUtc);
         final shopNow = TimezoneHelper.toTimezone(nowUtc, shopTz);
         final shopSlot = TimezoneHelper.toTimezone(slotTimeUtc, shopTz);
-        final isToday = shopSlot.year == shopNow.year && 
-                        shopSlot.month == shopNow.month && 
-                        shopSlot.day == shopNow.day;
-        final isActive = b.status.toLowerCase() == 'active' || 
-                         b.status.toLowerCase() == 'confirmed';
-        
-        return isFuture || (isToday && isActive);
+        final isToday =
+            shopSlot.year == shopNow.year &&
+            shopSlot.month == shopNow.month &&
+            shopSlot.day == shopNow.day;
+        final isActive =
+            b.status.toLowerCase() == 'active' ||
+            b.status.toLowerCase() == 'confirmed';
+
+        // Niche filter: only show barber-related bookings
+        final isBarberService =
+            b.shopNiche?.toLowerCase() == 'barber' ||
+            b.serviceTitle.toLowerCase().contains('barber') ||
+            b.serviceTitle.toLowerCase().contains('haircut') ||
+            b.serviceTitle.toLowerCase().contains('shave') ||
+            b.serviceTitle.toLowerCase().contains('beard') ||
+            b.serviceTitle.toLowerCase().contains('fade');
+
+        return (isFuture || (isToday && isActive)) && isBarberService;
       }).toList();
-      
+
       upcomingBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));
-      final nextBooking = upcomingBookings.isNotEmpty ? upcomingBookings.first : null;
+      final nextBooking = upcomingBookings.isNotEmpty
+          ? upcomingBookings.first
+          : null;
 
       if (nextBooking == null) {
         return GestureDetector(
@@ -203,17 +235,24 @@ class BarberDashboardContent extends StatelessWidget {
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.calendar_today_outlined, color: Colors.grey),
+                  child: const Icon(
+                    Icons.calendar_today_outlined,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('No upcoming appointments', 
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                      Text('View all bookings', 
-                        style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(
+                        'No upcoming appointments',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        'View all bookings',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
                     ],
                   ),
                 ),
@@ -225,7 +264,10 @@ class BarberDashboardContent extends StatelessWidget {
       }
 
       final timeText = nextBooking.shopTimezone != null
-          ? formatApiTimeInTimezone(nextBooking.slotTimeIso, nextBooking.shopTimezone!)
+          ? formatApiTimeInTimezone(
+              nextBooking.slotTimeIso,
+              nextBooking.shopTimezone!,
+            )
           : DateFormat('hh:mm a').format(nextBooking.slotTime);
 
       return GestureDetector(
@@ -242,11 +284,11 @@ class BarberDashboardContent extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.grey.shade200,
-                backgroundImage: nextBooking.profileImage != null 
-                    ? NetworkImage(nextBooking.profileImage!) 
+                backgroundImage: nextBooking.profileImage != null
+                    ? NetworkImage(nextBooking.profileImage!)
                     : null,
-                child: nextBooking.profileImage == null 
-                    ? const Icon(Icons.person, color: Colors.grey) 
+                child: nextBooking.profileImage == null
+                    ? const Icon(Icons.person, color: Colors.grey)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -256,14 +298,20 @@ class BarberDashboardContent extends StatelessWidget {
                   children: [
                     Text(
                       nextBooking.userName ?? 'Customer',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
                     Row(
                       children: [
                         Flexible(
                           child: Text(
                             nextBooking.serviceTitle,
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -279,7 +327,10 @@ class BarberDashboardContent extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           timeText,
-                          style: const TextStyle(color: Colors.grey, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -295,112 +346,168 @@ class BarberDashboardContent extends StatelessWidget {
   }
 
   // ==================
-  // REVENUE CARD
+  // REVENUE CARDS (2x2 Grid - Row 1)
   // ==================
-  Widget _buildRevenueCard(DailyRevenueController controller) {
+  Widget _buildRevenueCards(DailyRevenueController controller) {
     return Obx(() {
       final revenue = controller.revenueData.value;
       final isLoading = controller.isLoading.value;
-      
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Today\'s Earnings',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+
+      final todayRevenue = revenue?.totalRevenue ?? 0.0;
+      final monthlyProjection = todayRevenue * 30; // Simple projection
+
+      return Row(
+        children: [
+          Expanded(
+            child: _buildRevenueCardItem(
+              label: "Today's Earnings",
+              value: '\$${todayRevenue.toStringAsFixed(2)}',
+              valueColor: const Color(0xFFE63946),
+              isLoading: isLoading,
             ),
-            const SizedBox(height: 8),
-            if (isLoading)
-              const SizedBox(
-                height: 28,
-                width: 28,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else
-              Text(
-                '\$${(revenue?.totalRevenue ?? 0).toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFE63946),
-                ),
-              ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildRevenueCardItem(
+              label: 'Monthly Projection',
+              value: '\$${monthlyProjection.toStringAsFixed(2)}',
+              valueColor: Colors.black,
+              isLoading: isLoading,
+            ),
+          ),
+        ],
       );
     });
   }
 
-  // ==================
-  // WALK-IN CARD
-  // ==================
-  Widget _buildWalkInCard(WalkInController controller) {
-    return Obx(() {
-      final waiting = controller.waitingCount;
-      final isLoading = controller.isLoading.value;
-      
-      return GestureDetector(
-        onTap: () => Get.to(() => const WalkInQueueScreen()),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'Walk-Ins',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.groups, size: 16, color: Colors.grey),
-                ],
+  Widget _buildRevenueCardItem({
+    required String label,
+    required String value,
+    required Color valueColor,
+    required bool isLoading,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 8),
+          if (isLoading)
+            const SizedBox(
+              height: 28,
+              width: 28,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: valueColor,
               ),
-              const SizedBox(height: 8),
-              if (isLoading)
-                const SizedBox(
-                  height: 28,
-                  width: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                Row(
-                  children: [
-                    Text(
-                      '$waiting',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1565C0),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'waiting',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-            ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ==================
+  // STATS ROW (2x2 Grid - Row 2)
+  // ==================
+  Widget _buildStatsRow(
+    DailyRevenueController revenueController,
+    WalkInController walkInController,
+  ) {
+    return Obx(() {
+      final revenue = revenueController.revenueData.value;
+      final isRevenueLoading = revenueController.isLoading.value;
+      final isWalkInLoading = walkInController.isLoading.value;
+
+      final bookingCount = revenue?.bookingCount ?? 0;
+      final walkInCount = walkInController.waitingCount;
+
+      return Row(
+        children: [
+          Expanded(
+            child: _buildStatCard(
+              label: "Today's Bookings",
+              value: '$bookingCount',
+              valueColor: const Color(0xFFE63946),
+              isLoading: isRevenueLoading,
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => Get.to(() => const WalkInQueueScreen()),
+              child: _buildStatCard(
+                label: 'Walk-Ins Waiting',
+                value: '$walkInCount',
+                valueColor: const Color(0xFF1565C0),
+                isLoading: isWalkInLoading,
+                icon: Icons.groups,
+              ),
+            ),
+          ),
+        ],
       );
     });
+  }
+
+  Widget _buildStatCard({
+    required String label,
+    required String value,
+    required Color valueColor,
+    required bool isLoading,
+    IconData? icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ),
+              if (icon != null) Icon(icon, size: 16, color: Colors.grey),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (isLoading)
+            const SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: valueColor,
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   // ==================
@@ -410,15 +517,15 @@ class BarberDashboardContent extends StatelessWidget {
     return Obx(() {
       final count = controller.alertsData.value?.count ?? 0;
       final isLoading = controller.isLoading.value;
-      
+
       if (isLoading) {
         return const SizedBox.shrink();
       }
-      
+
       if (count == 0) {
         return const SizedBox.shrink();
       }
-      
+
       return GestureDetector(
         onTap: () => Get.to(() => const NoShowAlertsScreen()),
         child: Container(
@@ -436,7 +543,10 @@ class BarberDashboardContent extends StatelessWidget {
                   color: const Color(0xFFC62828).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFC62828)),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFC62828),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -452,10 +562,7 @@ class BarberDashboardContent extends StatelessWidget {
                     ),
                     Text(
                       '$count no-shows this week',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     ),
                   ],
                 ),
@@ -474,10 +581,11 @@ class BarberDashboardContent extends StatelessWidget {
   Widget _buildBookingRequests(BusinessOwnerController boController) {
     return Obx(() {
       final bookings = boController.allBusinessOwnerBookingOne.value.results;
-      final pendingBookings = bookings.where((b) => 
-        b.status.toLowerCase() == 'pending'
-      ).take(2).toList();
-      
+      final pendingBookings = bookings
+          .where((b) => b.status.toLowerCase() == 'pending')
+          .take(2)
+          .toList();
+
       if (pendingBookings.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(16),
@@ -493,13 +601,16 @@ class BarberDashboardContent extends StatelessWidget {
           ),
         );
       }
-      
+
       return Column(
         children: pendingBookings.map((booking) {
           final timeText = booking.shopTimezone != null
-              ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+              ? formatApiTimeInTimezone(
+                  booking.slotTimeIso,
+                  booking.shopTimezone!,
+                )
               : DateFormat('hh:mm a').format(booking.slotTime);
-          
+
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
@@ -513,11 +624,11 @@ class BarberDashboardContent extends StatelessWidget {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage: booking.profileImage != null 
-                      ? NetworkImage(booking.profileImage!) 
+                  backgroundImage: booking.profileImage != null
+                      ? NetworkImage(booking.profileImage!)
                       : null,
-                  child: booking.profileImage == null 
-                      ? const Icon(Icons.person, size: 20, color: Colors.grey) 
+                  child: booking.profileImage == null
+                      ? const Icon(Icons.person, size: 20, color: Colors.grey)
                       : null,
                 ),
                 const SizedBox(width: 12),
@@ -538,7 +649,10 @@ class BarberDashboardContent extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF3E0),
                     borderRadius: BorderRadius.circular(8),
@@ -569,11 +683,11 @@ class BarberDashboardContent extends StatelessWidget {
       final count = controller.customerCount;
       final redeemable = controller.redeemableCount;
       final isLoading = controller.isLoading.value;
-      
+
       if (isLoading && program == null) {
         return const SizedBox.shrink();
       }
-      
+
       return GestureDetector(
         onTap: () => Get.to(() => const LoyaltyProgramScreen()),
         child: Container(
@@ -591,7 +705,10 @@ class BarberDashboardContent extends StatelessWidget {
                   color: const Color(0xFF52B788).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.card_giftcard, color: Color(0xFF52B788)),
+                child: const Icon(
+                  Icons.card_giftcard,
+                  color: Color(0xFF52B788),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -607,14 +724,20 @@ class BarberDashboardContent extends StatelessWidget {
                         if (program != null && !program.isActive) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade200,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
                               'OFF',
-                              style: TextStyle(fontSize: 10, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
                             ),
                           ),
                         ],
@@ -647,23 +770,20 @@ class BarberDashboardContent extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Center(
-          child: Text(
-            'No reviews yet',
-            style: TextStyle(color: Colors.grey),
-          ),
+          child: Text('No reviews yet', style: TextStyle(color: Colors.grey)),
         ),
       );
     }
 
     final reviewController = Get.find<ReviewController>();
-    
+
     return Obx(() {
       if (reviewController.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
       }
-      
+
       final reviews = reviewController.reviews.take(2).toList();
-      
+
       if (reviews.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(16),
@@ -672,14 +792,11 @@ class BarberDashboardContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
-            child: Text(
-              'No reviews yet',
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: Text('No reviews yet', style: TextStyle(color: Colors.grey)),
           ),
         );
       }
-      
+
       return Column(
         children: reviews.map((review) {
           return Container(
@@ -702,7 +819,11 @@ class BarberDashboardContent extends StatelessWidget {
                           ? NetworkImage(review.avatarUrl!)
                           : null,
                       child: review.avatarUrl?.isNotEmpty != true
-                          ? const Icon(Icons.person, size: 18, color: Colors.grey)
+                          ? const Icon(
+                              Icons.person,
+                              size: 18,
+                              color: Colors.grey,
+                            )
                           : null,
                     ),
                     const SizedBox(width: 10),
@@ -742,22 +863,50 @@ class BarberDashboardContent extends StatelessWidget {
   // ==================
   // DAY APPOINTMENTS BOTTOM SHEET
   // ==================
-  void _showDayAppointments(BuildContext context, DateTime date, BusinessOwnerController boController) {
+  void _showDayAppointments(
+    BuildContext context,
+    DateTime date,
+    BusinessOwnerController boController,
+  ) {
     final bookings = boController.allBusinessOwnerBookingOne.value.results;
-    
+
+    // Filter by date AND by barber niche
     final dayBookings = bookings.where((b) {
-      return b.slotTime.year == date.year &&
-             b.slotTime.month == date.month &&
-             b.slotTime.day == date.day;
+      // Date filter using timezone-aware comparison
+      final shopTz = b.shopTimezone ?? 'America/New_York';
+      DateTime slotTimeUtc;
+      try {
+        slotTimeUtc = DateTime.parse(b.slotTimeIso).toUtc();
+      } catch (_) {
+        slotTimeUtc = b.slotTime.toUtc();
+      }
+      final shopSlotTime = TimezoneHelper.toTimezone(slotTimeUtc, shopTz);
+
+      final isMatchingDate =
+          shopSlotTime.year == date.year &&
+          shopSlotTime.month == date.month &&
+          shopSlotTime.day == date.day;
+
+      // Niche filter: check shopNiche first, then fallback to serviceTitle
+      final isBarberService =
+          b.shopNiche?.toLowerCase() == 'barber' ||
+          b.serviceTitle.toLowerCase().contains('barber') ||
+          b.serviceTitle.toLowerCase().contains('haircut') ||
+          b.serviceTitle.toLowerCase().contains('shave') ||
+          b.serviceTitle.toLowerCase().contains('beard') ||
+          b.serviceTitle.toLowerCase().contains('fade');
+
+      return isMatchingDate && isBarberService;
     }).toList();
-    
+
     dayBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));
-    
+
     final dateLabel = DateFormat('EEEE, MMM d').format(date);
-    final isToday = date.day == DateTime.now().day && 
-                    date.month == DateTime.now().month && 
-                    date.year == DateTime.now().year;
-    
+    final isToday =
+        date.day == DateTime.now().day &&
+        date.month == DateTime.now().month &&
+        date.year == DateTime.now().year;
+
     Get.bottomSheet(
       Container(
         constraints: BoxConstraints(
@@ -789,7 +938,10 @@ class BarberDashboardContent extends StatelessWidget {
                     children: [
                       Text(
                         isToday ? 'Today\'s Appointments' : dateLabel,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         '${dayBookings.length} ${dayBookings.length == 1 ? 'appointment' : 'appointments'}',
@@ -812,11 +964,18 @@ class BarberDashboardContent extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey[300]),
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 64,
+                            color: Colors.grey[300],
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'No appointments',
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
                           ),
                         ],
                       ),
@@ -828,9 +987,12 @@ class BarberDashboardContent extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final booking = dayBookings[index];
                         final timeText = booking.shopTimezone != null
-                            ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+                            ? formatApiTimeInTimezone(
+                                booking.slotTimeIso,
+                                booking.shopTimezone!,
+                              )
                             : DateFormat('hh:mm a').format(booking.slotTime);
-                        
+
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
@@ -842,7 +1004,10 @@ class BarberDashboardContent extends StatelessWidget {
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFFE5E7),
                                   borderRadius: BorderRadius.circular(8),
@@ -862,11 +1027,16 @@ class BarberDashboardContent extends StatelessWidget {
                                   children: [
                                     Text(
                                       booking.userName ?? 'Customer',
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                     Text(
                                       booking.serviceTitle,
-                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
                                   ],
                                 ),
