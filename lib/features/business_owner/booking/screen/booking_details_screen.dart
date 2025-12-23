@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
+import 'package:fidden/core/utils/time_display_helper.dart';
 import 'package:fidden/features/business_owner/home/model/business_owner_booking_model.dart';
 import 'package:fidden/features/user/checkout/controller/checkout_controller.dart';
 
@@ -35,10 +35,18 @@ class BookingDetailsScreen extends StatelessWidget {
     );
   }
 
-  String _fmtDate(DateTime dt) => DateFormat('EEE, MMM d, yyyy').format(dt);
-  String _fmtTime(DateTime dt) => DateFormat('h:mm a').format(dt);
+  // Use centralized time display helper for consistent timezone handling
+  String _fmtDate(OwnerBookingItem b) => TimeDisplayHelper.formatDateForPro(
+    b.slotTimeIso,
+    b.shopTimezone,
+    format: 'EEE, MMM d, yyyy',
+  );
+
+  String _fmtTime(OwnerBookingItem b) =>
+      TimeDisplayHelper.formatTimeForPro(b.slotTimeIso, b.shopTimezone);
+
   String _fmtMeta(DateTime dt) =>
-    DateFormat('MMM d, yyyy • h:mm a').format(dt);
+      TimeDisplayHelper.formatDateTimeForClient(dt.toIso8601String());
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +60,10 @@ class BookingDetailsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: const Text('Booking Details',
-            style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Booking Details',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
@@ -73,19 +83,26 @@ class BookingDetailsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name,
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (b.userEmail.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          b.userEmail,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w900)),
-                      if (b.userEmail.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(b.userEmail,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Color(0xFF6B7280),
-                                fontWeight: FontWeight.w600)),
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 10),
                       Wrap(
@@ -130,10 +147,7 @@ class BookingDetailsScreen extends StatelessWidget {
                   value: b.shopName.isEmpty ? '—' : b.shopName,
                 ),
                 const SizedBox(height: 12),
-                _DateTimeGrid(
-                  date: _fmtDate(b.slotTime),
-                  time: _fmtTime(b.slotTime),
-                ),
+                _DateTimeGrid(date: _fmtDate(b), time: _fmtTime(b)),
                 if (durationMins != null) ...[
                   const SizedBox(height: 12),
                   KVRow(
@@ -159,7 +173,6 @@ class BookingDetailsScreen extends StatelessWidget {
                   value: _fmtMeta(b.createdAt),
                 ),
                 const SizedBox(height: 12),
-          
               ],
             ),
           ),
@@ -228,9 +241,13 @@ class SectionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (title != null) ...[
-              Text(title!,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w900, fontSize: 16)),
+              Text(
+                title!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
               const SizedBox(height: 12),
             ],
             child,
@@ -325,22 +342,13 @@ class _DateTimeGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        KVRow(
-          icon: Icons.calendar_month_rounded,
-          label: 'Date',
-          value: date,
-        ),
+        KVRow(icon: Icons.calendar_month_rounded, label: 'Date', value: date),
         const SizedBox(height: 12),
-        KVRow(
-          icon: Icons.access_time_rounded,
-          label: 'Time',
-          value: time,
-        ),
+        KVRow(icon: Icons.access_time_rounded, label: 'Time', value: time),
       ],
     );
   }
 }
-
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.imageUrl});
@@ -452,10 +460,10 @@ class _CheckoutButtonState extends State<_CheckoutButton> {
 
   Future<void> _initiateCheckout() async {
     setState(() => _isLoading = true);
-    
+
     final controller = Get.put(CheckoutController());
     final success = await controller.initiateCheckout(widget.bookingId);
-    
+
     if (mounted) {
       setState(() => _isLoading = false);
       if (success) {
@@ -489,7 +497,9 @@ class _CheckoutButtonState extends State<_CheckoutButton> {
           backgroundColor: const Color(0xFF10B981),
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           elevation: 0,
         ),
       ),

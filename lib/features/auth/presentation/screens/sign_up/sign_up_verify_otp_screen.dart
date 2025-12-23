@@ -50,7 +50,8 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
     // This listener is helpful for formatting and can be kept
     _otpTEController.addListener(() {
       final digitsOnly = _otpTEController.text.replaceAll(RegExp(r'\D'), '');
-      if (digitsOnly != _otpTEController.text || digitsOnly.length > _otpLength) {
+      if (digitsOnly != _otpTEController.text ||
+          digitsOnly.length > _otpLength) {
         final clamped = digitsOnly.substring(
           0,
           digitsOnly.length.clamp(0, _otpLength),
@@ -103,7 +104,12 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxW),
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 16),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                bottomInset + MediaQuery.of(context).viewPadding.bottom + 24,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -113,7 +119,7 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
                     const CustomAppBar(
                       firstText: 'Verification code',
                       secondText:
-                      'Please check your email. We have to sent the code verification to your mail.',
+                          'Please check your email. We have to sent the code verification to your mail.',
                     ),
                     SizedBox(height: getHeight(36)),
                     PinCodeTextField(
@@ -182,12 +188,12 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
                           onPressed: _signUpController.isLoading.value
                               ? null
                               : () async {
-                            // CORRECTED: Call the method that resends a sign-up OTP
-                            await _signUpController.forgetEmail(
-                              widget.email,
-                            );
-                            _startResendCodeTimer();
-                          },
+                                  // CORRECTED: Call the method that resends a sign-up OTP
+                                  await _signUpController.forgetEmail(
+                                    widget.email,
+                                  );
+                                  _startResendCodeTimer();
+                                },
                           child: const Text(
                             'Resend Code',
                             style: TextStyle(
@@ -203,31 +209,31 @@ class _SignUpVerifyOtpScreenState extends State<SignUpVerifyOtpScreen> {
 
                     Obx(
                       // CORRECTED: Check the correct controller's loading state
-                          () => _signUpController.isLoading.value
+                      () => _signUpController.isLoading.value
                           ? const Center(
-                        child: SpinKitWave(color: _primary, size: 30.0),
-                      )
+                              child: SpinKitWave(color: _primary, size: 30.0),
+                            )
                           : SizedBox(
-                        height: getHeight(56),
-                        width: double.infinity,
-                        child: CustomButton(
-                          onPressed: () {
-                            // CORRECTED: Call the new verify method
-                            _signUpController.verifySignUpOtp(
-                              widget.email,
-                              _otpTEController.text.trim(),
-                            );
-                          },
-                          child: Text(
-                            'Verify',
-                            style: TextStyle(
-                              fontSize: getWidth(18),
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              height: getHeight(56),
+                              width: double.infinity,
+                              child: CustomButton(
+                                onPressed: () {
+                                  // CORRECTED: Call the new verify method
+                                  _signUpController.verifySignUpOtp(
+                                    widget.email,
+                                    _otpTEController.text.trim(),
+                                  );
+                                },
+                                child: Text(
+                                  'Verify',
+                                  style: TextStyle(
+                                    fontSize: getWidth(18),
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
                     ),
 
                     SizedBox(height: getHeight(16)),

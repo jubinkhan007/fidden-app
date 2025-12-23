@@ -2,13 +2,10 @@
 
 import 'dart:developer';
 
-
-
 class AppUrls {
   AppUrls._();
 
-  static const String _baseUrl =
-      'https://backend.fidden.io';
+  static const String _baseUrl = 'https://backend.fidden.io';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
     return 'wss://backend.fidden.io/ws/chat/?token=$accessToken';
@@ -34,7 +31,8 @@ class AppUrls {
   static const String activeBooking = '$_baseUrl/booking/users?status=pending';
   static const String completeBooking =
       '$_baseUrl/booking/users?status=completed';
-  static String cancelBooking(int bookingId) => '$_baseUrl/payments/bookings/cancel/$bookingId/';
+  static String cancelBooking(int bookingId) =>
+      '$_baseUrl/payments/bookings/cancel/$bookingId/';
 
   static String userBookings(String email, {bool excludeActive = false}) {
     final base = '$_baseUrl/payments/bookings/';
@@ -44,17 +42,23 @@ class AppUrls {
     };
     return Uri.parse(base).replace(queryParameters: qp).toString();
   }
+
+  static String userBookingDetail(int id) => '$_baseUrl/payments/bookings/$id/';
+
   static const String createReview = '$_baseUrl/api/reviews/';
   static const String allShops = '$_baseUrl/api/users/shops/';
   static const String serviceDetails =
       '$_baseUrl/api/shops'; // ✅ Added this line
 
+  // transactions
+  static String transactions(int shopId) =>
+      '$_baseUrl/payments/transactions/?shop=$shopId';
 
-// transactions
-  static String transactions (int shopId) => '$_baseUrl/payments/transactions/?shop=$shopId';
+  // Transaction aggregation for pro dashboard (V1 backend fix)
+  static String transactionsAggregate(int shopId) =>
+      '$_baseUrl/payments/shops/$shopId/transactions/aggregate/';
 
-// owner-booking
-  
+  // owner-booking
 
   //inbox-messaging
   static const String threads = '$_baseUrl/api/threads/';
@@ -87,7 +91,7 @@ class AppUrls {
   static const String businessProfile = '$_baseUrl/api/shop/';
   static editBusinessProfile(String id) => '$_baseUrl/api/shop/$id/';
   static deleteShop(String id) => '$_baseUrl/api/shop/$id/';
-  static getSingleService(String id) => '$_baseUrl/api/services/$id/';  
+  static getSingleService(String id) => '$_baseUrl/api/services/$id/';
   static updateService(String id) => '$_baseUrl/api/services/$id/';
 
   // Service
@@ -132,20 +136,28 @@ class AppUrls {
 
   static const String subscriptionPlans = '$_baseUrl/subscriptions/plans/';
   static const String subscriptionDetails = '$_baseUrl/subscriptions/details/';
-  static const String createCheckoutSession = '$_baseUrl/subscriptions/create-checkout-session/';
-  static const String cancelSubscription = '$_baseUrl/subscriptions/cancel-subscription/';
+  static const String createCheckoutSession =
+      '$_baseUrl/subscriptions/create-checkout-session/';
+  static const String cancelSubscription =
+      '$_baseUrl/subscriptions/cancel-subscription/';
 
   // Owner PayPal Subscription
-  static const String createPayPalSubOrder = '$_baseUrl/payments/paypal/subscription/create-order/';
-  static const String capturePayPalSubOrder = '$_baseUrl/payments/paypal/subscription/capture-order/';
+  static const String createPayPalSubOrder =
+      '$_baseUrl/payments/paypal/subscription/create-order/';
+  static const String capturePayPalSubOrder =
+      '$_baseUrl/payments/paypal/subscription/capture-order/';
 
   // Owner PayPal AI Add-on
-  static const String createPayPalAiOrder = '$_baseUrl/payments/paypal/ai-addon/create-order/';
-  static const String capturePayPalAiOrder = '$_baseUrl/payments/paypal/ai-addon/capture-order/';
+  static const String createPayPalAiOrder =
+      '$_baseUrl/payments/paypal/ai-addon/create-order/';
+  static const String capturePayPalAiOrder =
+      '$_baseUrl/payments/paypal/ai-addon/capture-order/';
 
-
-  static String ownerSlots({required int shopId, required int serviceId, required String date})
-  => '${_baseUrl}/api/shops/$shopId/slots/?service=$serviceId&date=$date';
+  static String ownerSlots({
+    required int shopId,
+    required int serviceId,
+    required String date,
+  }) => '${_baseUrl}/api/shops/$shopId/slots/?service=$serviceId&date=$date';
   // payment
   static String paymentIntent(int bookingId) =>
       '$_baseUrl/payments/payment-intent/$bookingId/';
@@ -157,7 +169,7 @@ class AppUrls {
   static const String saveCard = "$_baseUrl/payments/save-new-card";
   static String getMyCard(String customerId) =>
       '$_baseUrl/payments/$customerId';
-  
+
   // Checkout (Fidden Pay)
   static String initiateCheckout(int bookingId) =>
       '$_baseUrl/payments/initiate-checkout/$bookingId/';
@@ -171,10 +183,12 @@ class AppUrls {
   static const String getOwnerCoupons = '$_baseUrl/api/coupons/';
   static String updateCoupon(int id) => '$_baseUrl/api/coupons/$id/';
 
-// user coupons
-static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/coupons/?shop_id=$shopId&service_id=$serviceId';
+  // user coupons
+  static String UserCoupon(int shopId, int serviceId) =>
+      '${_baseUrl}/api/users/coupons/?shop_id=$shopId&service_id=$serviceId';
   // seller booking
-  static String ownerBooking (String shop_id) => '$_baseUrl/payments/bookings/?shop_id=$shop_id';
+  static String ownerBooking(String shop_id) =>
+      '$_baseUrl/payments/bookings/?shop_id=$shop_id';
 
   // Add reminder
   static createReminder(String userId) =>
@@ -194,13 +208,14 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   static String searchBusinessProfile = "$_baseUrl/business-profile";
 
   //analytics
- static const analytics = '$_baseUrl/api/analytics';
+  static const analytics = '$_baseUrl/api/analytics';
 
- // ai
+  // ai
 
   static const String aiReport = '$_baseUrl/api/weekly-summary/latest/';
   static const String generateContent = '$_baseUrl/api/weekly-summary/';
-  static const String checkoutAiAddon = '$_baseUrl/subscriptions/create-ai-addon-checkout-session/';
+  static const String checkoutAiAddon =
+      '$_baseUrl/subscriptions/create-ai-addon-checkout-session/';
   static const cancelAiAddon = '$_baseUrl/subscriptions/cancel-ai-addon/';
 
   static String markNoShow(int bookingId) =>
@@ -217,7 +232,7 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
       '$_baseUrl/payments/paypal/capture-order/';
 
   // ========== Niche-Specific Endpoints ==========
-  
+
   // Tattoo Artist - Portfolio
   static const String portfolioList = '$_baseUrl/api/portfolio/';
   static String portfolioItem(int id) => '$_baseUrl/api/portfolio/$id/';
@@ -225,7 +240,7 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   // Gallery (Universal for all niches)
   static const String galleryList = '$_baseUrl/api/gallery/';
   static String galleryItem(int id) => '$_baseUrl/api/gallery/$id/';
-  static String shopGallery(int shopId, {int page = 1}) => 
+  static String shopGallery(int shopId, {int page = 1}) =>
       '$_baseUrl/api/shops/$shopId/gallery/?page=$page';
 
   // Tattoo Artist - Design Requests
@@ -233,13 +248,17 @@ static String UserCoupon(int shopId, int serviceId) => '${_baseUrl}/api/users/co
   static String designRequest(int id) => '$_baseUrl/api/design-requests/$id/';
 
   // Tattoo Artist - Consent Forms
-  static const String consentTemplates = '$_baseUrl/api/consent-forms/templates/';
-  static String consentTemplate(int id) => '$_baseUrl/api/consent-forms/templates/$id/';
-  static const String signedConsentForms = '$_baseUrl/api/consent-forms/signed/';
-  static String signedConsentForm(int id) => '$_baseUrl/api/consent-forms/signed/$id/';
+  static const String consentTemplates =
+      '$_baseUrl/api/consent-forms/templates/';
+  static String consentTemplate(int id) =>
+      '$_baseUrl/api/consent-forms/templates/$id/';
+  static const String signedConsentForms =
+      '$_baseUrl/api/consent-forms/signed/';
+  static String signedConsentForm(int id) =>
+      '$_baseUrl/api/consent-forms/signed/$id/';
 
   // Tattoo Artist - ID Verification
   static const String idVerificationList = '$_baseUrl/api/id-verification/';
-  static String idVerificationItem(int id) => '$_baseUrl/api/id-verification/$id/';
-
+  static String idVerificationItem(int id) =>
+      '$_baseUrl/api/id-verification/$id/';
 }

@@ -24,12 +24,11 @@ import '../../../../core/utils/constants/api_constants.dart';
 import '../../subscription/controller/subscription_controller.dart';
 import '../data/business_profile_model.dart';
 
-
 /// Simple, UI-friendly (start,end) for a day. Stored as "hh:mm AM/PM".
 @immutable
 class Range {
   final String start; // e.g. "09:00 AM"
-  final String end;   // e.g. "06:00 PM"
+  final String end; // e.g. "06:00 PM"
   const Range(this.start, this.end);
 
   Range copyWith({String? start, String? end}) =>
@@ -37,8 +36,6 @@ class Range {
 }
 
 typedef BusinessHoursMap = Map<String, List<Range>>; // monday->[Range(),...]
-
-
 
 class BusinessOwnerProfileController extends GetxController {
   // ---- UI state ----
@@ -58,9 +55,9 @@ class BusinessOwnerProfileController extends GetxController {
   var documents = <File>[].obs;
 
   // Cancellation policy fields (strings bound to inputs)
-  final freeCancellationHours = ''.obs;     // e.g. "24"
+  final freeCancellationHours = ''.obs; // e.g. "24"
   final cancellationFeePercentage = ''.obs; // e.g. "50"
-  final noRefundHours = ''.obs;             // e.g. "4"
+  final noRefundHours = ''.obs; // e.g. "4"
 
   // Deposit UI state
   final isDepositRequired = false.obs;
@@ -68,7 +65,7 @@ class BusinessOwnerProfileController extends GetxController {
 
   // Shop timezone (IANA format, e.g., "America/New_York")
   final timeZone = 'America/New_York'.obs;
-  
+
   // Social Links
   final instagramUrl = ''.obs;
   final tiktokUrl = ''.obs;
@@ -83,12 +80,12 @@ class BusinessOwnerProfileController extends GetxController {
       : Get.put(SubscriptionController());
 
   bool get _isFoundation => sub.isFoundation;
-  bool get _isMomentum   => sub.isMomentum;
-  bool get _isIcon       => sub.isIcon;
+  bool get _isMomentum => sub.isMomentum;
+  bool get _isIcon => sub.isIcon;
 
   // What each tier can edit
   bool get canEditDeposit => _isMomentum || _isIcon;
-  bool get canEditPolicy  => _isIcon;
+  bool get canEditPolicy => _isIcon;
 
   // For upgrade messages
   // void _toastUpgradeForPolicy() =>
@@ -107,6 +104,7 @@ class BusinessOwnerProfileController extends GetxController {
 
   // Add a Completer to manage the initial loading state
   Completer<void> _initCompleter = Completer<void>();
+
   /// Other controllers can wait on this to know when the profile is ready.
   Future<void> get onProfileLoaded => _initCompleter.future;
 
@@ -124,12 +122,14 @@ class BusinessOwnerProfileController extends GetxController {
     });
 
     WidgetsBinding.instance.addObserver(
-      _LifecycleObserver(onResumed: () async {
-        if (_awaitingOnboarding) {
-          _awaitingOnboarding = false;
-          await checkStripeStatusIfPossible();
-        }
-      }),
+      _LifecycleObserver(
+        onResumed: () async {
+          if (_awaitingOnboarding) {
+            _awaitingOnboarding = false;
+            await checkStripeStatusIfPossible();
+          }
+        },
+      ),
     );
   }
 
@@ -153,7 +153,6 @@ class BusinessOwnerProfileController extends GetxController {
       _seedUiFromProfileData();
 
       await checkStripeStatusIfPossible();
-
     } catch (e) {
       if (kDebugMode) log('Error during _init: $e');
     } finally {
@@ -181,15 +180,17 @@ class BusinessOwnerProfileController extends GetxController {
 
     // Times
     startTime.value = data.startTime ?? '';
-    endTime.value   = data.endTime   ?? '';
+    endTime.value = data.endTime ?? '';
 
     // Cancellation policy (defaults when missing)
-    freeCancellationHours.value     = (data.freeCancellationHours ?? 24).toString();
-    cancellationFeePercentage.value = (data.cancellationFeePercentage ?? 0).toString();
-    noRefundHours.value             = (data.noRefundHours ?? 0).toString();
+    freeCancellationHours.value = (data.freeCancellationHours ?? 24).toString();
+    cancellationFeePercentage.value = (data.cancellationFeePercentage ?? 0)
+        .toString();
+    noRefundHours.value = (data.noRefundHours ?? 0).toString();
 
     // Deposit
-    defaultDepositPercentage.value = (data.defaultDepositPercentage ?? 0).toString();
+    defaultDepositPercentage.value = (data.defaultDepositPercentage ?? 0)
+        .toString();
     isDepositRequired.value = data.isDepositRequired ?? false;
 
     // Timezone
@@ -208,21 +209,34 @@ class BusinessOwnerProfileController extends GetxController {
     ensureBusinessHoursForOpenDays();
   }
 
-
   void _seedBusinessHoursFromData(Data? d) {
     // Prefer API business_hours - already converted to AM/PM by the model
     if (d?.businessHours != null && d!.businessHours!.isNotEmpty) {
       businessHours
         ..clear()
-        ..addAll(d.businessHours!.map((k, v) => MapEntry(
-          k.toLowerCase(), // Already full day name from model (e.g., "monday")
-          v.map((pair) => Range(pair.$1, pair.$2)).toList(), // Already AM/PM format
-        )));
+        ..addAll(
+          d.businessHours!.map(
+            (k, v) => MapEntry(
+              k.toLowerCase(), // Already full day name from model (e.g., "monday")
+              v
+                  .map((pair) => Range(pair.$1, pair.$2))
+                  .toList(), // Already AM/PM format
+            ),
+          ),
+        );
       return;
     }
 
     // Fallback: openDays + single legacy range
-    const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    const days = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
     final open = (d?.openDays ?? []).map((e) => e.toLowerCase()).toSet();
 
     final s = (d?.startTime != null && d!.startTime!.isNotEmpty)
@@ -249,7 +263,8 @@ class BusinessOwnerProfileController extends GetxController {
   /// Convert 24-hour time (e.g., "09:00", "18:30") to AM/PM format (e.g., "09:00 AM", "06:30 PM")
   String _from24ToUi(String time24) {
     // If already in AM/PM format, return as-is
-    if (time24.toUpperCase().contains('AM') || time24.toUpperCase().contains('PM')) {
+    if (time24.toUpperCase().contains('AM') ||
+        time24.toUpperCase().contains('PM')) {
       return time24;
     }
 
@@ -272,7 +287,7 @@ class BusinessOwnerProfileController extends GetxController {
 
   void onDefaultTimeChanged({required bool isStart, required String value}) {
     final oldStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
-    final oldEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+    final oldEnd = endTime.value.isNotEmpty ? endTime.value : '06:00 PM';
 
     if (isStart) {
       startTime.value = value;
@@ -288,25 +303,41 @@ class BusinessOwnerProfileController extends GetxController {
     String norm(String s) {
       // "09:00 AM" -> "9:00am"
       // "9:00 a.m." -> "9:00am"
-      var n = s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '').replaceAll('.', '');
+      var n = s
+          .trim()
+          .toLowerCase()
+          .replaceAll(RegExp(r'\s+'), '')
+          .replaceAll('.', '');
       if (n.startsWith('0') && n.length > 1) {
         n = n.substring(1);
       }
       return n;
     }
+
     return norm(t1) == norm(t2);
   }
 
   /// Update businessHours for days that were still using the old defaults,
   /// and seed any open-but-empty day with the new defaults.
-  void _propagateDefaultChange({required String oldStart, required String oldEnd}) {
+  void _propagateDefaultChange({
+    required String oldStart,
+    required String oldEnd,
+  }) {
     final defStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
-    final defEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+    final defEnd = endTime.value.isNotEmpty ? endTime.value : '06:00 PM';
 
     // compare in lowercase for safety
     final openLower = openDays.map((d) => d.toLowerCase()).toSet();
 
-    for (final day in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) {
+    for (final day in [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ]) {
       final ranges = businessHours[day] ?? const [];
 
       if (openLower.contains(day)) {
@@ -317,11 +348,15 @@ class BusinessOwnerProfileController extends GetxController {
           // Check if it matches the OLD user setting OR the system fallback (9-6)
           // This fixes the issue where days stuck at 9-6 wouldn't update
           final r = ranges.first;
-          final matchesOld = _areTimesEqual(r.start, oldStart) && _areTimesEqual(r.end, oldEnd);
-          final matchesSystemDefault = _areTimesEqual(r.start, '09:00 AM') && _areTimesEqual(r.end, '06:00 PM');
-          
+          final matchesOld =
+              _areTimesEqual(r.start, oldStart) &&
+              _areTimesEqual(r.end, oldEnd);
+          final matchesSystemDefault =
+              _areTimesEqual(r.start, '09:00 AM') &&
+              _areTimesEqual(r.end, '06:00 PM');
+
           if (matchesOld || matchesSystemDefault) {
-             businessHours[day] = [Range(defStart, defEnd)];
+            businessHours[day] = [Range(defStart, defEnd)];
           }
         }
       } else {
@@ -334,13 +369,16 @@ class BusinessOwnerProfileController extends GetxController {
 
   // Parse "hh:mm AM/PM" -> "HH:mm"
   String _uiTo24(String ui) {
-    final reg = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$', caseSensitive: false);
+    final reg = RegExp(
+      r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$',
+      caseSensitive: false,
+    );
     final m = reg.firstMatch(ui.trim());
     if (m == null) {
       // Try 24-hour format
       final m24 = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*$').firstMatch(ui.trim());
       if (m24 != null) {
-        return '${m24.group(1)!.padLeft(2,'0')}:${m24.group(2)!}';
+        return '${m24.group(1)!.padLeft(2, '0')}:${m24.group(2)!}';
       }
       return ui;
     }
@@ -349,33 +387,37 @@ class BusinessOwnerProfileController extends GetxController {
     final ap = m.group(3)!.toUpperCase();
     if (ap == 'PM' && h != 12) h += 12;
     if (ap == 'AM' && h == 12) h = 0;
-    return '${h.toString().padLeft(2,'0')}:$mm';
+    return '${h.toString().padLeft(2, '0')}:$mm';
   }
 
   bool _isValidRange(Range r) {
     // very light validation: start < end when converted to minutes
     int _mins(String ui) {
       // Try 12-hour format
-      final m = RegExp(r'(\d{1,2}):(\d{2})\s*([AP]M)', caseSensitive: false).firstMatch(ui);
+      final m = RegExp(
+        r'(\d{1,2}):(\d{2})\s*([AP]M)',
+        caseSensitive: false,
+      ).firstMatch(ui);
       if (m != null) {
         int hh = int.parse(m.group(1)!);
         final mm = int.parse(m.group(2)!);
         final ap = m.group(3)!.toUpperCase();
         if (ap == 'PM' && hh != 12) hh += 12;
         if (ap == 'AM' && hh == 12) hh = 0;
-        return hh*60 + mm;
+        return hh * 60 + mm;
       }
-      
+
       // Try 24-hour format
       final m24 = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*$').firstMatch(ui.trim());
       if (m24 != null) {
         int hh = int.parse(m24.group(1)!);
         final mm = int.parse(m24.group(2)!);
-        return hh*60 + mm;
+        return hh * 60 + mm;
       }
-      
+
       throw FormatException("Invalid time format: $ui");
     }
+
     try {
       return _mins(r.start) < _mins(r.end);
     } catch (_) {
@@ -418,7 +460,7 @@ class BusinessOwnerProfileController extends GetxController {
       Get.back(); // close loader
       _awaitingOnboarding = true;
       final completed = await Get.to<bool>(
-            () => StripeWebViewScreen(onboardingUrl: link.url),
+        () => StripeWebViewScreen(onboardingUrl: link.url),
       );
 
       // Always re-verify when you come back
@@ -430,7 +472,9 @@ class BusinessOwnerProfileController extends GetxController {
       }
     } catch (_) {
       if (Get.isDialogOpen ?? false) Get.back();
-      AppSnackBar.showError('Could not start Stripe onboarding. Please try again.');
+      AppSnackBar.showError(
+        'Could not start Stripe onboarding. Please try again.',
+      );
     }
   }
 
@@ -477,7 +521,13 @@ class BusinessOwnerProfileController extends GetxController {
 
   void pickDay({required bool isStart}) async {
     const days = [
-      'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
     ];
     String? selectedDay = await showDialog<String>(
       context: Get.context!,
@@ -488,10 +538,12 @@ class BusinessOwnerProfileController extends GetxController {
           width: 200,
           child: ListView(
             children: days
-                .map((day) => ListTile(
-              title: Text(day),
-              onTap: () => Navigator.pop(context, day),
-            ))
+                .map(
+                  (day) => ListTile(
+                    title: Text(day),
+                    onTap: () => Navigator.pop(context, day),
+                  ),
+                )
                 .toList(),
           ),
         ),
@@ -515,7 +567,13 @@ class BusinessOwnerProfileController extends GetxController {
 
     if (picked != null) {
       final now = DateTime.now();
-      final full = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+      final full = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        picked.hour,
+        picked.minute,
+      );
 
       final formatted = DateFormat('hh:mm a')
           .format(full)
@@ -574,7 +632,9 @@ class BusinessOwnerProfileController extends GetxController {
     } catch (e) {
       profileDetails.value = GetBusinesModel(data: null);
       if (!silentAuthErrors) {
-        AppSnackBar.showError('An error occurred while fetching profile details.');
+        AppSnackBar.showError(
+          'An error occurred while fetching profile details.',
+        );
       }
       if (kDebugMode) log('Fetch profile details error: $e');
     } finally {
@@ -624,14 +684,13 @@ class BusinessOwnerProfileController extends GetxController {
   bool _validPolicy(int freeH, int feePct, int noRefundH) {
     if (freeH < 0 || noRefundH < 0) return false;
     if (feePct < 0 || feePct > 100) return false;
-    if (noRefundH >= freeH) return false; // no-refund must be inside free window
+    if (noRefundH >= freeH)
+      return false; // no-refund must be inside free window
     return true;
   }
 
-
   // ---- Day key maps for API <-> UI ----
-  static const Map<String, String> _uiLowerFull_to_apiShort =
-  {
+  static const Map<String, String> _uiLowerFull_to_apiShort = {
     'monday': 'mon',
     'tuesday': 'tue',
     'wednesday': 'wed',
@@ -641,8 +700,7 @@ class BusinessOwnerProfileController extends GetxController {
     'sunday': 'sun',
   };
 
-  static const Map<String, String> _apiShort_to_uiLowerFull =
-  {
+  static const Map<String, String> _apiShort_to_uiLowerFull = {
     'mon': 'monday',
     'tue': 'tuesday',
     'wed': 'wednesday',
@@ -653,20 +711,19 @@ class BusinessOwnerProfileController extends GetxController {
   };
 
   String _toApiDayKeyShort3(String anyUiKey) {
-    final k = anyUiKey.trim().toLowerCase();     // "monday" etc.
-    return _uiLowerFull_to_apiShort[k] ?? k;     // -> "mon"
+    final k = anyUiKey.trim().toLowerCase(); // "monday" etc.
+    return _uiLowerFull_to_apiShort[k] ?? k; // -> "mon"
   }
 
   String _fromApiDayKeyShort3(String apiKey) {
-    final k = apiKey.trim().toLowerCase();       // "mon" etc.
-    return _apiShort_to_uiLowerFull[k] ?? k;     // -> "monday"
+    final k = apiKey.trim().toLowerCase(); // "mon" etc.
+    return _apiShort_to_uiLowerFull[k] ?? k; // -> "monday"
   }
-
 
   Map<String, dynamic> _serializeBusinessHoursForApi() {
     final Map<String, dynamic> out = {};
     businessHours.forEach((uiKeyLower, ranges) {
-      final apiKey = _toApiDayKeyShort3(uiKeyLower);  // <-- "mon"
+      final apiKey = _toApiDayKeyShort3(uiKeyLower); // <-- "mon"
       out[apiKey] = ranges.isEmpty
           ? []
           : ranges.map((r) => [_uiTo24(r.start), _uiTo24(r.end)]).toList();
@@ -674,21 +731,37 @@ class BusinessOwnerProfileController extends GetxController {
     return out;
   }
 
-
   List<String> _deriveCloseDaysFromBH() {
-    const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    const days = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
     return days.where((d) => (businessHours[d]?.isEmpty ?? true)).toList();
   }
 
-
   void ensureBusinessHoursForOpenDays() {
-    final defaultStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
-    final defaultEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+    final defaultStart = startTime.value.isNotEmpty
+        ? startTime.value
+        : '09:00 AM';
+    final defaultEnd = endTime.value.isNotEmpty ? endTime.value : '06:00 PM';
 
     // Canonical title-case names in openDays, but BH map keys are lowercase.
     final openSet = openDays.map((d) => d.toLowerCase()).toSet();
 
-    for (final d in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) {
+    for (final d in [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ]) {
       final isOpen = openSet.contains(d);
       final cur = businessHours[d];
 
@@ -705,55 +778,56 @@ class BusinessOwnerProfileController extends GetxController {
     businessHours.refresh();
   }
 
-/// Set open days from UI picker (always canonicalize to Monday..Sunday).
-void setOpenDays(Set<String> days) {
-  final norm = days.map(_normalizeDay).where((e) => e.isNotEmpty).toSet();
+  /// Set open days from UI picker (always canonicalize to Monday..Sunday).
+  void setOpenDays(Set<String> days) {
+    final norm = days.map(_normalizeDay).where((e) => e.isNotEmpty).toSet();
 
-  // Update openDays
-  openDays
-    ..clear()
-    ..addAll(norm);
+    // Update openDays
+    openDays
+      ..clear()
+      ..addAll(norm);
 
-  // Also reflect this in per-day businessHours:
-  // - if a day is open but has no ranges yet, give it one default range
-  // - if a day is closed, clear its ranges
-  final defaultStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
-  final defaultEnd   = endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM';
+    // Also reflect this in per-day businessHours:
+    // - if a day is open but has no ranges yet, give it one default range
+    // - if a day is closed, clear its ranges
+    final defaultStart = startTime.value.isNotEmpty
+        ? startTime.value
+        : '09:00 AM';
+    final defaultEnd = endTime.value.isNotEmpty ? endTime.value : '06:00 PM';
 
-  for (final dLower in _allDaysLower) {
-    final dTitle = _normalizeDay(dLower);
-    final shouldBeOpen = norm.contains(dTitle);
-    final current = businessHours[dLower] ?? <Range>[];
+    for (final dLower in _allDaysLower) {
+      final dTitle = _normalizeDay(dLower);
+      final shouldBeOpen = norm.contains(dTitle);
+      final current = businessHours[dLower] ?? <Range>[];
 
-    if (shouldBeOpen) {
-      if (current.isEmpty) {
-        businessHours[dLower] = [Range(defaultStart, defaultEnd)];
+      if (shouldBeOpen) {
+        if (current.isEmpty) {
+          businessHours[dLower] = [Range(defaultStart, defaultEnd)];
+        } else {
+          businessHours[dLower] = current; // keep user edits
+        }
       } else {
-        businessHours[dLower] = current; // keep user edits
+        businessHours[dLower] = []; // closed
       }
-    } else {
-      businessHours[dLower] = []; // closed
     }
+    businessHours.refresh();
   }
-  businessHours.refresh();
-}
-
 
   /// Title-case a weekday ("monday" -> "Monday")
   String _titleCaseDay(String d) =>
       d.isEmpty ? d : d[0].toUpperCase() + d.substring(1).toLowerCase();
 
-/// Derive openDays from businessHours (used when toggling day switches).
-void syncOpenDaysFromBH() {
-  final Set<String> open = {};
-  for (final dLower in _allDaysLower) {
-    final isOpen = (businessHours[dLower]?.isNotEmpty ?? false);
-    if (isOpen) open.add(_normalizeDay(dLower));
+  /// Derive openDays from businessHours (used when toggling day switches).
+  void syncOpenDaysFromBH() {
+    final Set<String> open = {};
+    for (final dLower in _allDaysLower) {
+      final isOpen = (businessHours[dLower]?.isNotEmpty ?? false);
+      if (isOpen) open.add(_normalizeDay(dLower));
+    }
+    openDays
+      ..clear()
+      ..addAll(open);
   }
-  openDays
-    ..clear()
-    ..addAll(open);
-}
 
   /// Ensure businessHours matches `openDays`.
   /// - Any *open* day with no ranges gets a single default interval
@@ -761,14 +835,24 @@ void syncOpenDaysFromBH() {
   /// - Any *closed* day gets cleared ([]).
   void applyOpenDaysToBH({String? overrideStart, String? overrideEnd}) {
     // ensure all 7 keys exist
-    const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    const days = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
     for (final d in days) {
       businessHours.putIfAbsent(d, () => []);
     }
 
-    final defaultStart = overrideStart ?? (startTime.value.isNotEmpty ? startTime.value : '09:00 AM');
-    final defaultEnd   = overrideEnd   ?? (endTime.value.isNotEmpty   ? endTime.value   : '06:00 PM');
-    
+    final defaultStart =
+        overrideStart ??
+        (startTime.value.isNotEmpty ? startTime.value : '09:00 AM');
+    final defaultEnd =
+        overrideEnd ?? (endTime.value.isNotEmpty ? endTime.value : '06:00 PM');
 
     // normalize set for lookup
     final openSet = openDays.map((e) => e.toLowerCase()).toSet();
@@ -792,10 +876,22 @@ void syncOpenDaysFromBH() {
 
   // --- Canonical days and normalizer ---
   static const List<String> _allDaysTitle = <String>[
-    'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
   ];
   static const List<String> _allDaysLower = <String>[
-    'monday','tuesday','wednesday','thursday','friday','saturday','sunday'
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
   ];
 
   static const Map<String, String> _dayCanonical = {
@@ -804,9 +900,15 @@ void syncOpenDaysFromBH() {
     // tuesday
     't': 'Tuesday', 'tue': 'Tuesday', 'tues': 'Tuesday', 'tuesday': 'Tuesday',
     // wednesday
-    'w': 'Wednesday', 'wed': 'Wednesday', 'weds': 'Wednesday', 'wednesday': 'Wednesday',
+    'w': 'Wednesday',
+    'wed': 'Wednesday',
+    'weds': 'Wednesday',
+    'wednesday': 'Wednesday',
     // thursday
-    'thu': 'Thursday', 'thur': 'Thursday', 'thurs': 'Thursday', 'thursday': 'Thursday',
+    'thu': 'Thursday',
+    'thur': 'Thursday',
+    'thurs': 'Thursday',
+    'thursday': 'Thursday',
     // friday
     'f': 'Friday', 'fri': 'Friday', 'friday': 'Friday',
     // saturday
@@ -821,7 +923,6 @@ void syncOpenDaysFromBH() {
     // fallback: TitleCase the input, but only first match wins
     return k.isEmpty ? '' : k[0].toUpperCase() + k.substring(1);
   }
-
 
   // ---------------- Networking: create ----------------
   Future<void> createBusinessProfile({
@@ -839,7 +940,8 @@ void syncOpenDaysFromBH() {
     final noRefH = _intOrNull(noRefundHours.value) ?? 0;
 
     // Enforce tier restrictions BEFORE validating/sending
-    final willSendPolicy = canEditPolicy; // Foundation/Momentum can't modify policy
+    final willSendPolicy =
+        canEditPolicy; // Foundation/Momentum can't modify policy
     if (!willSendPolicy) {
       // Show info once so user knows why their changes won't apply
       //_toastUpgradeForPolicy();
@@ -849,7 +951,7 @@ void syncOpenDaysFromBH() {
     if (willSendPolicy && !_validPolicy(freeH, feePct, noRefH)) {
       AppSnackBar.showError(
         'Invalid cancellation policy. '
-            'Make sure 0 ≤ fee ≤ 100 and No-refund hours < Free-cancel hours.',
+        'Make sure 0 ≤ fee ≤ 100 and No-refund hours < Free-cancel hours.',
       );
       isLoading.value = false;
       return;
@@ -859,13 +961,23 @@ void syncOpenDaysFromBH() {
       final uiStart = startTime.value.isNotEmpty ? startTime.value : '09:00 AM';
       final uiClose = endTime.value.isNotEmpty ? endTime.value : '06:00 PM';
 
-      const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const allDays = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
       final closed = allDays.where((d) => !openDays.contains(d)).toList();
 
       // Validate all ranges
       for (final entry in businessHours.entries) {
         if (!_isValidDay(entry.value)) {
-          AppSnackBar.showError('Invalid hours for ${entry.key.toUpperCase()}: End time must be after start time.');
+          AppSnackBar.showError(
+            'Invalid hours for ${entry.key.toUpperCase()}: End time must be after start time.',
+          );
           isLoading.value = false;
           return;
         }
@@ -873,6 +985,11 @@ void syncOpenDaysFromBH() {
 
       final closeDaysFromBh = _deriveCloseDaysFromBH();
       final bhPayload = _serializeBusinessHoursForApi();
+
+      // DEBUG: Log business_hours payload to verify multi-interval format
+      log('=== CREATE PROFILE: business_hours payload ===');
+      log(jsonEncode(bhPayload));
+      log('==============================================');
 
       // Build request
       final resp = await ShopApi().createShopWithImage(
@@ -892,10 +1009,7 @@ void syncOpenDaysFromBH() {
         cancellationFeePercentage: willSendPolicy ? feePct : null,
         noRefundHours: willSendPolicy ? noRefH : null,
         token: AuthService.accessToken ?? '',
-        extraJson: { 
-          "business_hours": bhPayload,
-          "time_zone": timeZone.value,
-        },
+        extraJson: {"business_hours": bhPayload, "time_zone": timeZone.value},
         // ⬇️ IF ShopApi supports deposit, include it only when allowed:
         // isDepositRequired: canEditDeposit ? isDepositRequired.value : null,
         // depositAmount:     canEditDeposit ? depositAmount.value : null,
@@ -910,7 +1024,9 @@ void syncOpenDaysFromBH() {
         await svc?.refreshGuardsAndServices();
         Get.offNamed('/all-services');
       } else {
-        log('Create profile failed: ${resp.statusCode}, error: ${resp.errorMessage}');
+        log(
+          'Create profile failed: ${resp.statusCode}, error: ${resp.errorMessage}',
+        );
         AppSnackBar.showError(
           resp.errorMessage.isNotEmpty ? resp.errorMessage : 'Create failed.',
         );
@@ -942,23 +1058,36 @@ void syncOpenDaysFromBH() {
       final uiStart = (startAt?.isNotEmpty ?? false)
           ? startAt!
           : (startTime.value.isNotEmpty
-          ? startTime.value
-          : (profileDetails.value.data?.startTime ?? '09:00 AM'));
+                ? startTime.value
+                : (profileDetails.value.data?.startTime ?? '09:00 AM'));
 
       final uiClose = (closeAt?.isNotEmpty ?? false)
           ? closeAt!
           : (endTime.value.isNotEmpty
-          ? endTime.value
-          : (profileDetails.value.data?.endTime ?? '06:00 PM'));
+                ? endTime.value
+                : (profileDetails.value.data?.endTime ?? '06:00 PM'));
 
-      String _normalizeAmPm(String s) =>
-          s.replaceAll('.', '').toUpperCase().replaceAll('AM', 'AM').replaceAll('PM', 'PM');
+      String _normalizeAmPm(String s) => s
+          .replaceAll('.', '')
+          .toUpperCase()
+          .replaceAll('AM', 'AM')
+          .replaceAll('PM', 'PM');
       final normStart = _normalizeAmPm(uiStart);
       final normClose = _normalizeAmPm(uiClose);
 
       // --- days ---
-      const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-      final open = (openDays != null && openDays.isNotEmpty) ? openDays : this.openDays.toList();
+      const allDays = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
+      final open = (openDays != null && openDays.isNotEmpty)
+          ? openDays
+          : this.openDays.toList();
       final closed = (closeDays != null && closeDays.isNotEmpty)
           ? closeDays
           : allDays.where((d) => !open.contains(d)).toList();
@@ -1004,7 +1133,9 @@ void syncOpenDaysFromBH() {
 
       for (final entry in businessHours.entries) {
         if (!_isValidDay(entry.value)) {
-          AppSnackBar.showError('Invalid hours for ${entry.key.toUpperCase()}: End time must be after start time.');
+          AppSnackBar.showError(
+            'Invalid hours for ${entry.key.toUpperCase()}: End time must be after start time.',
+          );
           return;
         }
       }
@@ -1033,7 +1164,7 @@ void syncOpenDaysFromBH() {
         imagePath: imagePath.value.isEmpty ? null : imagePath.value,
         documents: documents,
         token: AuthService.accessToken ?? '',
-        extraJson: { 
+        extraJson: {
           "business_hours": bhPayload,
           "time_zone": timeZone.value,
           // Always send social links (even empty) so backend can clear them
@@ -1050,7 +1181,9 @@ void syncOpenDaysFromBH() {
 
         // ✅ NEW: send deposit only if allowed
         //isDepositRequired: canEditDeposit ? requireDepositToSend : null,
-        defaultDepositPercentage: canEditDeposit ? depositPercentageToSend : null,
+        defaultDepositPercentage: canEditDeposit
+            ? depositPercentageToSend
+            : null,
       );
 
       if (resp.statusCode == 200 || resp.statusCode == 201) {
@@ -1060,7 +1193,9 @@ void syncOpenDaysFromBH() {
         final oldUrl = profileDetails.value.data?.image;
         if (oldUrl != null && oldUrl.isNotEmpty) {
           await CachedNetworkImage.evictFromCache(oldUrl);
-          try { await DefaultCacheManager().removeFile(oldUrl); } catch (_) {}
+          try {
+            await DefaultCacheManager().removeFile(oldUrl);
+          } catch (_) {}
         }
 
         // 1) Fetch profile to get latest data (including new image URL)
@@ -1071,10 +1206,11 @@ void syncOpenDaysFromBH() {
         if (newUrl != null && newUrl.isNotEmpty) {
           // Evict the new URL
           await CachedNetworkImage.evictFromCache(newUrl);
-          
+
           // Also create a cache-busted version for the UI
-          final busted = '$newUrl${newUrl.contains('?') ? '&' : '?'}v=${DateTime.now().millisecondsSinceEpoch}';
-          
+          final busted =
+              '$newUrl${newUrl.contains('?') ? '&' : '?'}v=${DateTime.now().millisecondsSinceEpoch}';
+
           final m = profileDetails.value;
           if (m.data != null) {
             m.data!.image = busted;
@@ -1089,7 +1225,6 @@ void syncOpenDaysFromBH() {
         AppSnackBar.showError('Update failed');
       }
       // --- END MODIFIED BLOCK ---
-
     } catch (e) {
       log('Update error: $e');
       AppSnackBar.showError('Failed to update business profile.');
@@ -1100,11 +1235,11 @@ void syncOpenDaysFromBH() {
 
   // ---------------- Raw multipart PUT helper (unchanged) ----------------
   Future<void> _sendPutRequestWithHeadersAndImagesOnly(
-      String url,
-      Map<String, dynamic> body,
-      String? imagePath,
-      String? token,
-      ) async {
+    String url,
+    Map<String, dynamic> body,
+    String? imagePath,
+    String? token,
+  ) async {
     if (token == null || token.isEmpty) {
       AppSnackBar.showError('Token is invalid or expired.');
       return;
@@ -1132,7 +1267,9 @@ void syncOpenDaysFromBH() {
       }
     } catch (e) {
       log('Request error: $e');
-      AppSnackBar.showError("Failed to update business profile. Please try again.");
+      AppSnackBar.showError(
+        "Failed to update business profile. Please try again.",
+      );
     }
   }
 
@@ -1148,7 +1285,9 @@ void syncOpenDaysFromBH() {
       if (Get.isDialogOpen ?? false) Get.back();
 
       if (!response.isSuccess) {
-        AppSnackBar.showError(response.errorMessage ?? 'Failed to delete profile.');
+        AppSnackBar.showError(
+          response.errorMessage ?? 'Failed to delete profile.',
+        );
         return false;
       }
 
@@ -1182,7 +1321,10 @@ void syncOpenDaysFromBH() {
   }
 
   String _toApiTime(String ui) {
-    final m = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$', caseSensitive: false).firstMatch(ui);
+    final m = RegExp(
+      r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$',
+      caseSensitive: false,
+    ).firstMatch(ui);
     if (m == null) return ui;
     int h = int.parse(m.group(1)!);
     final mm = int.parse(m.group(2)!);

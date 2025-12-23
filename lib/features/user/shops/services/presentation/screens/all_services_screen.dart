@@ -1,7 +1,6 @@
 // lib/features/user/shops/services/presentation/screens/all_services_screen.dart
 
 import 'package:fidden/core/commom/widgets/custom_text.dart';
-import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:fidden/features/user/shops/services/controller/all_services_controller.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart'; // Import the details screen
 import 'package:fidden/features/user/shops/services/presentation/screens/service_filter_screen.dart';
@@ -17,6 +16,23 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 import '../../../../../../core/utils/constants/app_sizes.dart';
 
+/// Helper function to get shop identity label for services
+/// Format: "at {Shop Name}" or "at {Shop Address}" or "at Shop"
+String _getShopLabel(dynamic service) {
+  // Try shopName first
+  if (service.shopName != null &&
+      service.shopName.toString().trim().isNotEmpty) {
+    return 'at ${service.shopName}';
+  }
+  // Fall back to shopAddress
+  if (service.shopAddress != null &&
+      service.shopAddress.toString().trim().isNotEmpty) {
+    return 'at ${service.shopAddress}';
+  }
+  // Final fallback
+  return 'at Shop';
+}
+
 class AllServicesScreen extends StatelessWidget {
   const AllServicesScreen({super.key, this.categoryId, this.categoryName});
   final int? categoryId;
@@ -24,7 +40,18 @@ class AllServicesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(AllServicesController(categoryId: categoryId));
+    // Use unique tag per category to ensure fresh controller when switching categories
+    final tag = 'all_services_${categoryId ?? 'all'}';
+
+    // Delete any existing controller with this tag to ensure fresh data
+    if (Get.isRegistered<AllServicesController>(tag: tag)) {
+      Get.delete<AllServicesController>(tag: tag);
+    }
+
+    final controller = Get.put(
+      AllServicesController(categoryId: categoryId),
+      tag: tag,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -50,14 +77,15 @@ class AllServicesScreen extends StatelessWidget {
               onFilterTap: () async {
                 final f = controller.filters;
                 final Map<String, dynamic>? result = await Get.to(
-                      () => ServiceFilterScreen(
+                  () => ServiceFilterScreen(
                     initialCategoryId: f['category'] as int?,
                     initialMinPrice: f['min_price'] as int?,
                     initialMaxPrice: f['max_price'] as int?,
                     initialDuration: f['duration'] as int?,
                     initialDistance: f['distance'] as int?,
                     initialRating: (f['rating'] as num?)?.toDouble(),
-                    sliderMin: 0, sliderMax: 500,
+                    sliderMin: 0,
+                    sliderMax: 500,
                   ),
                   transition: Transition.downToUp,
                 );
@@ -119,14 +147,16 @@ class AllServicesScreen extends StatelessWidget {
 
                     final service = list[index];
 
-                    final imageUrl = (service.serviceImg != null &&
-                        service.serviceImg!.isNotEmpty)
+                    final imageUrl =
+                        (service.serviceImg != null &&
+                            service.serviceImg!.isNotEmpty)
                         ? service.serviceImg!
                         : service.randomPlaceholderImage;
 
                     final rating = (service.avgRating ?? 0).toDouble();
                     final reviewCount = service.reviewCount ?? 0;
-                    final hasDiscount = (service.discountPrice != null &&
+                    final hasDiscount =
+                        (service.discountPrice != null &&
                         service.discountPrice != "0.00");
                     final displayPrice = hasDiscount
                         ? service.discountPrice
@@ -153,7 +183,7 @@ class AllServicesScreen extends StatelessWidget {
                       onTap: () {
                         if (service.id != null) {
                           Get.to(
-                                () => ServiceDetailsScreen(serviceId: service.id!),
+                            () => ServiceDetailsScreen(serviceId: service.id!),
                             transition: Transition.cupertino,
                           );
                         }
@@ -197,6 +227,7 @@ class _BottomLoader extends StatelessWidget {
     );
   }
 }
+
 /// pill search with a filter button
 class _SearchBar extends StatelessWidget {
   const _SearchBar({
@@ -425,6 +456,18 @@ class _ServiceCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       maxLines: 1,
                       textOverflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    // Shop Identity Line: "at {shop_name}"
+                    Text(
+                      _getShopLabel(service),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280), // Muted gray per spec
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Row(

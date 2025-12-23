@@ -25,7 +25,7 @@ class NetworkCaller {
 
   Future<bool> _ensureTokenRefreshed() async {
     if (_refreshingCompleter != null) {
-      return _refreshingCompleter!.future;        // wait for the in-flight refresh
+      return _refreshingCompleter!.future; // wait for the in-flight refresh
     }
     final c = Completer<bool>();
     _refreshingCompleter = c;
@@ -35,7 +35,12 @@ class NetworkCaller {
     return ok;
   }
 
-  Future<ResponseData> getRequest(String endpoint, {String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
+  Future<ResponseData> getRequest(
+    String endpoint, {
+    String? token,
+    bool treat404AsEmpty = false,
+    dynamic emptyPayload,
+  }) {
     return _makeRequestWithRetry(() async {
       log('GET Request: $endpoint');
       // --- MODIFIED: Reliably get token if not provided ---
@@ -44,15 +49,28 @@ class NetworkCaller {
       final response = await http.get(
         Uri.parse(endpoint),
         headers: {
-          if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
+          if (effectiveToken != null && effectiveToken.isNotEmpty)
+            'Authorization': 'Bearer $effectiveToken',
           'Content-type': 'application/json',
         },
       );
-      return _handleResponse(response, treat404AsEmpty: treat404AsEmpty, emptyPayload: emptyPayload);
+      return _handleResponse(
+        response,
+        treat404AsEmpty: treat404AsEmpty,
+        emptyPayload: emptyPayload,
+      );
     });
   }
 
-  Future<ResponseData> multipartRequest(String endpoint, {String method = 'POST', required Map<String, String> body, String? token, File? photo, List<File>? documents}) {
+  Future<ResponseData> multipartRequest(
+    String endpoint, {
+    String method = 'POST',
+    required Map<String, String> body,
+    String? token,
+    File? photo,
+    String photoFieldName = 'shop_img',
+    List<File>? documents,
+  }) {
     return _makeRequestWithRetry(() async {
       log('Multipart Request: $endpoint');
       // --- MODIFIED: Reliably get token if not provided ---
@@ -62,15 +80,20 @@ class NetworkCaller {
       request.fields.addAll(body);
 
       if (photo != null) {
-        request.files.add(await http.MultipartFile.fromPath('shop_img', photo.path));
+        request.files.add(
+          await http.MultipartFile.fromPath(photoFieldName, photo.path),
+        );
       }
       if (documents != null && documents.isNotEmpty) {
         for (var doc in documents) {
-          request.files.add(await http.MultipartFile.fromPath('verification_files', doc.path));
+          request.files.add(
+            await http.MultipartFile.fromPath('verification_files', doc.path),
+          );
         }
       }
       request.headers.addAll({
-        if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
+        if (effectiveToken != null && effectiveToken.isNotEmpty)
+          'Authorization': 'Bearer $effectiveToken',
       });
 
       final streamedResponse = await request.send();
@@ -79,7 +102,13 @@ class NetworkCaller {
     });
   }
 
-  Future<ResponseData> getRequestWithBody(String endpoint, {Map<String, dynamic>? body, String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
+  Future<ResponseData> getRequestWithBody(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+    bool treat404AsEmpty = false,
+    dynamic emptyPayload,
+  }) {
     return _makeRequestWithRetry(() async {
       log('GET Request with body: $endpoint');
       // --- MODIFIED: Reliably get token if not provided ---
@@ -87,7 +116,8 @@ class NetworkCaller {
 
       final request = http.Request('GET', Uri.parse(endpoint));
       request.headers.addAll({
-        if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
+        if (effectiveToken != null && effectiveToken.isNotEmpty)
+          'Authorization': 'Bearer $effectiveToken',
         'Content-Type': 'application/json',
       });
       if (body != null) {
@@ -95,11 +125,21 @@ class NetworkCaller {
       }
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      return _handleResponse(response, treat404AsEmpty: treat404AsEmpty, emptyPayload: emptyPayload);
+      return _handleResponse(
+        response,
+        treat404AsEmpty: treat404AsEmpty,
+        emptyPayload: emptyPayload,
+      );
     });
   }
 
-  Future<ResponseData> postRequest(String endpoint, {Map<String, dynamic>? body, String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
+  Future<ResponseData> postRequest(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+    bool treat404AsEmpty = false,
+    dynamic emptyPayload,
+  }) {
     return _makeRequestWithRetry(() async {
       log('POST Request: $endpoint');
       log('Request Body: ${jsonEncode(body)}');
@@ -109,16 +149,27 @@ class NetworkCaller {
       final response = await http.post(
         Uri.parse(endpoint),
         headers: {
-          if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
+          if (effectiveToken != null && effectiveToken.isNotEmpty)
+            'Authorization': 'Bearer $effectiveToken',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
       );
-      return _handleResponse(response, treat404AsEmpty: treat404AsEmpty, emptyPayload: emptyPayload);
+      return _handleResponse(
+        response,
+        treat404AsEmpty: treat404AsEmpty,
+        emptyPayload: emptyPayload,
+      );
     });
   }
 
-  Future<ResponseData> putRequest(String endpoint, {Map<String, dynamic>? body, String? token, treat404AsEmpty = false, dynamic emptyPayload}) {
+  Future<ResponseData> putRequest(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+    treat404AsEmpty = false,
+    dynamic emptyPayload,
+  }) {
     return _makeRequestWithRetry(() async {
       log('PUT Request: $endpoint');
       log('Request Body: ${jsonEncode(body)}');
@@ -128,16 +179,27 @@ class NetworkCaller {
       final response = await http.put(
         Uri.parse(endpoint),
         headers: {
-          if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
+          if (effectiveToken != null && effectiveToken.isNotEmpty)
+            'Authorization': 'Bearer $effectiveToken',
           'Content-type': 'application/json',
         },
         body: jsonEncode(body),
       );
-      return _handleResponse(response, treat404AsEmpty: treat404AsEmpty, emptyPayload: emptyPayload);
+      return _handleResponse(
+        response,
+        treat404AsEmpty: treat404AsEmpty,
+        emptyPayload: emptyPayload,
+      );
     });
   }
 
-  Future<ResponseData> deleteRequest(String endpoint, {Map<String, dynamic>? body, String? token, bool treat404AsEmpty = false, dynamic emptyPayload}) {
+  Future<ResponseData> deleteRequest(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+    bool treat404AsEmpty = false,
+    dynamic emptyPayload,
+  }) {
     return _makeRequestWithRetry(() async {
       log('DELETE Request: $endpoint');
       log('Request Body: ${jsonEncode(body)}');
@@ -146,7 +208,8 @@ class NetworkCaller {
 
       final req = http.Request('DELETE', Uri.parse(endpoint));
       req.headers.addAll({
-        if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
+        if (effectiveToken != null && effectiveToken.isNotEmpty)
+          'Authorization': 'Bearer $effectiveToken',
         'Content-Type': 'application/json',
       });
       if (body != null) req.body = jsonEncode(body);
@@ -157,12 +220,12 @@ class NetworkCaller {
   }
 
   Future<ResponseData> patchRequest(
-      String endpoint, {
-        Map<String, dynamic>? body,
-        String? token,
-        bool treat404AsEmpty = false,
-        dynamic emptyPayload,
-      }) {
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+    bool treat404AsEmpty = false,
+    dynamic emptyPayload,
+  }) {
     return _makeRequestWithRetry(() async {
       log('PATCH Request: $endpoint');
       log('Request Body: ${jsonEncode(body)}');
@@ -172,7 +235,8 @@ class NetworkCaller {
       final response = await http.patch(
         Uri.parse(endpoint),
         headers: {
-          if (effectiveToken != null && effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
+          if (effectiveToken != null && effectiveToken.isNotEmpty)
+            'Authorization': 'Bearer $effectiveToken',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
@@ -188,68 +252,74 @@ class NetworkCaller {
   // --- No changes needed below this line ---
 
   Future<ResponseData> _makeRequestWithRetry(
-  Future<ResponseData> Function() request,
-) async {
-  final connectivityResult = await Connectivity().checkConnectivity();
-  if (connectivityResult == ConnectivityResult.none) {
-    return ResponseData(
-      isSuccess: false,
-      statusCode: -1,
-      errorMessage: 'No internet connection. Please check your settings.',
-      responseData: null,
-    );
-  }
-
-  try {
-    // First attempt with standard network retry (socket/timeouts)
-    final first = await _retryOptions.retry(
-      request,
-      retryIf: (e) =>
-          e is SocketException || e is TimeoutException || e is http.ClientException,
-      onRetry: (e) => log('Retrying request after error: $e'),
-    );
-
-    // If token expired, refresh ONCE and then re-run *this caller’s* request.
-    if (first.statusCode == 401) {
-      final ok = await _ensureTokenRefreshed();
-      if (!ok) {
-        // Token refresh failed - force logout and redirect to login
-        await AuthService.logoutUser();
-        return ResponseData(
-          isSuccess: false,
-          statusCode: 401,
-          errorMessage: 'Your session has expired. Please log in again.',
-          responseData: null,
-        );
-      }
-      // re-run same request with the new token (no extra recursion)
-      return await request();
+    Future<ResponseData> Function() request,
+  ) async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      return ResponseData(
+        isSuccess: false,
+        statusCode: -1,
+        errorMessage: 'No internet connection. Please check your settings.',
+        responseData: null,
+      );
     }
 
-    return first;
-  } on SocketException {
-    return ResponseData(
-      isSuccess: false, statusCode: -1,
-      errorMessage: 'Failed to connect. Please check your internet connection.',
-      responseData: null,
-    );
-  } on TimeoutException {
-    return ResponseData(
-      isSuccess: false, statusCode: 408,
-      errorMessage: 'The connection timed out. Please try again.',
-      responseData: null,
-    );
-  } catch (e) {
-    return ResponseData(
-      isSuccess: false, statusCode: 500,
-      errorMessage: 'An unexpected error occurred: $e',
-      responseData: null,
-    );
+    try {
+      // First attempt with standard network retry (socket/timeouts)
+      final first = await _retryOptions.retry(
+        request,
+        retryIf: (e) =>
+            e is SocketException ||
+            e is TimeoutException ||
+            e is http.ClientException,
+        onRetry: (e) => log('Retrying request after error: $e'),
+      );
+
+      // If token expired, refresh ONCE and then re-run *this caller’s* request.
+      if (first.statusCode == 401) {
+        final ok = await _ensureTokenRefreshed();
+        if (!ok) {
+          // Token refresh failed - force logout and redirect to login
+          await AuthService.logoutUser();
+          return ResponseData(
+            isSuccess: false,
+            statusCode: 401,
+            errorMessage: 'Your session has expired. Please log in again.',
+            responseData: null,
+          );
+        }
+        // re-run same request with the new token (no extra recursion)
+        return await request();
+      }
+
+      return first;
+    } on SocketException {
+      return ResponseData(
+        isSuccess: false,
+        statusCode: -1,
+        errorMessage:
+            'Failed to connect. Please check your internet connection.',
+        responseData: null,
+      );
+    } on TimeoutException {
+      return ResponseData(
+        isSuccess: false,
+        statusCode: 408,
+        errorMessage: 'The connection timed out. Please try again.',
+        responseData: null,
+      );
+    } catch (e) {
+      return ResponseData(
+        isSuccess: false,
+        statusCode: 500,
+        errorMessage: 'An unexpected error occurred: $e',
+        responseData: null,
+      );
+    }
   }
-}
 
-
-  Future<ResponseData> _handleResponse(http.Response response, {
+  Future<ResponseData> _handleResponse(
+    http.Response response, {
     bool treat404AsEmpty = false,
     dynamic emptyPayload,
   }) async {
@@ -257,15 +327,14 @@ class NetworkCaller {
     log('Response Body: ${response.body}');
 
     if (response.statusCode == 401) {
-  // Just return 401; _makeRequestWithRetry will handle refresh + retry.
-  return ResponseData(
-    isSuccess: false,
-    statusCode: 401,
-    errorMessage: 'Unauthorized',
-    responseData: null,
-  );
-}
-
+      // Just return 401; _makeRequestWithRetry will handle refresh + retry.
+      return ResponseData(
+        isSuccess: false,
+        statusCode: 401,
+        errorMessage: 'Unauthorized',
+        responseData: null,
+      );
+    }
 
     final code = response.statusCode;
     final raw = response.body;
@@ -421,7 +490,8 @@ class NetworkCaller {
     newRequest.headers.addAll(request.headers);
 
     // Use the reliable getter for the new token
-    newRequest.headers['Authorization'] = 'Bearer ${await AuthService.getValidAccessToken()}';
+    newRequest.headers['Authorization'] =
+        'Bearer ${await AuthService.getValidAccessToken()}';
 
     if (request is http.Request && request.body.isNotEmpty) {
       newRequest.body = request.body;
@@ -444,7 +514,9 @@ class NetworkCaller {
           decoded.forEach((key, value) {
             if (value is List && value.isNotEmpty) {
               final msg = value.first.toString();
-              final prettyKey = key == 'non_field_errors' ? '' : '${key[0].toUpperCase()}${key.substring(1)}: ';
+              final prettyKey = key == 'non_field_errors'
+                  ? ''
+                  : '${key[0].toUpperCase()}${key.substring(1)}: ';
               buf.writeln('$prettyKey$msg');
             }
           });
@@ -452,7 +524,7 @@ class NetworkCaller {
           if (text.isNotEmpty) return text;
         }
         final firstString = decoded.values.firstWhere(
-              (v) => v is String,
+          (v) => v is String,
           orElse: () => null,
         );
         if (firstString is String && firstString.isNotEmpty) return firstString;

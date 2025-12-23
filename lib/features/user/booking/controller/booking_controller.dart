@@ -129,7 +129,7 @@ class BookingController extends GetxController {
 
         // server already excludes active; keep a defensive filter anyway
         for (final b in parsed.results.where((b) => b.status != 'active')) {
-          historyAll.add(b);                       // preserve API order
+          historyAll.add(b); // preserve API order
           if (b.status == 'completed') history.add(b);
           if (b.status == 'cancelled') cancelled.add(b);
         }
@@ -141,12 +141,29 @@ class BookingController extends GetxController {
     }
   }
 
+  Future<BookingItem?> fetchBookingById(int id) async {
+    try {
+      final url = AppUrls.userBookingDetail(id);
+      final resp = await NetworkCaller().getRequest(
+        url,
+        token: AuthService.accessToken,
+      );
+
+      if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+        return BookingItem.fromJson(resp.responseData as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('Error fetching booking $id: $e');
+    }
+    return null;
+  }
+
   Future<void> submitReview(BookingItem booking) async {
     final body = {
       "shop": booking.shop,
-      "service":
-          booking.serviceId,
-          "booking_id":booking.id, // Assuming booking.id is the service id as per the API doc
+      "service": booking.serviceId,
+      "booking_id": booking
+          .id, // Assuming booking.id is the service id as per the API doc
       "rating": rating.value.toInt(),
       "review": reviewText.value,
       "review_img": null,
@@ -162,7 +179,9 @@ class BookingController extends GetxController {
       AppSnackBar.showSuccess('Review submitted successfully!');
       reviewedBookingIds.add(booking.id);
     } else {
-      AppSnackBar.showError(response.errorMessage ?? 'Failed to submit review.1');
+      AppSnackBar.showError(
+        response.errorMessage ?? 'Failed to submit review.1',
+      );
     }
   }
 
@@ -179,10 +198,11 @@ class BookingController extends GetxController {
     if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
       final m = resp.responseData as Map<String, dynamic>;
       // Try common shapes safely
-      _email = (m['email'] ??
-              (m['data'] is Map ? (m['data']['email']) : null) ??
-              (m['user'] is Map ? (m['user']['email']) : null))
-          ?.toString();
+      _email =
+          (m['email'] ??
+                  (m['data'] is Map ? (m['data']['email']) : null) ??
+                  (m['user'] is Map ? (m['user']['email']) : null))
+              ?.toString();
 
       // Fallback if API doesn’t send email for some reason
       _email ??= "protim@example.com";
@@ -222,7 +242,8 @@ class BookingController extends GetxController {
 
         if (response != null && response.isSuccess) {
           AppSnackBar.showSuccess(
-              "Booking canceled successfully and refund initiated.");
+            "Booking canceled successfully and refund initiated.",
+          );
 
           // ✅ THE FIX: Update all relevant lists for a seamless UI update.
 
@@ -238,15 +259,14 @@ class BookingController extends GetxController {
           // 4. ✨ CRUCIAL STEP: Add it to the top of the 'historyAll' list,
           //    which controls the UI's display order.
           historyAll.insert(0, cancelledBooking);
-
         } else {
           AppSnackBar.showError(
-              response?.errorMessage ?? "Failed to cancel booking.");
+            response?.errorMessage ?? "Failed to cancel booking.",
+          );
         }
       },
     );
   }
-  
 }
 
-// 
+//

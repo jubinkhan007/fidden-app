@@ -34,14 +34,70 @@ class ShopDetailsScreen extends StatelessWidget {
   Color get _warning => const Color(0xffFACC15);
   Color get _cta => const Color(0xffDC143C);
 
-
   String? _normalizeUrl(String? u) {
     if (u == null) return null;
     final t = u.trim();
     return (t.isEmpty || t.toLowerCase() == 'null') ? null : t;
   }
 
+  /// Build verification badge based on shop status
+  Widget _buildVerificationBadge(String status) {
+    IconData icon;
+    String label;
+    Color bgColor;
+    Color iconColor;
+    Color textColor;
 
+    switch (status.toLowerCase()) {
+      case 'verified':
+      case 'approved': // Backend uses 'approved' as the verified status
+        icon = Icons.verified;
+        label = 'Verified';
+        bgColor = const Color(0xFFDCFCE7);
+        iconColor = const Color(0xFF16A34A);
+        textColor = const Color(0xFF166534);
+        break;
+      case 'unverified':
+        icon = Icons.info_outline;
+        label = 'Unverified';
+        bgColor = const Color(0xFFFEF3C7);
+        iconColor = const Color(0xFFF59E0B);
+        textColor = const Color(0xFF92400E);
+        break;
+      case 'pending':
+        icon = Icons.hourglass_top;
+        label = 'Pending';
+        bgColor = const Color(0xFFF3F4F6);
+        iconColor = const Color(0xFF6B7280);
+        textColor = const Color(0xFF374151);
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,12 +105,12 @@ class ShopDetailsScreen extends StatelessWidget {
     final wishlistController = Get.find<WishlistController>();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!controller.isLoading.value && controller.shopDetails.value.id == null) {
+      if (!controller.isLoading.value &&
+          controller.shopDetails.value.id == null) {
         controller.fetchShopDetails(id);
       }
     });
 
-    
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
@@ -100,16 +156,30 @@ class ShopDetailsScreen extends StatelessWidget {
                     children: [
                       AspectRatio(
                         aspectRatio: 16 / 10,
-                        child: Image.network(
-                          heroUrl,
-                          key: ValueKey(heroUrl),           // ← forces rebuild when URL changes
-                          fit: BoxFit.cover,
-                          loadingBuilder: (c, child, prog) =>
-                          prog == null ? child : Container(color: const Color(0xffE5E7EB)),
-                          errorBuilder: (c, err, st) {
-                            debugPrint('Shop image load failed: $err');  // helpful log
-                            return Image.network(fallbackImg, fit: BoxFit.cover);
-                          },
+                        child: Container(
+                          color: const Color(
+                            0xFFF0F4F8,
+                          ), // Light background for logos
+                          child: Image.network(
+                            heroUrl,
+                            key: ValueKey(
+                              heroUrl,
+                            ), // ← forces rebuild when URL changes
+                            fit:
+                                BoxFit.contain, // Changed from cover to contain
+                            loadingBuilder: (c, child, prog) => prog == null
+                                ? child
+                                : Container(color: const Color(0xffE5E7EB)),
+                            errorBuilder: (c, err, st) {
+                              debugPrint(
+                                'Shop image load failed: $err',
+                              ); // helpful log
+                              return Image.network(
+                                fallbackImg,
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          ),
                         ),
                       ),
                       Positioned(
@@ -154,11 +224,19 @@ class ShopDetailsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CustomText(
-                      text: data.name ?? '',
-                      fontSize: getWidth(16),
-                      fontWeight: FontWeight.w600,
-                      color: _ink,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomText(
+                            text: data.name ?? '',
+                            fontSize: getWidth(16),
+                            fontWeight: FontWeight.w600,
+                            color: _ink,
+                          ),
+                        ),
+                        if (data.status != null && data.status!.isNotEmpty)
+                          _buildVerificationBadge(data.status!),
+                      ],
                     ),
                     SizedBox(height: getHeight(6)),
                     Row(
@@ -302,12 +380,17 @@ class ShopDetailsScreen extends StatelessWidget {
                 ),
                 onPressed: isServiceSelected
                     ? () {
-                        Get.to(() => ServiceDetailsScreen(
-                            serviceId: controller.selectedServiceId.value!));
+                        Get.to(
+                          () => ServiceDetailsScreen(
+                            serviceId: controller.selectedServiceId.value!,
+                          ),
+                        );
                       }
                     : () {
-                        Get.snackbar('No Service Selected',
-                            'Please select a service to continue.');
+                        Get.snackbar(
+                          'No Service Selected',
+                          'Please select a service to continue.',
+                        );
                       },
                 child: Text(
                   "Book Now",
@@ -535,23 +618,25 @@ class _AboutSectionState extends State<_AboutSection> {
                 ),
               ],
             ),
-            
+
             // --- Gallery Section ---
-            if (widget.data.galleryPreview != null && 
+            if (widget.data.galleryPreview != null &&
                 widget.data.galleryPreview!.isNotEmpty) ...[
               SizedBox(height: getHeight(24)),
               GalleryPreviewSection(
                 items: widget.data.galleryPreview!,
                 shopId: widget.data.id ?? 0,
                 onSeeAll: () {
-                  Get.to(() => FullGalleryScreen(
-                    items: widget.data.galleryPreview!,
-                    shopName: widget.data.name,
-                  ));
+                  Get.to(
+                    () => FullGalleryScreen(
+                      items: widget.data.galleryPreview!,
+                      shopName: widget.data.name,
+                    ),
+                  );
                 },
               ),
             ],
-            
+
             // --- Social Links Section ---
             if (_hasSocialLinks()) ...[
               SizedBox(height: getHeight(24)),
@@ -574,12 +659,12 @@ class _AboutSectionState extends State<_AboutSection> {
       },
     );
   }
-  
+
   bool _hasSocialLinks() {
     return widget.data.instagramUrl != null ||
-           widget.data.tiktokUrl != null ||
-           widget.data.youtubeUrl != null ||
-           widget.data.websiteUrl != null;
+        widget.data.tiktokUrl != null ||
+        widget.data.youtubeUrl != null ||
+        widget.data.websiteUrl != null;
   }
 }
 
@@ -676,8 +761,8 @@ class _ServiceSection extends StatelessWidget {
 
               final ImageProvider avatarImage =
                   (s.serviceImg != null && s.serviceImg!.isNotEmpty)
-                      ? NetworkImage(s.serviceImg!)
-                      : const AssetImage(ImagePath.profileImage);
+                  ? NetworkImage(s.serviceImg!)
+                  : const AssetImage(ImagePath.profileImage);
 
               return Material(
                 color: Colors.transparent,

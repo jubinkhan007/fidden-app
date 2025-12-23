@@ -11,39 +11,37 @@ class TrendingServiceModel {
   final String? previous;
   final List<TrendingServiceItem> results;
 
-  TrendingServiceModel({
-    this.next,
-    this.previous,
-    required this.results,
-  });
+  TrendingServiceModel({this.next, this.previous, required this.results});
 
   factory TrendingServiceModel.fromJson(Map<String, dynamic> j) {
     final list = (j['results'] as List<dynamic>? ?? [])
-        .map((e) => TrendingServiceItem.fromJson(
-              Map<String, dynamic>.from(e as Map),
-            ))
+        .map(
+          (e) =>
+              TrendingServiceItem.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
         .toList();
     return TrendingServiceModel(
-      next: j['next'] .toString(),
-      previous: j['previous'] .toString(),
+      next: j['next'].toString(),
+      previous: j['previous'].toString(),
       results: list,
     );
   }
 
   factory TrendingServiceModel.fromList(List<dynamic> arr) {
     final list = arr
-        .map((e) => TrendingServiceItem.fromJson(
-              Map<String, dynamic>.from(e as Map),
-            ))
+        .map(
+          (e) =>
+              TrendingServiceItem.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
         .toList();
     return TrendingServiceModel(next: null, previous: null, results: list);
   }
 
   Map<String, dynamic> toJson() => {
-        'next': next,
-        'previous': previous,
-        'results': results.map((e) => e.toJson()).toList(),
-      };
+    'next': next,
+    'previous': previous,
+    'results': results.map((e) => e.toJson()).toList(),
+  };
 }
 
 class TrendingServiceItem {
@@ -51,6 +49,7 @@ class TrendingServiceItem {
   final String title;
   final String? price;
   final String? discountPrice;
+  final String? shopName; // ← NEW: shop name for identity line
   final String? shopAddress;
   final double? avgRating;
   final int? reviewCount;
@@ -64,6 +63,7 @@ class TrendingServiceItem {
     required this.title,
     this.price,
     this.discountPrice,
+    this.shopName,
     this.shopAddress,
     this.avgRating,
     this.reviewCount,
@@ -79,32 +79,35 @@ class TrendingServiceItem {
         title: (j['title'] ?? '').toString(),
         price: j['price']?.toString(),
         discountPrice: j['discount_price']?.toString(),
+        shopName: j['shop_name']?.toString(),
         shopAddress: j['shop_address']?.toString(),
-        avgRating:
-            j['avg_rating'] == null ? null : (j['avg_rating'] as num).toDouble(),
+        avgRating: j['avg_rating'] == null
+            ? null
+            : (j['avg_rating'] as num).toDouble(),
         reviewCount: j['review_count'] as int?,
         serviceImg: j['service_img']?.toString(),
         badge: j['badge']?.toString(),
-        distance:
-            j['distance'] == null ? null : (j['distance'] as num).toDouble(),
+        distance: j['distance'] == null
+            ? null
+            : (j['distance'] as num).toDouble(),
         isActive: j['is_active'] as bool?,
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'price': price,
-        'discount_price': discountPrice,
-        'shop_address': shopAddress,
-        'avg_rating': avgRating,
-        'review_count': reviewCount,
-        'service_img': serviceImg,
-        'badge': badge,
-        'distance': distance,
-        'is_active': isActive,
-      };
+    'id': id,
+    'title': title,
+    'price': price,
+    'discount_price': discountPrice,
+    'shop_name': shopName,
+    'shop_address': shopAddress,
+    'avg_rating': avgRating,
+    'review_count': reviewCount,
+    'service_img': serviceImg,
+    'badge': badge,
+    'distance': distance,
+    'is_active': isActive,
+  };
 }
-
 
 class TrendingService {
   int? id;

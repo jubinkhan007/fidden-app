@@ -67,7 +67,12 @@ class SignUpScreen extends StatelessWidget {
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxW),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 0,
+                bottom: MediaQuery.of(context).viewPadding.bottom + 16,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(

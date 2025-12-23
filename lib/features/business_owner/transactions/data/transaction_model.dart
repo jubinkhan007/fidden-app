@@ -8,8 +8,9 @@ class TransactionModel {
   TransactionModel.fromJson(Map<String, dynamic> json) {
     next = json['next'];
     previous = json['previous'];
-    results =
-    json['results'] != null ? Results.fromJson(json['results']) : null;
+    results = json['results'] != null
+        ? Results.fromJson(json['results'])
+        : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -68,24 +69,25 @@ class Transaction {
   String? userName; // New field for user's name
   String? userEmail; // New field for user's email
 
-  Transaction(
-      {this.id,
-        this.transactionType,
-        this.payment,
-        this.refund,
-        this.user,
-        this.shop,
-        this.shopName,
-        this.slot,
-        this.slotTime,
-        this.service,
-        this.serviceTitle,
-        this.amount,
-        this.currency,
-        this.status,
-        this.createdAt,
-        this.userName,
-        this.userEmail});
+  Transaction({
+    this.id,
+    this.transactionType,
+    this.payment,
+    this.refund,
+    this.user,
+    this.shop,
+    this.shopName,
+    this.slot,
+    this.slotTime,
+    this.service,
+    this.serviceTitle,
+    this.amount,
+    this.currency,
+    this.status,
+    this.createdAt,
+    this.userName,
+    this.userEmail,
+  });
 
   Transaction.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -96,7 +98,16 @@ class Transaction {
     shop = json['shop'];
     shopName = json['shop_name'];
     slot = json['slot'];
-    slotTime = json['slot_time'];
+    // slot_time can be a string or an object {start_time, end_time}
+    final slotTimeData = json['slot_time'];
+    if (slotTimeData is String) {
+      slotTime = slotTimeData;
+    } else if (slotTimeData is Map<String, dynamic>) {
+      // Use start_time for display
+      slotTime = slotTimeData['start_time']?.toString();
+    } else {
+      slotTime = null;
+    }
     service = json['service'];
     serviceTitle = json['service_title'];
     amount = json['amount'];
@@ -128,5 +139,4 @@ class Transaction {
     data['user_email'] = userEmail; // Including user's email
     return data;
   }
-  
 }
