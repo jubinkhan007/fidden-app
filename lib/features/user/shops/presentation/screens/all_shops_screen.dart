@@ -45,6 +45,65 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
     });
   }
 
+  /// Build verification badge based on shop status
+  Widget _buildVerificationBadge(String status) {
+    IconData icon;
+    String label;
+    Color bgColor;
+    Color iconColor;
+    Color textColor;
+
+    switch (status.toLowerCase()) {
+      case 'verified':
+      case 'approved':
+        icon = Icons.verified;
+        label = 'Verified';
+        bgColor = const Color(0xFFDCFCE7);
+        iconColor = const Color(0xFF16A34A);
+        textColor = const Color(0xFF166534);
+        break;
+      case 'unverified':
+        icon = Icons.info_outline;
+        label = 'Unverified';
+        bgColor = const Color(0xFFFEF3C7);
+        iconColor = const Color(0xFFF59E0B);
+        textColor = const Color(0xFF92400E);
+        break;
+      case 'pending':
+        icon = Icons.hourglass_top;
+        label = 'Pending';
+        bgColor = const Color(0xFFF3F4F6);
+        iconColor = const Color(0xFF6B7280);
+        textColor = const Color(0xFF374151);
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: iconColor),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final wishlistController =
@@ -114,12 +173,12 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
               final hasData = controller.hasLocalData;
               final items = controller.allShops.value.shops ?? const [];
 
-// 1) No cache yet + loading => shimmer
+              // 1) No cache yet + loading => shimmer
               if (!hasData && controller.isLoading.value) {
                 return _buildShimmerEffect();
               }
 
-// 2) Finished loading and still empty => true empty state
+              // 2) Finished loading and still empty => true empty state
               if (!controller.isLoading.value && items.isEmpty) {
                 return const Center(child: CustomText(text: "No shops found"));
               }
@@ -172,16 +231,22 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
                                   topLeft: Radius.circular(18),
                                   topRight: Radius.circular(18),
                                 ),
-                                child: CachedNetworkImage(
-                                  imageUrl: imageUrl,
+                                child: Container(
                                   height: 180,
                                   width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) =>
-                                      Container(color: Colors.grey[200]),
-                                  errorWidget: (_, __, ___) => Image.network(
-                                    "https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                                    fit: BoxFit.cover,
+                                  color: const Color(
+                                    0xFFF0F4F8,
+                                  ), // Light background for logos
+                                  child: CachedNetworkImage(
+                                    imageUrl: imageUrl,
+                                    fit: BoxFit
+                                        .contain, // Changed from cover to contain
+                                    placeholder: (_, __) =>
+                                        Container(color: Colors.grey[200]),
+                                    errorWidget: (_, __, ___) => Image.network(
+                                      "https://plus.unsplash.com/premium_photo-1661645788141-8196a45fb483?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -241,12 +306,21 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CustomText(
-                                  text: shop.name ?? '',
-                                  fontSize: getWidth(18),
-                                  fontWeight: FontWeight.bold,
-                                  maxLines: 1,
-                                  textOverflow: TextOverflow.ellipsis,
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: CustomText(
+                                        text: shop.name ?? '',
+                                        fontSize: getWidth(18),
+                                        fontWeight: FontWeight.bold,
+                                        maxLines: 1,
+                                        textOverflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (shop.status != null &&
+                                        shop.status!.isNotEmpty)
+                                      _buildVerificationBadge(shop.status!),
+                                  ],
                                 ),
                                 const SizedBox(height: 6),
                                 CustomText(

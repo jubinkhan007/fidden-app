@@ -41,6 +41,65 @@ class ShopDetailsScreen extends StatelessWidget {
     return (t.isEmpty || t.toLowerCase() == 'null') ? null : t;
   }
 
+  /// Build verification badge based on shop status
+  Widget _buildVerificationBadge(String status) {
+    IconData icon;
+    String label;
+    Color bgColor;
+    Color iconColor;
+    Color textColor;
+
+    switch (status.toLowerCase()) {
+      case 'verified':
+      case 'approved': // Backend uses 'approved' as the verified status
+        icon = Icons.verified;
+        label = 'Verified';
+        bgColor = const Color(0xFFDCFCE7);
+        iconColor = const Color(0xFF16A34A);
+        textColor = const Color(0xFF166534);
+        break;
+      case 'unverified':
+        icon = Icons.info_outline;
+        label = 'Unverified';
+        bgColor = const Color(0xFFFEF3C7);
+        iconColor = const Color(0xFFF59E0B);
+        textColor = const Color(0xFF92400E);
+        break;
+      case 'pending':
+        icon = Icons.hourglass_top;
+        label = 'Pending';
+        bgColor = const Color(0xFFF3F4F6);
+        iconColor = const Color(0xFF6B7280);
+        textColor = const Color(0xFF374151);
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(ShopDetailsController());
@@ -160,11 +219,19 @@ class ShopDetailsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CustomText(
-                      text: data.name ?? '',
-                      fontSize: getWidth(16),
-                      fontWeight: FontWeight.w600,
-                      color: _ink,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomText(
+                            text: data.name ?? '',
+                            fontSize: getWidth(16),
+                            fontWeight: FontWeight.w600,
+                            color: _ink,
+                          ),
+                        ),
+                        if (data.status != null && data.status!.isNotEmpty)
+                          _buildVerificationBadge(data.status!),
+                      ],
                     ),
                     SizedBox(height: getHeight(6)),
                     Row(

@@ -31,6 +31,9 @@ class WeeklySummary {
 
   final int totalAppointments;
   final double revenueGenerated;
+  final double revenueDeposits; // NEW: breakdown
+  final double revenueCheckout; // NEW: breakdown
+  final double revenueTips; // NEW: breakdown
   final double rebookingRate;
   final double growthRate;
   final int noShowsFilled;
@@ -50,7 +53,8 @@ class WeeklySummary {
   final DateTime createdAt;
 
   // --- AI subscription info ---
-  final String? aiState; // "addon_active", "included", "addon_inactive", "locked", etc.
+  final String?
+  aiState; // "addon_active", "included", "addon_inactive", "locked", etc.
   final bool legacy500;
   final String? aiPriceId; // Stripe price id (used to infer plan)
 
@@ -60,6 +64,9 @@ class WeeklySummary {
     required this.weekEndDate,
     required this.totalAppointments,
     required this.revenueGenerated,
+    this.revenueDeposits = 0.0,
+    this.revenueCheckout = 0.0,
+    this.revenueTips = 0.0,
     required this.rebookingRate,
     required this.growthRate,
     required this.noShowsFilled,
@@ -80,8 +87,7 @@ class WeeklySummary {
   factory WeeklySummary.fromJson(Map<String, dynamic> j) {
     double _d(dynamic v) =>
         (v is num) ? v.toDouble() : (double.tryParse('$v') ?? 0.0);
-    int _i(dynamic v) =>
-        (v is int) ? v : (int.tryParse('$v') ?? 0);
+    int _i(dynamic v) => (v is int) ? v : (int.tryParse('$v') ?? 0);
 
     final rec = j['ai_recommendations'] ?? {};
     final aiPayload = j['ai'] ?? {};
@@ -92,6 +98,9 @@ class WeeklySummary {
       weekEndDate: DateTime.parse(j['week_end_date']),
       totalAppointments: _i(j['total_appointments']),
       revenueGenerated: _d(j['revenue_generated']),
+      revenueDeposits: _d(j['revenue_deposits']),
+      revenueCheckout: _d(j['revenue_checkout']),
+      revenueTips: _d(j['revenue_tips']),
       rebookingRate: _d(j['rebooking_rate']),
       growthRate: _d(j['growth_rate']),
       noShowsFilled: _i(j['no_shows_filled']),
@@ -100,14 +109,11 @@ class WeeklySummary {
           ? null
           : _i(j['top_service_count']),
       openSlotsNextWeek: _i(j['open_slots_next_week']),
-      forecastEstimatedRevenue:
-      _d(j['forecast_estimated_revenue']),
+      forecastEstimatedRevenue: _d(j['forecast_estimated_revenue']),
       aiMotivation: (j['ai_motivation'] ?? '').toString(),
       recommendations: AiRecommendations.fromJson(rec),
       deliveredChannels:
-      (j['delivered_channels'] as List?)
-          ?.map((e) => '$e')
-          .toList() ??
+          (j['delivered_channels'] as List?)?.map((e) => '$e').toList() ??
           const [],
       deepLink: j['deep_link']?.toString(),
       createdAt: DateTime.parse(j['created_at']),
@@ -115,12 +121,12 @@ class WeeklySummary {
       legacy500: aiPayload['legacy'] == true,
       aiPriceId: aiPayload['price_id']?.toString(),
     );
-    
+
     // DEBUG: Log parsed AI state
     print('🔍 DEBUG: Parsed aiState: ${aiPayload['state']}');
     print('🔍 DEBUG: Parsed legacy500: ${aiPayload['legacy']}');
     print('🔍 DEBUG: Parsed aiPriceId: ${aiPayload['price_id']}');
-    
+
     return summary;
   }
 }
@@ -140,14 +146,11 @@ extension WeeklySummaryExtras on WeeklySummary {
   }
 
   /// AI considered active when addon is on or included in plan.
-  bool get isAiActive =>
-      aiState == 'addon_active' || aiState == 'included';
+  bool get isAiActive => aiState == 'addon_active' || aiState == 'included';
 
   /// Only explicitly inactive / locked / null is treated as "can start checkout".
   bool get isAiInactive =>
-      aiState == null ||
-          aiState == 'addon_inactive' ||
-          aiState == 'locked';
+      aiState == null || aiState == 'addon_inactive' || aiState == 'locked';
 
   /// Show cancel when add-on is active, non-Icon, non-legacy.
   bool get canCancelAi =>
@@ -215,9 +218,7 @@ class AiRecommendations {
       retentionPlay: j['retention_play'] == null
           ? null
           : RecCard.fromJson(j['retention_play']),
-      forecast: j['forecast'] == null
-          ? null
-          : Forecast.fromJson(j['forecast']),
+      forecast: j['forecast'] == null ? null : Forecast.fromJson(j['forecast']),
     );
   }
 }
@@ -255,12 +256,10 @@ class Forecast {
   factory Forecast.fromJson(Map<String, dynamic> j) {
     double _d(dynamic v) =>
         (v is num) ? v.toDouble() : (double.tryParse('$v') ?? 0.0);
-    int _i(dynamic v) =>
-        (v is int) ? v : (int.tryParse('$v') ?? 0);
+    int _i(dynamic v) => (v is int) ? v : (int.tryParse('$v') ?? 0);
     return Forecast(
       openSlotsNextWeek: _i(j['open_slots_next_week']),
-      forecastEstimatedRevenue:
-      _d(j['forecast_estimated_revenue']),
+      forecastEstimatedRevenue: _d(j['forecast_estimated_revenue']),
     );
   }
 }
@@ -273,56 +272,45 @@ class AiApi {
   Future<WeeklySummary> fetchLatest() async {
     final resp = await _net.getRequest(AppUrls.aiReport);
     if (!resp.isSuccess) {
-      String errorMsg =
-          resp.errorMessage ?? 'Failed to load summary';
+      String errorMsg = resp.errorMessage ?? 'Failed to load summary';
       if (resp.responseData is Map<String, dynamic> &&
           resp.responseData['detail'] != null) {
         errorMsg = resp.responseData['detail'].toString();
       }
-      throw AiApiException(
-        message: errorMsg,
-        statusCode: resp.statusCode,
-      );
+      throw AiApiException(message: errorMsg, statusCode: resp.statusCode);
     }
 
     final Map<String, dynamic> data =
-    (resp.responseData is Map<String, dynamic>)
+        (resp.responseData is Map<String, dynamic>)
         ? resp.responseData
-        : jsonDecode(resp.responseData as String)
-    as Map<String, dynamic>;
+        : jsonDecode(resp.responseData as String) as Map<String, dynamic>;
 
     return WeeklySummary.fromJson(data);
   }
 
-  Future<GeneratedCaptionResult>
-  generateMarketingCaptionWithResult(
-      String summaryId, {
-        bool previewOnly = false,
-      }) async {
+  Future<GeneratedCaptionResult> generateMarketingCaptionWithResult(
+    String summaryId, {
+    bool previewOnly = false,
+  }) async {
     var base = AppUrls.generateContent;
     if (!base.endsWith('/')) base = '$base/';
     final endpoint = '${base}generate_marketing_caption/';
 
-    final body = {
-      'summary_id': summaryId,
-      'preview_only': previewOnly,
-    };
+    final body = {'summary_id': summaryId, 'preview_only': previewOnly};
 
-    final resp =
-    await _net.postRequest(endpoint, body: body);
+    final resp = await _net.postRequest(endpoint, body: body);
     if (!resp.isSuccess) {
       throw Exception(
         'Failed to generate caption: '
-            '${resp.statusCode} '
-            '${resp.responseData ?? resp.errorMessage}',
+        '${resp.statusCode} '
+        '${resp.responseData ?? resp.errorMessage}',
       );
     }
 
     final Map<String, dynamic> data =
-    (resp.responseData is Map<String, dynamic>)
+        (resp.responseData is Map<String, dynamic>)
         ? resp.responseData
-        : jsonDecode(resp.responseData as String)
-    as Map<String, dynamic>;
+        : jsonDecode(resp.responseData as String) as Map<String, dynamic>;
 
     return GeneratedCaptionResult.fromJson(data);
   }
@@ -341,44 +329,29 @@ class AiApi {
       if (extraPayload != null) ...extraPayload,
     };
 
-    final resp =
-    await _net.postRequest(endpoint, body: body);
+    final resp = await _net.postRequest(endpoint, body: body);
     return resp.isSuccess;
   }
 
   Future<bool> generateMarketingCaption(String summaryId) =>
-      triggerAction(
-        summaryId: summaryId,
-        action: 'generate_marketing_caption',
-      );
+      triggerAction(summaryId: summaryId, action: 'generate_marketing_caption');
 
   Future<bool> sendLoyaltySms(String summaryId) =>
-      triggerAction(
-        summaryId: summaryId,
-        action: 'send_loyalty_sms',
-      );
+      triggerAction(summaryId: summaryId, action: 'send_loyalty_sms');
 
-  Future<void> cancelAiAddon({
-    PaymentProvider? provider,
-  }) async {
+  Future<void> cancelAiAddon({PaymentProvider? provider}) async {
     final resp = await _net.postRequest(
       AppUrls.cancelAiAddon,
-      body: {
-        if (provider != null) 'provider': provider.apiValue,
-      },
+      body: {if (provider != null) 'provider': provider.apiValue},
     );
 
     if (!resp.isSuccess) {
-      String errorMsg =
-          resp.errorMessage ?? 'Failed to cancel add-on';
+      String errorMsg = resp.errorMessage ?? 'Failed to cancel add-on';
       if (resp.responseData is Map<String, dynamic> &&
           resp.responseData['error'] != null) {
         errorMsg = resp.responseData['error'].toString();
       }
-      throw AiApiException(
-        message: errorMsg,
-        statusCode: resp.statusCode,
-      );
+      throw AiApiException(message: errorMsg, statusCode: resp.statusCode);
     }
   }
 }

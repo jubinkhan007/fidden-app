@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:fidden/core/commom/widgets/custom_app_bar.dart';
 import 'package:fidden/core/utils/constants/app_colors.dart';
 import 'package:fidden/features/business_owner/subscription/controller/subscription_controller.dart';
 import 'package:fidden/features/business_owner/subscription/data/subscription_model.dart';
@@ -27,7 +26,9 @@ class SubscriptionScreen extends StatelessWidget {
         }
 
         if (controller.currentSubscription.value == null) {
-          return const Center(child: Text('Could not load subscription details.'));
+          return const Center(
+            child: Text('Could not load subscription details.'),
+          );
         }
 
         final currentPlan = controller.currentSubscription.value!.plan;
@@ -57,14 +58,16 @@ class SubscriptionScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                ...controller.availablePlans.where((plan) => plan.id != currentPlan.id).map((plan) {
-                  return _buildPlanCard(
-                    context,
-                    plan,
-                    isCurrentPlan: false,
-                    controller: controller,
-                  );
-                }),
+                ...controller.availablePlans
+                    .where((plan) => plan.id != currentPlan.id)
+                    .map((plan) {
+                      return _buildPlanCard(
+                        context,
+                        plan,
+                        isCurrentPlan: false,
+                        controller: controller,
+                      );
+                    }),
               ],
             ),
           ),
@@ -74,9 +77,7 @@ class SubscriptionScreen extends StatelessWidget {
   }
 
   /// Stripe vs PayPal picker for paid plans
-  Future<PaymentProvider?> _pickPaymentProvider(
-      BuildContext context,
-      ) {
+  Future<PaymentProvider?> _pickPaymentProvider(BuildContext context) {
     return showModalBottomSheet<PaymentProvider>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -91,25 +92,20 @@ class SubscriptionScreen extends StatelessWidget {
                 padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
                   'Choose payment method',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
               ListTile(
                 leading: const Icon(Icons.credit_card),
                 title: Text(PaymentProvider.stripe.label),
                 subtitle: const Text('Pay with debit/credit card'),
-                onTap: () =>
-                    Navigator.of(ctx).pop(PaymentProvider.stripe),
+                onTap: () => Navigator.of(ctx).pop(PaymentProvider.stripe),
               ),
               ListTile(
                 leading: const Icon(Icons.account_balance_wallet),
                 title: Text(PaymentProvider.paypal.label),
                 subtitle: const Text('Pay with your PayPal account'),
-                onTap: () =>
-                    Navigator.of(ctx).pop(PaymentProvider.paypal),
+                onTap: () => Navigator.of(ctx).pop(PaymentProvider.paypal),
               ),
               const SizedBox(height: 8),
             ],
@@ -120,13 +116,16 @@ class SubscriptionScreen extends StatelessWidget {
   }
 
   Widget _buildPlanCard(
-      BuildContext context,
-      SubscriptionPlan plan, {
-        required bool isCurrentPlan,
-        required SubscriptionController controller,
-      }) {
+    BuildContext context,
+    SubscriptionPlan plan, {
+    required bool isCurrentPlan,
+    required SubscriptionController controller,
+  }) {
     final double currentPrice =
-        double.tryParse(controller.currentSubscription.value?.plan.monthlyPrice ?? '0') ?? 0;
+        double.tryParse(
+          controller.currentSubscription.value?.plan.monthlyPrice ?? '0',
+        ) ??
+        0;
     final double planPrice = double.tryParse(plan.monthlyPrice) ?? 0;
 
     String buttonText = 'Switch to ${plan.name}';
@@ -145,9 +144,7 @@ class SubscriptionScreen extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isCurrentPlan
-              ? AppColors.primaryColor
-              : Colors.grey.shade300,
+          color: isCurrentPlan ? AppColors.primaryColor : Colors.grey.shade300,
           width: 1.5,
         ),
       ),
@@ -158,10 +155,7 @@ class SubscriptionScreen extends StatelessWidget {
           children: [
             Text(
               plan.name,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -178,10 +172,7 @@ class SubscriptionScreen extends StatelessWidget {
                 double.parse(plan.commissionRate) > 0)
               Text(
                 '+ ${plan.commissionRate}% commission per booking',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade700,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
               ),
             const SizedBox(height: 16),
             _buildFeatureRow(
@@ -195,10 +186,7 @@ class SubscriptionScreen extends StatelessWidget {
               'Advanced Calendar Tools',
               enabled: plan.advancedCalendarTools,
             ),
-            _buildFeatureRow(
-              'Auto-followups',
-              enabled: plan.autoFollowups,
-            ),
+            _buildFeatureRow('Auto-followups', enabled: plan.autoFollowups),
             _buildFeatureRow(
               'Ghost Client Re-engagement',
               enabled: plan.ghostClientReEngagement,
@@ -260,8 +248,7 @@ class SubscriptionScreen extends StatelessWidget {
                     }
 
                     // Paid plans → ask Stripe vs PayPal
-                    final provider =
-                    await _pickPaymentProvider(context);
+                    final provider = await _pickPaymentProvider(context);
                     if (provider == null) return;
 
                     controller.createCheckoutSession(
@@ -278,15 +265,26 @@ class SubscriptionScreen extends StatelessWidget {
     );
   }
 
-
   Widget _buildFeatureRow(String text, {bool enabled = true}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
-          Icon(enabled ? Icons.check_circle : Icons.cancel_outlined, color: enabled ? AppColors.primaryColor : Colors.grey.shade400, size: 20),
+          Icon(
+            enabled ? Icons.check_circle : Icons.cancel_outlined,
+            color: enabled ? AppColors.primaryColor : Colors.grey.shade400,
+            size: 20,
+          ),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: TextStyle(fontSize: 15, color: enabled ? Colors.black87 : Colors.grey.shade600))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 15,
+                color: enabled ? Colors.black87 : Colors.grey.shade600,
+              ),
+            ),
+          ),
         ],
       ),
     );

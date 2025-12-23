@@ -14,6 +14,7 @@ class ServiceDetailsModel {
   final int? duration; // minutes
   final int shopId;
   final String shopName;
+  final String? shopImg; // NEW: shop logo/image
   final double? avgRating;
   final int? reviewCount;
   final List<ServiceReview> reviews;
@@ -31,6 +32,7 @@ class ServiceDetailsModel {
     this.duration,
     required this.shopId,
     required this.shopName,
+    this.shopImg,
     this.avgRating,
     this.reviewCount,
     required this.reviews,
@@ -48,9 +50,10 @@ class ServiceDetailsModel {
       duration: json["duration"],
       shopId: json["shop_id"],
       shopName: json["shop_name"] ?? '',
+      shopImg: json["shop_img"],
       avgRating: (json["avg_rating"] as num?)?.toDouble(),
       reviewCount: json["review_count"],
-      shopAddress: json["shop_address"] .toString(),
+      shopAddress: json["shop_address"].toString(),
       reviews: (json["reviews"] as List<dynamic>? ?? [])
           .map((e) => ServiceReview.fromJson(e))
           .toList(),

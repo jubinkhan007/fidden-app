@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Social links row widget for shop details
-/// Shows icons for Instagram, TikTok, YouTube, and Website
+/// Shows brand-specific icons for Instagram, TikTok, YouTube, and Website
 class SocialLinksRow extends StatelessWidget {
   final String? instagramUrl;
   final String? tiktokUrl;
@@ -35,28 +36,28 @@ class SocialLinksRow extends StatelessWidget {
         children: [
           if (instagramUrl != null)
             _SocialButton(
-              icon: Icons.camera_alt_rounded,
+              icon: FontAwesomeIcons.instagram, // ✅ Actual Instagram icon
               url: instagramUrl!,
-              color: const Color(0xFFE4405F),
+              color: const Color(0xFFE4405F), // Instagram brand color
               label: 'Instagram',
             ),
           if (tiktokUrl != null)
             _SocialButton(
-              icon: Icons.music_note_rounded,
+              icon: FontAwesomeIcons.tiktok, // ✅ Actual TikTok icon
               url: tiktokUrl!,
               color: Colors.black,
               label: 'TikTok',
             ),
           if (youtubeUrl != null)
             _SocialButton(
-              icon: Icons.play_circle_fill_rounded,
+              icon: FontAwesomeIcons.youtube, // ✅ Actual YouTube icon
               url: youtubeUrl!,
-              color: const Color(0xFFFF0000),
+              color: const Color(0xFFFF0000), // YouTube brand color
               label: 'YouTube',
             ),
           if (websiteUrl != null)
             _SocialButton(
-              icon: Icons.language_rounded,
+              icon: FontAwesomeIcons.globe, // Website globe icon
               url: websiteUrl!,
               color: Colors.blue,
               label: 'Website',
@@ -103,9 +104,7 @@ class _SocialButton extends StatelessWidget {
               color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
-              child: Icon(icon, color: color, size: 24),
-            ),
+            child: Center(child: FaIcon(icon, color: color, size: 22)),
           ),
         ),
       ),

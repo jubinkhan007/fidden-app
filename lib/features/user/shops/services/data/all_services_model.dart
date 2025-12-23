@@ -41,6 +41,7 @@ class ServiceResult {
   String? price;
   String? discountPrice;
   int? shopId;
+  String? shopName; // ← NEW: shop name for identity line
   String? shopAddress;
   double? avgRating;
   int? reviewCount;
@@ -56,6 +57,7 @@ class ServiceResult {
     this.price,
     this.discountPrice,
     this.shopId,
+    this.shopName,
     this.shopAddress,
     this.avgRating,
     this.reviewCount,
@@ -72,6 +74,7 @@ class ServiceResult {
     price: json["price"],
     discountPrice: json["discount_price"],
     shopId: json["shop_id"],
+    shopName: json["shop_name"],
     shopAddress: json["shop_address"],
     avgRating: json["avg_rating"]?.toDouble(),
     reviewCount: json["review_count"],
@@ -93,6 +96,7 @@ class ServiceResult {
     "price": price,
     "discount_price": discountPrice,
     "shop_id": shopId,
+    "shop_name": shopName,
     "shop_address": shopAddress,
     "avg_rating": avgRating,
     "review_count": reviewCount,

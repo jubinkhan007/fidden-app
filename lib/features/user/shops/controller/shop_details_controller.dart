@@ -54,14 +54,14 @@ class ShopDetailsController extends GetxController {
     try {
       final response = await NetworkCaller().getRequest(
         AppUrls.shopDetails(id),
-        token: AuthService.accessToken,
+        // Token is auto-fetched by NetworkCaller - do NOT pass it explicitly
+        // so that on 401 retry, a fresh token is used.
       );
 
       if (response.isSuccess) {
         shopDetails.value = ShopDetailsModel.fromJson(response.responseData);
-        shopDetails.refresh();  // make sure Obx rebuilds
-      }
-      else {
+        shopDetails.refresh(); // make sure Obx rebuilds
+      } else {
         AppSnackBar.showError(
           response.errorMessage ?? 'Failed to fetch shop details.',
         );

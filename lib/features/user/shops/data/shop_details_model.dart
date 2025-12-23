@@ -41,6 +41,9 @@ class ShopDetailsModel {
   // Gallery Preview (first 5 public items)
   List<GalleryPreviewItem>? galleryPreview;
 
+  // Verification status (verified/unverified/pending)
+  String? status;
+
   ShopDetailsModel({
     this.id,
     this.name,
@@ -70,6 +73,7 @@ class ShopDetailsModel {
     this.youtubeUrl,
     this.websiteUrl,
     this.galleryPreview,
+    this.status,
   });
 
   factory ShopDetailsModel.fromJson(Map<String, dynamic> json) {
@@ -131,6 +135,8 @@ class ShopDetailsModel {
       websiteUrl: json['website_url']?.toString(),
       // Gallery Preview
       galleryPreview: galleryItems,
+      // Verification status
+      status: json['status']?.toString(),
     );
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
+import 'package:fidden/core/utils/time_display_helper.dart';
 import 'package:fidden/features/business_owner/home/model/business_owner_booking_model.dart';
 import 'package:fidden/features/user/checkout/controller/checkout_controller.dart';
 import 'package:fidden/features/business_owner/hairstylist/services/hairstylist_service.dart';
@@ -36,9 +36,18 @@ class BookingDetailsScreen extends StatelessWidget {
     );
   }
 
-  String _fmtDate(DateTime dt) => DateFormat('EEE, MMM d, yyyy').format(dt);
-  String _fmtTime(DateTime dt) => DateFormat('h:mm a').format(dt);
-  String _fmtMeta(DateTime dt) => DateFormat('MMM d, yyyy • h:mm a').format(dt);
+  // Use centralized time display helper for consistent timezone handling
+  String _fmtDate(OwnerBookingItem b) => TimeDisplayHelper.formatDateForPro(
+    b.slotTimeIso,
+    b.shopTimezone,
+    format: 'EEE, MMM d, yyyy',
+  );
+
+  String _fmtTime(OwnerBookingItem b) =>
+      TimeDisplayHelper.formatTimeForPro(b.slotTimeIso, b.shopTimezone);
+
+  String _fmtMeta(DateTime dt) =>
+      TimeDisplayHelper.formatDateTimeForClient(dt.toIso8601String());
 
   @override
   Widget build(BuildContext context) {
@@ -139,10 +148,7 @@ class BookingDetailsScreen extends StatelessWidget {
                   value: b.shopName.isEmpty ? '—' : b.shopName,
                 ),
                 const SizedBox(height: 12),
-                _DateTimeGrid(
-                  date: _fmtDate(b.slotTime),
-                  time: _fmtTime(b.slotTime),
-                ),
+                _DateTimeGrid(date: _fmtDate(b), time: _fmtTime(b)),
                 if (durationMins != null) ...[
                   const SizedBox(height: 12),
                   KVRow(

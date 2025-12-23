@@ -36,7 +36,9 @@ class ServiceDetailsScreen extends StatelessWidget {
       // ignore: invalid_use_of_protected_member
       dl
         ..watchdogArmed = false
-        ..suppressDeepLinkUntil = DateTime.now().add(const Duration(seconds: 3));
+        ..suppressDeepLinkUntil = DateTime.now().add(
+          const Duration(seconds: 3),
+        );
     }
 
     if (Get.key.currentState?.canPop() ?? false) {
@@ -51,15 +53,13 @@ class ServiceDetailsScreen extends StatelessWidget {
     return false;
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final RxBool _bookingBusy = false.obs; // ← spinner state
     final tag = 'svc_${serviceId}';
-final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
-    ? Get.find<ServiceDetailsController>(tag: tag)
-    : Get.put(ServiceDetailsController(serviceId), tag: tag);
+    final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
+        ? Get.find<ServiceDetailsController>(tag: tag)
+        : Get.put(ServiceDetailsController(serviceId), tag: tag);
 
     //  Ensure we have a WishlistController to manage the heart state
     final wishlist = Get.isRegistered<WishlistController>()
@@ -67,614 +67,701 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
         : Get.put(WishlistController());
 
     return WillPopScope(
-        onWillPop: _smartBack,
-        child:Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
-      body: SafeArea(
-        bottom: false,
-        child: Obx(() {
-          final d = c.details.value;
+      onWillPop: _smartBack,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F8FA),
+        body: SafeArea(
+          bottom: false,
+          child: Obx(() {
+            final d = c.details.value;
 
-          return Stack(
-            children: [
-              CustomScrollView(
-                slivers: [
-                  SliverAppBar(
-                    pinned: false,
-                    floating: false,
-                    snap: false,
-                    elevation: 0,
-                    backgroundColor: Colors.white,
-                    automaticallyImplyLeading: false,
-                    expandedHeight: 260,
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: CachedNetworkImage(
-                              imageUrl: (d?.serviceImg?.isNotEmpty ?? false)
-                                  ? d!.serviceImg!
-                                  : fallbackImg,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) =>
-                                  Container(color: Colors.grey[300]),
-                              errorWidget: (_, __, ___) =>
-                                  Image.network(fallbackImg, fit: BoxFit.cover),
-                            ),
-                          ),
-                          // top bar icons
-                          Positioned(
-                            top: 8,
-                            left: 8,
-                            right: 8,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _roundIcon(
-                                  icon: Icons.arrow_back_ios_new_rounded,
-                                  onTap: () => _smartBack(), // ← use the same guarded back path
+            return Stack(
+              children: [
+                CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      pinned: false,
+                      floating: false,
+                      snap: false,
+                      elevation: 0,
+                      backgroundColor: Colors.white,
+                      automaticallyImplyLeading: false,
+                      expandedHeight: 260,
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: CachedNetworkImage(
+                                imageUrl: (d?.serviceImg?.isNotEmpty ?? false)
+                                    ? d!.serviceImg!
+                                    : fallbackImg,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) =>
+                                    Container(color: Colors.grey[300]),
+                                errorWidget: (_, __, ___) => Image.network(
+                                  fallbackImg,
+                                  fit: BoxFit.cover,
                                 ),
-                                Row(
-                                  children: [
-                                    //  FAVORITE (reactive)
-                                    Obx(() {
-                                      final isFav = wishlist.isServiceFavorite(
-                                        serviceId,
-                                      );
-                                      return _roundIcon(
-                                        icon: isFav
-                                            ? Icons.favorite_rounded
-                                            : Icons.favorite_border_rounded,
-                                        onTap: () => wishlist
-                                            .toggleServiceFavoriteByServiceId(
-                                              serviceId,
-                                            ),
-                                      );
-                                    }),
-                                    const SizedBox(width: 8),
-                                    //  SHARE
-                                    _roundIcon(
-                                      icon: Icons.ios_share_rounded,
-                                      onTap: () => _shareService(d),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
+                            // top bar icons
+                            Positioned(
+                              top: 8,
+                              left: 8,
+                              right: 8,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _roundIcon(
+                                    icon: Icons.arrow_back_ios_new_rounded,
+                                    onTap: () =>
+                                        _smartBack(), // ← use the same guarded back path
+                                  ),
+                                  Row(
+                                    children: [
+                                      //  FAVORITE (reactive)
+                                      Obx(() {
+                                        final isFav = wishlist
+                                            .isServiceFavorite(serviceId);
+                                        return _roundIcon(
+                                          icon: isFav
+                                              ? Icons.favorite_rounded
+                                              : Icons.favorite_border_rounded,
+                                          onTap: () => wishlist
+                                              .toggleServiceFavoriteByServiceId(
+                                                serviceId,
+                                              ),
+                                        );
+                                      }),
+                                      const SizedBox(width: 8),
+                                      //  SHARE
+                                      _roundIcon(
+                                        icon: Icons.ios_share_rounded,
+                                        onTap: () => _shareService(d),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Title
-                          CustomText(
-                            text: d?.title ?? '—',
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            maxLines: 2,
-                            textOverflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 8),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title
+                            CustomText(
+                              text: d?.title ?? '—',
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              maxLines: 2,
+                              textOverflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 8),
 
-                          // Price
-                          Row(
-                            children: [
-                              ...() {
-                                double? _toDouble(String? s) {
-                                  if (s == null) return null;
-                                  final cleaned = s.replaceAll(
-                                    RegExp(r'[^0-9.\-]'),
-                                    '',
-                                  );
-                                  return double.tryParse(cleaned);
-                                }
+                            // Price
+                            Row(
+                              children: [
+                                ...() {
+                                  double? _toDouble(String? s) {
+                                    if (s == null) return null;
+                                    final cleaned = s.replaceAll(
+                                      RegExp(r'[^0-9.\-]'),
+                                      '',
+                                    );
+                                    return double.tryParse(cleaned);
+                                  }
 
-                                final currentStr =
-                                    (d?.discountPrice != null &&
-                                            d!.discountPrice!.trim().isNotEmpty)
-                                        ? d.discountPrice
-                                        : d?.price;
-                                final current = _toDouble(currentStr) ?? 0.0;
-                                final original = _toDouble(d?.price);
+                                  final currentStr =
+                                      (d?.discountPrice != null &&
+                                          d!.discountPrice!.trim().isNotEmpty)
+                                      ? d.discountPrice
+                                      : d?.price;
+                                  final current = _toDouble(currentStr) ?? 0.0;
+                                  final original = _toDouble(d?.price);
 
-                                final showOriginal =
-                                    (original != null && original > current);
+                                  final showOriginal =
+                                      (original != null && original > current);
 
-                                return [
-                                  CustomText(
-                                    text: '\$${currentStr ?? '0'}',
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                  if (showOriginal) ...[
-                                    const SizedBox(width: 10),
+                                  return [
+                                    CustomText(
+                                      text: '\$${currentStr ?? '0'}',
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                    if (showOriginal) ...[
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        '\$${d!.price}',
+                                        style: TextStyle(
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                          color: Colors.grey.shade600,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(width: 6),
                                     Text(
-                                      '\$${d!.price}',
+                                      '/ session',
                                       style: TextStyle(
-                                        decoration: TextDecoration.lineThrough,
-                                        color: Colors.grey.shade600,
-                                        fontSize: 14,
+                                        color: Colors.grey.shade700,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                  ],
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '/ session',
+                                  ];
+                                }(),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Shop row
+                            if (d != null)
+                              _ShopRow(
+                                name: d.shopName,
+                                shopImg: d.shopImg,
+                                rating: d.avgRating ?? 0,
+                                reviews: d.reviewCount ?? 0,
+                                onView: () => Get.to(
+                                  () => ShopDetailsScreen(
+                                    id: d.shopId.toString(),
+                                  ),
+                                ),
+                              ),
+
+                            const SizedBox(height: 18),
+                            Divider(color: Colors.grey.shade300, height: 1),
+                            const SizedBox(height: 18),
+
+                            // About
+                            CustomText(
+                              text: 'About',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            const SizedBox(height: 10),
+                            _ExpandableText(
+                              text: d?.description ?? '—',
+                              maxLines: 5,
+                              style: TextStyle(
+                                color: Colors.grey.shade800,
+                                fontSize: 15,
+                                height: 1.45,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              linkStyle: TextStyle(
+                                color: Get.theme.primaryColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            // Duration
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.schedule_rounded,
+                                  size: 20,
+                                  color: Colors.grey.shade700,
+                                ),
+                                CustomText(text: 'Duration: '),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${d?.duration ?? 0} minutes',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade800,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 22),
+
+                            // Select a date
+                            CustomText(
+                              text: 'Available Dates',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            const SizedBox(height: 0),
+
+                            Obx(() {
+                              final selected = c.selectedDate.value;
+
+                              // allow any future date (you can cap with +90 days if you like)
+                              final now = DateTime.now();
+                              final today = DateTime(
+                                now.year,
+                                now.month,
+                                now.day,
+                              );
+                              final firstDay = DateTime(
+                                today.year - 1,
+                                1,
+                                1,
+                              ); // far past (for nav)
+                              final lastDay = DateTime(
+                                today.year + 1,
+                                12,
+                                31,
+                              ); // far future (for nav)
+
+                              bool isPast(DateTime d) => d.isBefore(today);
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Month label stays in sync with calendar page
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Text(
+                                      DateFormat('MMMM yyyy').format(selected),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  TableCalendar(
+                                    firstDay: firstDay,
+                                    lastDay: lastDay,
+                                    focusedDay:
+                                        selected, // keep calendar focused
+                                    calendarFormat:
+                                        CalendarFormat.month, // <-- full month
+                                    availableGestures:
+                                        AvailableGestures.horizontalSwipe,
+                                    startingDayOfWeek: StartingDayOfWeek.sunday,
+                                    headerStyle: const HeaderStyle(
+                                      formatButtonVisible: false,
+                                      titleCentered: true,
+                                      leftChevronVisible: true,
+                                      rightChevronVisible: true,
+                                    ),
+
+                                    selectedDayPredicate: (d) =>
+                                        d.year == selected.year &&
+                                        d.month == selected.month &&
+                                        d.day == selected.day,
+
+                                    // Disable past days and shop closed days
+                                    enabledDayPredicate: (day) =>
+                                        !isPast(day) && !c.isClosedDay(day),
+
+                                    onDaySelected: (sel, foc) {
+                                      if (isPast(sel) || c.isClosedDay(sel))
+                                        return;
+                                      c.fetchSlotsForDate(
+                                        sel,
+                                      ); // updates selectedDate & loads slots
+                                    },
+
+                                    // keep the label in sync when user flips months
+                                    onPageChanged: (focused) {
+                                      // move focus but don't trigger slot load
+                                      c.selectedDate.value = DateTime(
+                                        focused.year,
+                                        focused.month,
+                                        c.selectedDate.value.day.clamp(1, 28),
+                                      );
+                                    },
+
+                                    calendarBuilders: CalendarBuilders(
+                                      defaultBuilder: (ctx, day, foc) {
+                                        final disabled =
+                                            isPast(day) || c.isClosedDay(day);
+                                        return Center(
+                                          child: Text(
+                                            '${day.day}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              color: disabled
+                                                  ? Colors.grey.shade400
+                                                  : const Color(0xFF120D1C),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      outsideBuilder: (ctx, day, foc) {
+                                        final disabled =
+                                            isPast(day) || c.isClosedDay(day);
+                                        return Center(
+                                          child: Text(
+                                            '${day.day}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              color: disabled
+                                                  ? Colors.grey.shade300
+                                                  : Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      selectedBuilder: (ctx, day, foc) => Center(
+                                        child: Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: Get.theme.primaryColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            '${day.day}', // ← show the number
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      todayBuilder: (ctx, day, foc) => Center(
+                                        child: Text(
+                                          '${day.day}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF120D1C),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }),
+
+                            const SizedBox(height: 0),
+
+                            // Select a time
+                            CustomText(
+                              text: 'Select a time',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            const SizedBox(height: 12),
+                            Obx(() {
+                              // Show shimmer while:
+                              // - details still loading, OR
+                              // - first slots load hasn’t finished yet, OR
+                              // - a fetch is in progress
+                              final showShimmer =
+                                  c.isLoadingDetails.value ||
+                                  !c.didLoadSlotsOnce.value ||
+                                  c.isLoadingSlots.value;
+
+                              if (showShimmer) {
+                                return SlotsShimmer(); // now real shimmer (see below)
+                              }
+
+                              if (c.slots.isEmpty) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Text(
+                                    'No time slots available.',
                                     style: TextStyle(
                                       color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              return Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: c.slots.map((s) {
+                                  final isSel = c.selectedSlotId.value == s.id;
+                                  final label = c.fmtTimeLocal(s.startTimeUtc);
+                                  return TimeChip(
+                                    text: label,
+                                    selected: isSel,
+                                    available: s.available,
+                                    onTap: () => c.selectedSlotId.value = s.id,
+                                  );
+                                }).toList(),
+                              );
+                            }),
+
+                            const SizedBox(height: 26),
+
+                            // Add-on Services
+                            Obx(() {
+                              if (c.shopServices.isEmpty)
+                                return const SizedBox.shrink();
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CustomText(
+                                    text: 'Add-on Services',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ...c.shopServices.map((service) {
+                                    final isSelected = c.selectedAddOns
+                                        .contains(service);
+                                    return CheckboxListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text(
+                                        service.title ?? '',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        '${service.duration ?? 0} min • \$${service.discountPrice ?? service.price ?? 0}',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      value: isSelected,
+                                      onChanged: (val) =>
+                                          c.toggleAddOn(service),
+                                      activeColor: Get.theme.primaryColor,
+                                      controlAffinity:
+                                          ListTileControlAffinity.leading,
+                                    );
+                                  }).toList(),
+                                  const SizedBox(height: 26),
+                                ],
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Floating bottom bar
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          offset: Offset(0, -6),
+                          blurRadius: 16,
+                        ),
+                      ],
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Obx(
+                              () => Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Total: \$${c.effectivePrice.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Duration: ${c.totalDuration} min',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ];
-                              }(),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Shop row
-                          if (d != null)
-                            _ShopRow(
-                              name: d.shopName,
-                              rating: d.avgRating ?? 0,
-                              reviews: d.reviewCount ?? 0,
-                              onView: () => Get.to(
-                                () =>
-                                    ShopDetailsScreen(id: d.shopId.toString()),
+                                ],
                               ),
                             ),
-
-                          const SizedBox(height: 18),
-                          Divider(color: Colors.grey.shade300, height: 1),
-                          const SizedBox(height: 18),
-
-                          // About
-                          CustomText(
-                            text: 'About',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
                           ),
-                          const SizedBox(height: 10),
-                          _ExpandableText(
-                            text: d?.description ?? '—',
-                            maxLines: 5,
-                            style: TextStyle(
-                              color: Colors.grey.shade800,
-                              fontSize: 15,
-                              height: 1.45,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            linkStyle: TextStyle(
-                              color: Get.theme.primaryColor,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // Duration
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.schedule_rounded,
-                                size: 20,
-                                color: Colors.grey.shade700,
-                              ),
-                              CustomText(text: 'Duration: '),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${d?.duration ?? 0} minutes',
-                                style: TextStyle(
-                                  color: Colors.grey.shade800,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          // Select a date
-                          CustomText(
-                            text: 'Available Dates',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                          const SizedBox(height: 0),
-
-                          Obx(() {
-                            final selected = c.selectedDate.value;
-
-                            // allow any future date (you can cap with +90 days if you like)
-                            final now    = DateTime.now();
-                            final today  = DateTime(now.year, now.month, now.day);
-                            final firstDay = DateTime(today.year - 1, 1, 1);   // far past (for nav)
-                            final lastDay  = DateTime(today.year + 1, 12, 31); // far future (for nav)
-
-                            bool isPast(DateTime d) => d.isBefore(today);
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Month label stays in sync with calendar page
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 6),
-                                  child: Text(
-                                    DateFormat('MMMM yyyy').format(selected),
-                                    style: const TextStyle(fontWeight: FontWeight.w800),
+                          const SizedBox(width: 0),
+                          Expanded(
+                            flex: 2,
+                            child: Obx(() {
+                              final busy = _bookingBusy.value;
+                              return ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Get.theme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
                                   ),
-                                ),
-                                TableCalendar(
-                                  firstDay: firstDay,
-                                  lastDay: lastDay,
-                                  focusedDay: selected,                   // keep calendar focused
-                                  calendarFormat: CalendarFormat.month,   // <-- full month
-                                  availableGestures: AvailableGestures.horizontalSwipe,
-                                  startingDayOfWeek: StartingDayOfWeek.sunday,
-                                  headerStyle: const HeaderStyle(
-                                    formatButtonVisible: false,
-                                    titleCentered: true,
-                                    leftChevronVisible: true,
-                                    rightChevronVisible: true,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
+                                  elevation: 0,
+                                ),
+                                onPressed: busy
+                                    ? null
+                                    : () async {
+                                        if (_bookingBusy.value) return;
+                                        _bookingBusy.value = true;
+                                        try {
+                                          final slotId = c.selectedSlotId.value;
+                                          if (slotId == null) {
+                                            Get.snackbar(
+                                              'Select a time',
+                                              'Please select a time slot to continue.',
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                            );
+                                            return;
+                                          }
 
-                                  selectedDayPredicate: (d) =>
-                                  d.year == selected.year &&
-                                      d.month == selected.month &&
-                                      d.day == selected.day,
+                                          // find the selected slot to format the date/time using shop's timezone
+                                          DateTime? slotStartShopTz;
+                                          try {
+                                            final slot = c.slots.firstWhere(
+                                              (s) => s.id == slotId,
+                                            );
+                                            slotStartShopTz = c.toShopTz(
+                                              slot.startTimeUtc,
+                                            ); // Use shop timezone, not device local
+                                          } catch (_) {}
 
-                                  // Disable past days and shop closed days
-                                  enabledDayPredicate: (day) => !isPast(day) && !c.isClosedDay(day),
+                                          final slotLabel =
+                                              (slotStartShopTz != null)
+                                              ? DateFormat(
+                                                  'MMMM d, yyyy, h.mm a',
+                                                ).format(slotStartShopTz)
+                                              : '—';
 
-                                  onDaySelected: (sel, foc) {
-                                    if (isPast(sel) || c.isClosedDay(sel)) return;
-                                    c.fetchSlotsForDate(sel); // updates selectedDate & loads slots
-                                  },
+                                          String? currentPriceStr;
+                                          String? originalPriceStr;
+                                          final details = c.details.value;
+                                          if (details != null) {
+                                            final hasDiscount =
+                                                (details.discountPrice !=
+                                                    null &&
+                                                details.discountPrice!
+                                                    .trim()
+                                                    .isNotEmpty);
+                                            currentPriceStr = hasDiscount
+                                                ? details.discountPrice
+                                                : details.price;
+                                            originalPriceStr = details.price;
+                                          }
 
-                                  // keep the label in sync when user flips months
-                                  onPageChanged: (focused) {
-                                    // move focus but don't trigger slot load
-                                    c.selectedDate.value = DateTime(focused.year, focused.month, c.selectedDate.value.day.clamp(1, 28));
-                                  },
+                                          // ✅ No API call here. Just navigate with arguments.
+                                          //    Use the selected slotId as the bookingId to keep the arg name.
+                                          final args = {
+                                            'bookingId':
+                                                slotId, // ← passing slotId as the bookingId
+                                            'serviceName': details?.title ?? '',
+                                            'shopName': details?.shopName ?? '',
+                                            'service_img':
+                                                details?.serviceImg ?? '',
+                                            'shopAddress':
+                                                details?.shopAddress ?? '',
+                                            'serviceDurationMinutes': c
+                                                .totalDuration, // Use total duration
+                                            'selectedSlotLabel': slotLabel,
+                                            'price': c
+                                                .effectivePrice, // Use effective price
+                                            'discountPrice':
+                                                null, // Already handled in effectivePrice
+                                            'add_on_ids': c.selectedAddOns
+                                                .map((s) => s.id)
+                                                .toList(), // Pass add-ons
+                                            // keep a reference payload if the summary screen needs context
+                                            'booking': {
+                                              'slot_id': slotId,
+                                              'service_id': details?.id,
+                                              'shop_id': details?.shopId,
+                                            },
+                                            'preload': {
+                                              'selectedDate': c
+                                                  .selectedDate
+                                                  .value
+                                                  .toIso8601String(),
+                                              'slots': c.slots
+                                                  .map(
+                                                    (s) => {
+                                                      'id': s.id,
+                                                      'start': s.startTimeUtc
+                                                          .toIso8601String(),
+                                                      'end': s.endTimeUtc
+                                                          .toIso8601String(),
+                                                      'available': s.available,
+                                                      'service': s.service,
+                                                      'shop': s.shop,
+                                                      'capLeft': s.capacityLeft,
+                                                    },
+                                                  )
+                                                  .toList(),
+                                            },
+                                          };
 
-                                  calendarBuilders: CalendarBuilders(
-                                    defaultBuilder: (ctx, day, foc) {
-                                      final disabled = isPast(day) || c.isClosedDay(day);
-                                      return Center(
-                                        child: Text(
-                                          '${day.day}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            color: disabled ? Colors.grey.shade400 : const Color(0xFF120D1C),
-                                          ),
+                                          Get.to(
+                                            () => BookingSummaryScreen(),
+                                            arguments: args,
+                                          );
+                                        } catch (e) {
+                                          AppSnackBar.showError(
+                                            'Could not continue: $e',
+                                          );
+                                        } finally {
+                                          _bookingBusy.value = false;
+                                        }
+                                      },
+
+                                // ─── Spinner or label ────────────────────────
+                                child: busy
+                                    ? const SizedBox(
+                                        height: 22,
+                                        width: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.4,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
                                         ),
-                                      );
-                                    },
-                                    outsideBuilder: (ctx, day, foc) {
-                                      final disabled = isPast(day) || c.isClosedDay(day);
-                                      return Center(
-                                        child: Text(
-                                          '${day.day}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            color: disabled ? Colors.grey.shade300 : Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    selectedBuilder: (ctx, day, foc) => Center(
-                                      child: Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: Get.theme.primaryColor,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          '${day.day}',                 // ← show the number
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-
-                                    todayBuilder: (ctx, day, foc) => Center(
-                                      child: Text(
-                                        '${day.day}',
-                                        style: const TextStyle(
+                                      )
+                                    : const Text(
+                                        'Book Now',
+                                        style: TextStyle(
                                           fontWeight: FontWeight.w800,
-                                          color: Color(0xFF120D1C),
+                                          fontSize: 16,
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
-
-
-                          const SizedBox(height: 0),
-
-                          // Select a time
-                          CustomText(
-                            text: 'Select a time',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                              );
+                            }),
                           ),
-                          const SizedBox(height: 12),
-                          Obx(() {
-  // Show shimmer while:
-  // - details still loading, OR
-  // - first slots load hasn’t finished yet, OR
-  // - a fetch is in progress
-  final showShimmer = c.isLoadingDetails.value ||
-                      !c.didLoadSlotsOnce.value ||
-                      c.isLoadingSlots.value;
-
-  if (showShimmer) {
-    return SlotsShimmer(); // now real shimmer (see below)
-  }
-
-  if (c.slots.isEmpty) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        'No time slots available.',
-        style: TextStyle(color: Colors.grey.shade700),
-      ),
-    );
-  }
-
-  return Wrap(
-    spacing: 10,
-    runSpacing: 10,
-    children: c.slots.map((s) {
-      final isSel = c.selectedSlotId.value == s.id;
-      final label = c.fmtTimeLocal(s.startTimeUtc);
-      return TimeChip(
-        text: label,
-        selected: isSel,
-        available: s.available,
-        onTap: () => c.selectedSlotId.value = s.id,
-      );
-    }).toList(),
-  );
-}),
-
-                          const SizedBox(height: 26),
-
-                          // Add-on Services
-                          Obx(() {
-                            if (c.shopServices.isEmpty) return const SizedBox.shrink();
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CustomText(
-                                  text: 'Add-on Services',
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                const SizedBox(height: 12),
-                                ...c.shopServices.map((service) {
-                                  final isSelected = c.selectedAddOns.contains(service);
-                                  return CheckboxListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    title: Text(
-                                      service.title ?? '',
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
-                                    ),
-                                    subtitle: Text(
-                                      '${service.duration ?? 0} min • \$${service.discountPrice ?? service.price ?? 0}',
-                                      style: TextStyle(color: Colors.grey.shade600),
-                                    ),
-                                    value: isSelected,
-                                    onChanged: (val) => c.toggleAddOn(service),
-                                    activeColor: Get.theme.primaryColor,
-                                    controlAffinity: ListTileControlAffinity.leading,
-                                  );
-                                }).toList(),
-                                const SizedBox(height: 26),
-                              ],
-                            );
-                          }),
                         ],
                       ),
                     ),
                   ),
-                ],
-              ),
-
-              // Floating bottom bar
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x14000000),
-                        offset: Offset(0, -6),
-                        blurRadius: 16,
-                      ),
-                    ],
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: SafeArea(
-                    top: false,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Obx(
-                            () => Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Total: \$${c.effectivePrice.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                Text(
-                                  'Duration: ${c.totalDuration} min',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 0),
-                        Expanded(
-                          flex: 2,
-                          child: Obx(() {
-                            final busy = _bookingBusy.value;
-                            return ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Get.theme.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                elevation: 0,
-                              ),
-                              onPressed: busy
-    ? null
-    : () async {
-        if (_bookingBusy.value) return;
-        _bookingBusy.value = true;
-        try {
-          final slotId = c.selectedSlotId.value;
-          if (slotId == null) {
-            Get.snackbar(
-              'Select a time',
-              'Please select a time slot to continue.',
-              snackPosition: SnackPosition.BOTTOM,
-            );
-            return;
-          }
-
-          // find the selected slot to format the date/time using shop's timezone
-          DateTime? slotStartShopTz;
-          try {
-            final slot = c.slots.firstWhere((s) => s.id == slotId);
-            slotStartShopTz = c.toShopTz(slot.startTimeUtc); // Use shop timezone, not device local
-          } catch (_) {}
-
-          final slotLabel = (slotStartShopTz != null)
-              ? DateFormat('MMMM d, yyyy, h.mm a').format(slotStartShopTz)
-              : '—';
-
-          String? currentPriceStr;
-          String? originalPriceStr;
-          final details = c.details.value;
-          if (details != null) {
-            final hasDiscount = (details.discountPrice != null &&
-                details.discountPrice!.trim().isNotEmpty);
-            currentPriceStr = hasDiscount ? details.discountPrice : details.price;
-            originalPriceStr = details.price;
-          }
-
-          // ✅ No API call here. Just navigate with arguments.
-          //    Use the selected slotId as the bookingId to keep the arg name.
-          final args = {
-            'bookingId': slotId, // ← passing slotId as the bookingId
-            'serviceName': details?.title ?? '',
-            'shopName': details?.shopName ?? '',
-            'service_img': details?.serviceImg ?? '',
-            'shopAddress': details?.shopAddress ?? '',
-            'serviceDurationMinutes': c.totalDuration, // Use total duration
-            'selectedSlotLabel': slotLabel,
-            'price': c.effectivePrice, // Use effective price
-            'discountPrice': null, // Already handled in effectivePrice
-            'add_on_ids': c.selectedAddOns.map((s) => s.id).toList(), // Pass add-ons
-
-            // keep a reference payload if the summary screen needs context
-            'booking': {
-              'slot_id': slotId,
-              'service_id': details?.id,
-              'shop_id': details?.shopId,
-            },
-            'preload': {
-    'selectedDate': c.selectedDate.value.toIso8601String(),
-    'slots': c.slots.map((s) => {
-      'id': s.id,
-      'start': s.startTimeUtc.toIso8601String(),
-      'end': s.endTimeUtc.toIso8601String(),
-      'available': s.available,
-      'service': s.service,
-      'shop': s.shop,
-      'capLeft': s.capacityLeft,
-    }).toList(),
-  },
-          };
-
-          Get.to(() => BookingSummaryScreen(), arguments: args);
-        } catch (e) {
-          AppSnackBar.showError('Could not continue: $e');
-        } finally {
-          _bookingBusy.value = false;
-        }
-      },
-
-                              // ─── Spinner or label ────────────────────────
-                              child: busy
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.4,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                                Colors.white),
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Book Now',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                            );
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
-              ),
-            ],
-          );
-        }),
+              ],
+            );
+          }),
+        ),
       ),
-    ));
+    );
   }
 
   // --- helpers (unchanged) ---
@@ -717,12 +804,14 @@ final c = Get.isRegistered<ServiceDetailsController>(tag: tag)
 class _ShopRow extends StatelessWidget {
   const _ShopRow({
     required this.name,
+    this.shopImg,
     required this.rating,
     required this.reviews,
     required this.onView,
   });
 
   final String name;
+  final String? shopImg;
   final double rating;
   final int reviews;
   final VoidCallback onView;
@@ -731,7 +820,16 @@ class _ShopRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const CircleAvatar(radius: 18, backgroundColor: Color(0xFFE9EDF5)),
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: const Color(0xFFE9EDF5),
+          backgroundImage: (shopImg != null && shopImg!.isNotEmpty)
+              ? CachedNetworkImageProvider(shopImg!)
+              : null,
+          child: (shopImg == null || shopImg!.isEmpty)
+              ? Icon(Icons.storefront, size: 18, color: Colors.grey.shade500)
+              : null,
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -826,19 +924,19 @@ class _DatePill extends StatelessWidget {
   String _wkday(int w) =>
       const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][w - 1];
   String _mon(int m) => const [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ][m - 1];
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][m - 1];
 }
 
 class TimeChip extends StatelessWidget {
@@ -906,9 +1004,10 @@ class SlotsShimmer extends StatefulWidget {
 
 class _SlotsShimmerState extends State<SlotsShimmer>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ac =
-      AnimationController(vsync: this, duration: const Duration(seconds: 1))
-        ..repeat();
+  late final AnimationController _ac = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 1),
+  )..repeat();
 
   @override
   void dispose() {
@@ -975,7 +1074,6 @@ class _ShimmerChip extends StatelessWidget {
   }
 }
 
-
 /// Convenience gradient transform
 
 // class GradientTranslation extends GradientTransform {
@@ -988,7 +1086,6 @@ class _ShimmerChip extends StatelessWidget {
 //     return Matrix4.translationValues(dx, dy, 0.0);
 //   }
 // }
-
 
 class _ExpandableText extends StatefulWidget {
   const _ExpandableText({
@@ -1044,7 +1141,8 @@ class _ExpandableTextState extends State<_ExpandableText>
             onPressed: () => setState(() => _expanded = !_expanded),
             child: Text(
               _expanded ? 'Show Less' : 'Show More',
-              style: widget.linkStyle ??
+              style:
+                  widget.linkStyle ??
                   const TextStyle(
                     color: Color(0xff111827),
                     fontWeight: FontWeight.w800,

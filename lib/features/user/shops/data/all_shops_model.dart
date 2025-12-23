@@ -47,7 +47,9 @@ class Shop {
   String? shop_img;
   String? badge;
   bool? isFavorite;
-  final String? niche; // DEPRECATED: Use niches. Kept for backward compatibility
+  String? status; // Verification status: approved, unverified, pending
+  final String?
+  niche; // DEPRECATED: Use niches. Kept for backward compatibility
   final List<String> niches; // NEW: List of all niches offered by shop
 
   Shop({
@@ -61,6 +63,7 @@ class Shop {
     this.shop_img,
     this.badge,
     this.isFavorite,
+    this.status,
     this.niche,
     List<String>? niches,
   }) : niches = niches ?? (niche != null ? [niche] : ['other']);
@@ -75,7 +78,7 @@ class Shop {
     } else {
       parsedNiches = ['other'];
     }
-    
+
     return Shop(
       id: json['id'],
       name: json['name'],
@@ -87,6 +90,7 @@ class Shop {
       shop_img: json['shop_img'],
       badge: json["badge"],
       isFavorite: json["is_favorite"],
+      status: json['status']?.toString(),
       niche: json['niche'], // Deprecated
       niches: parsedNiches, // NEW: Multi-niche support
     );
@@ -108,10 +112,10 @@ class Shop {
       'niches': niches, // NEW: Multi-niche support
     };
   }
-  
+
   /// Helper: Returns primary (first) niche
   String get primaryNiche => niches.isNotEmpty ? niches.first : 'other';
-  
+
   /// Helper: Check if shop offers multiple niches
   bool get isMultiNiche => niches.length > 1;
 }

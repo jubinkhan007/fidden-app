@@ -43,6 +43,8 @@ class AppUrls {
     return Uri.parse(base).replace(queryParameters: qp).toString();
   }
 
+  static String userBookingDetail(int id) => '$_baseUrl/payments/bookings/$id/';
+
   static const String createReview = '$_baseUrl/api/reviews/';
   static const String allShops = '$_baseUrl/api/users/shops/';
   static const String serviceDetails =
@@ -51,6 +53,10 @@ class AppUrls {
   // transactions
   static String transactions(int shopId) =>
       '$_baseUrl/payments/transactions/?shop=$shopId';
+
+  // Transaction aggregation for pro dashboard (V1 backend fix)
+  static String transactionsAggregate(int shopId) =>
+      '$_baseUrl/payments/shops/$shopId/transactions/aggregate/';
 
   // owner-booking
 
@@ -78,8 +84,6 @@ class AppUrls {
   // Tattoo Artist Features
   static const String portfolio = '$_baseUrl/api/portfolio/';
   static const String designRequests = '$_baseUrl/api/design-requests/';
-  static const String consentTemplates =
-      '$_baseUrl/api/consent-forms/templates/';
   static const String signedConsents = '$_baseUrl/api/consent-forms/signed/';
   static const String idVerification = '$_baseUrl/api/id-verification/';
   static const String consultations = '$_baseUrl/api/consultations/';
@@ -306,6 +310,8 @@ class AppUrls {
       '$_baseUrl/api/design-requests/$id/images/';
 
   // Tattoo Artist - Consent Forms
+  static const String consentTemplates =
+      '$_baseUrl/api/consent-forms/templates/';
   static String consentTemplate(int id) =>
       '$_baseUrl/api/consent-forms/templates/$id/';
   static const String signedConsentForms =

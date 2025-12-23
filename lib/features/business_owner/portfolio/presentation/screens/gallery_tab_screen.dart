@@ -81,7 +81,11 @@ class GalleryTabScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.photo_library_outlined, size: getWidth(80), color: Colors.grey[400]),
+          Icon(
+            Icons.photo_library_outlined,
+            size: getWidth(80),
+            color: Colors.grey[400],
+          ),
           SizedBox(height: getHeight(16)),
           CustomText(
             text: 'No photos yet',
@@ -112,26 +116,27 @@ class GalleryTabScreen extends StatelessWidget {
     );
   }
 
-void _showUploadDialog(BuildContext context, GalleryController controller) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,        // ✅ keep this
-    backgroundColor: Colors.transparent,
-    builder: (context) => _UploadGallerySheet(controller: controller),
-  );
-}
+  void _showUploadDialog(BuildContext context, GalleryController controller) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true, // ✅ keep this
+      backgroundColor: Colors.transparent,
+      builder: (context) => _UploadGallerySheet(controller: controller),
+    );
+  }
 
-
-  void _showItemDetails(BuildContext context, GalleryItemModel item, GalleryController controller) {
+  void _showItemDetails(
+    BuildContext context,
+    GalleryItemModel item,
+    GalleryController controller,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _GalleryItemDetailSheet(
-        item: item,
-        controller: controller,
-      ),
+      builder: (context) =>
+          _GalleryItemDetailSheet(item: item, controller: controller),
     );
   }
 }
@@ -141,15 +146,12 @@ class _GalleryGridItem extends StatelessWidget {
   final GalleryItemModel item;
   final VoidCallback onTap;
 
-  const _GalleryGridItem({
-    required this.item,
-    required this.onTap,
-  });
+  const _GalleryGridItem({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = item.thumbnailUrl ?? item.imageUrl;
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -249,11 +251,11 @@ class _UploadGallerySheetState extends State<_UploadGallerySheet> {
 
     final success = await widget.controller.uploadGalleryItem(
       imagePath: _selectedImage!.path,
-      caption: _captionController.text.trim().isEmpty 
-          ? null 
+      caption: _captionController.text.trim().isEmpty
+          ? null
           : _captionController.text.trim(),
-      categoryTag: _categoryTagController.text.trim().isEmpty 
-          ? null 
+      categoryTag: _categoryTagController.text.trim().isEmpty
+          ? null
           : _categoryTagController.text.trim(),
       isPublic: _isPublic,
     );
@@ -265,24 +267,27 @@ class _UploadGallerySheetState extends State<_UploadGallerySheet> {
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  return Container(
-    decoration: const BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    padding: EdgeInsets.only(
-      left: 20,
-      right: 20,
-      top: 20,
-      // keyboard inset only; SafeArea already handled system bottom
-      bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-    ),
-    child: SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        // keyboard inset + safe area for system navigation bar
+        bottom:
+            MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).viewPadding.bottom +
+            24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Handle bar
             Center(
@@ -296,7 +301,7 @@ Widget build(BuildContext context) {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Title
             const Text(
               'Add to Gallery',
@@ -349,7 +354,11 @@ Widget build(BuildContext context) {
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close, color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
@@ -366,7 +375,10 @@ Widget build(BuildContext context) {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               maxLines: 2,
               textCapitalization: TextCapitalization.sentences,
@@ -382,7 +394,10 @@ Widget build(BuildContext context) {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -410,7 +425,7 @@ Widget build(BuildContext context) {
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                         Text(
-                          _isPublic 
+                          _isPublic
                               ? 'Clients can see this photo'
                               : 'Only visible to you',
                           style: TextStyle(
@@ -433,13 +448,16 @@ Widget build(BuildContext context) {
 
             // Upload button
             SizedBox(
-              height: 50,
+              height: 56, // Increased from 50 to prevent text clipping
               child: ElevatedButton(
                 onPressed: _isUploading ? null : _upload,
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                  ), // Explicit padding
                 ),
                 child: _isUploading
                     ? const SizedBox(
@@ -450,13 +468,18 @@ Widget build(BuildContext context) {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Add to Gallery', style: TextStyle(fontSize: 16)),
+                    : const Text(
+                        'Add to Gallery',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ],
         ),
       ),
-
     );
   }
 }
@@ -504,13 +527,11 @@ class _GalleryItemDetailSheet extends StatefulWidget {
   final GalleryItemModel item;
   final GalleryController controller;
 
-  const _GalleryItemDetailSheet({
-    required this.item,
-    required this.controller,
-  });
+  const _GalleryItemDetailSheet({required this.item, required this.controller});
 
   @override
-  State<_GalleryItemDetailSheet> createState() => _GalleryItemDetailSheetState();
+  State<_GalleryItemDetailSheet> createState() =>
+      _GalleryItemDetailSheetState();
 }
 
 class _GalleryItemDetailSheetState extends State<_GalleryItemDetailSheet> {
@@ -525,12 +546,12 @@ class _GalleryItemDetailSheetState extends State<_GalleryItemDetailSheet> {
 
   Future<void> _toggleVisibility() async {
     setState(() => _isUpdating = true);
-    
+
     final success = await widget.controller.togglePublicVisibility(
       widget.item.id,
       _isPublic,
     );
-    
+
     if (success) {
       setState(() {
         _isPublic = !_isPublic;
@@ -603,9 +624,8 @@ class _GalleryItemDetailSheetState extends State<_GalleryItemDetailSheet> {
               child: CachedNetworkImage(
                 imageUrl: imageUrl,
                 fit: BoxFit.contain,
-                placeholder: (context, url) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                placeholder: (context, url) =>
+                    const Center(child: CircularProgressIndicator()),
                 errorWidget: (context, url, error) => Container(
                   height: 200,
                   color: Colors.grey[300],
@@ -620,7 +640,8 @@ class _GalleryItemDetailSheetState extends State<_GalleryItemDetailSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (widget.item.caption != null && widget.item.caption!.isNotEmpty)
+                if (widget.item.caption != null &&
+                    widget.item.caption!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(

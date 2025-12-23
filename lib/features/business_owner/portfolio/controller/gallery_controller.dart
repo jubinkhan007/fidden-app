@@ -12,7 +12,7 @@ class GalleryController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxBool isLoadingMore = false.obs;
   final RxList<GalleryItemModel> galleryItems = <GalleryItemModel>[].obs;
-  
+
   // For public gallery pagination
   final RxInt currentPage = 1.obs;
   final RxInt totalPages = 1.obs;
@@ -33,7 +33,9 @@ class GalleryController extends GetxController {
       if (response.isSuccess) {
         final List<dynamic> data = response.responseData as List<dynamic>;
         galleryItems.value = data
-            .map((json) => GalleryItemModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) => GalleryItemModel.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
       } else {
         if (response.statusCode != 401) {
@@ -58,7 +60,7 @@ class GalleryController extends GetxController {
   }) async {
     try {
       isLoading(true);
-      
+
       // Build query parameters
       final queryParams = <String, String>{'niche': niche};
       if (tags != null && tags.isNotEmpty) {
@@ -67,26 +69,28 @@ class GalleryController extends GetxController {
       if (category != null && category.isNotEmpty) {
         queryParams['category'] = category;
       }
-      
+
       final queryString = queryParams.entries
           .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
           .join('&');
       final url = '${AppUrls.galleryList}?$queryString';
-      
+
       final response = await NetworkCaller().getRequest(url);
 
       if (response.isSuccess) {
         List<dynamic> data;
         if (response.responseData is List) {
           data = response.responseData as List<dynamic>;
-        } else if (response.responseData is Map && 
-                   response.responseData['results'] != null) {
+        } else if (response.responseData is Map &&
+            response.responseData['results'] != null) {
           data = response.responseData['results'] as List<dynamic>;
         } else {
           data = [];
         }
         galleryItems.value = data
-            .map((json) => GalleryItemModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) => GalleryItemModel.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
       } else {
         if (response.statusCode != 401) {
@@ -116,9 +120,7 @@ class GalleryController extends GetxController {
     try {
       isLoading(true);
 
-      final body = <String, String>{
-        'is_public': isPublic.toString(),
-      };
+      final body = <String, String>{'is_public': isPublic.toString()};
       if (caption != null && caption.isNotEmpty) {
         body['caption'] = caption;
       }
@@ -134,7 +136,7 @@ class GalleryController extends GetxController {
         method: 'POST',
         body: body,
         photo: File(imagePath),
-        photoFieldName: 'image',
+        photoFieldName: 'image', // Backend expects 'image' field name
       );
 
       if (response.isSuccess) {
@@ -220,7 +222,10 @@ class GalleryController extends GetxController {
   }
 
   /// Fetch public gallery for a shop (client-facing, paginated)
-  Future<PaginatedGallery?> fetchPublicGallery(int shopId, {int page = 1}) async {
+  Future<PaginatedGallery?> fetchPublicGallery(
+    int shopId, {
+    int page = 1,
+  }) async {
     try {
       if (page == 1) {
         isLoading(true);
@@ -235,17 +240,17 @@ class GalleryController extends GetxController {
       if (response.isSuccess) {
         final data = response.responseData as Map<String, dynamic>;
         final paginated = PaginatedGallery.fromJson(data);
-        
+
         currentPage.value = paginated.currentPage;
         totalPages.value = paginated.numPages;
         totalCount.value = paginated.count;
-        
+
         if (page == 1) {
           galleryItems.value = paginated.results;
         } else {
           galleryItems.addAll(paginated.results);
         }
-        
+
         return paginated;
       } else {
         if (response.statusCode != 401) {

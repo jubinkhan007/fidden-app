@@ -276,27 +276,29 @@ class _Header extends StatelessWidget {
                     ),
                     SizedBox(height: r.h(10)),
                     Row(
-  children: [
-    Icon(
-      Icons.location_on,
-      size: r.w(16),
-      color: const Color(0xFFFFE082),
-    ),
-    SizedBox(width: r.w(6)),
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: r.w(16),
+                          color: const Color(0xFFFFE082),
+                        ),
+                        SizedBox(width: r.w(6)),
 
-    //Use Obx here
-    Obx(() {
-      final addr = SplashController.address.value.trim();
-      return Text(
-        addr.isNotEmpty ? addr : "Location not available", // fallback text
-        style: TextStyle(
-          color: Colors.white70,
-          fontSize: r.sp(14),
-        ),
-      );
-    }),
-  ],
-),
+                        //Use Obx here
+                        Obx(() {
+                          final addr = SplashController.address.value.trim();
+                          return Text(
+                            addr.isNotEmpty
+                                ? addr
+                                : "Location not available", // fallback text
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: r.sp(14),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                     //SizedBox(height: 2,)
                   ],
                 ),
@@ -321,7 +323,7 @@ class _Header extends StatelessWidget {
                               onPressed: () {
                                 Get.toNamed(AppRoute.notificationScreen);
                               },
-                        
+
                               icon: const Icon(
                                 color: Colors.white,
                                 Icons.notifications_none_outlined,
@@ -470,6 +472,23 @@ String _pct(String? s) {
 String _nonEmpty(String? s, String fallback) =>
     (s != null && s.trim().isNotEmpty) ? s : fallback;
 
+/// Helper function to get shop identity label for trending services
+/// Format: "at {Shop Name}" or "at {Shop Address}" or "at Shop"
+String _getTrendingShopLabel(dynamic service) {
+  // Try shopName first (now available from backend)
+  if (service.shopName != null &&
+      service.shopName.toString().trim().isNotEmpty) {
+    return 'at ${service.shopName}';
+  }
+  // Fall back to shopAddress
+  if (service.shopAddress != null &&
+      service.shopAddress.toString().trim().isNotEmpty) {
+    return 'at ${service.shopAddress}';
+  }
+  // Final fallback
+  return 'at Shop';
+}
+
 class _PromoCard extends StatelessWidget {
   const _PromoCard({required this.r, required this.promo});
   final R r;
@@ -522,7 +541,7 @@ class _PromoCard extends StatelessWidget {
           ),
           SizedBox(width: r.w(8)),
           Text(
-            '${_pct(promo.amount)}%',   // ← no more "null%"
+            '${_pct(promo.amount)}%', // ← no more "null%"
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -534,7 +553,6 @@ class _PromoCard extends StatelessWidget {
     );
   }
 }
-
 
 class _Categories extends GetView<HomeController> {
   const _Categories({required this.r});
@@ -753,7 +771,10 @@ class _TrendingServices extends GetView<HomeController> {
           SizedBox(
             height: r.h(280),
             child: ListView.separated(
-              padding: EdgeInsets.symmetric(horizontal: r.w(20), vertical: r.h(5)),
+              padding: EdgeInsets.symmetric(
+                horizontal: r.w(20),
+                vertical: r.h(5),
+              ),
               scrollDirection: Axis.horizontal,
               itemBuilder: (_, i) => _TrendingCard(r: r, service: services[i]),
               separatorBuilder: (_, __) => SizedBox(width: r.w(14)),
@@ -847,29 +868,18 @@ class _TrendingCard extends StatelessWidget {
                         color: const Color(0xFF22242A),
                       ),
                     ),
-                    SizedBox(height: r.h(6)),
+                    SizedBox(height: r.h(4)),
 
-                    // Location: 1 line max
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: r.w(16),
-                          color: const Color(0xFF6B6F7C),
-                        ),
-                        SizedBox(width: r.w(6)),
-                        Expanded(
-                          child: Text(
-                            service.shopAddress ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: r.sp(13),
-                              color: const Color(0xFF6B6F7C),
-                            ),
-                          ),
-                        ),
-                      ],
+                    // Shop Identity Line (per spec: at {Shop Name} • {City})
+                    Text(
+                      _getTrendingShopLabel(service),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: r.sp(13),
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF6B7280), // Muted gray per spec
+                      ),
                     ),
                     const Spacer(),
 
@@ -1067,13 +1077,13 @@ class _ShopItem extends StatelessWidget {
               child: resolved.isEmpty
                   ? Image.network(fallback, fit: BoxFit.cover)
                   : CachedNetworkImage(
-                imageUrl: resolved,
-                fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    Container(color: const Color(0xFFF0F2F6)),
-                errorWidget: (_, __, ___) =>
-                    Image.network(fallback, fit: BoxFit.cover),
-              ),
+                      imageUrl: resolved,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) =>
+                          Container(color: const Color(0xFFF0F2F6)),
+                      errorWidget: (_, __, ___) =>
+                          Image.network(fallback, fit: BoxFit.cover),
+                    ),
             ),
           ),
           SizedBox(height: r.h(8)),
@@ -1093,12 +1103,18 @@ class _ShopItem extends StatelessWidget {
               SizedBox(width: r.w(4)),
               Text(
                 shop.avgRating?.toStringAsFixed(1) ?? '0.0',
-                style: TextStyle(fontSize: r.sp(12), fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontSize: r.sp(12),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               SizedBox(width: r.w(4)),
               Text(
                 '(${shop.reviewCount})',
-                style: TextStyle(fontSize: r.sp(12), color: const Color(0xFF6B6F7C)),
+                style: TextStyle(
+                  fontSize: r.sp(12),
+                  color: const Color(0xFF6B6F7C),
+                ),
               ),
             ],
           ),
@@ -1109,4 +1125,3 @@ class _ShopItem extends StatelessWidget {
 }
 
 //
-
