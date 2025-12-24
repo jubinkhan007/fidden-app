@@ -120,7 +120,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     SizedBox(height: getHeight(16)),
                     CustomProfileButton(
-                      title: 'Term & Policy',
+                      title: 'Terms & Policies',
                       firstImageString: IconPath.termsAndConditionIcon,
                       onTap: () {
                         Get.toNamed(AppRoute.termsAndConditionScreen);

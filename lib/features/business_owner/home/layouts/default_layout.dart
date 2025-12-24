@@ -21,13 +21,16 @@ import 'package:intl/intl.dart';
 
 class DefaultLayout implements NicheLayoutStrategy {
   @override
-  List<Widget> buildContent(BuildContext context, BusinessOwnerController controller) {
+  List<Widget> buildContent(
+    BuildContext context,
+    BusinessOwnerController controller,
+  ) {
     return [
       // 1. My Services Section
       _buildServicesSection(controller),
-      
+
       const SizedBox(height: 24),
-      
+
       // 2. Dashboard Analytics Link
       _buildSectionTitle(
         "Dashboard",
@@ -35,42 +38,43 @@ class DefaultLayout implements NicheLayoutStrategy {
         onAction: () => Get.to(() => const PerformanceAnalyticsScreen()),
       ),
       const SizedBox(height: 16),
-      
+
       // 3. Key Stats Cards
       Row(
         children: [
           DashboardStatsCard(
             title: "Revenue",
-            value: "\$${controller.totalRevenue}",
+            value: "\$${controller.totalRevenue.value.toStringAsFixed(2)}",
             icon: Icons.attach_money,
             color: Colors.green,
           ),
           const SizedBox(width: 16),
           DashboardStatsCard(
             title: "New Bookings",
-            value: "${controller.allBusinessOwnerBookingOne.value.stats?.newBookings ?? 0}",
+            value:
+                "${controller.allBusinessOwnerBookingOne.value.stats?.newBookings ?? 0}",
             icon: Icons.calendar_today,
             color: Colors.blue,
           ),
         ],
       ),
-      
+
       const SizedBox(height: 24),
-      
+
       // 4. Weekly Revenue Chart
       _buildSectionTitle("Weekly Revenue"),
       const SizedBox(height: 16),
       Obx(() => RevenueChart(data: controller.revenue7d.toList())),
-      
+
       SizedBox(height: getHeight(24)),
-      
+
       // 5. Booking Stats
       _buildSectionTitle("Booking Stats"),
       const SizedBox(height: 16),
       const BookingStats(),
-      
+
       const SizedBox(height: 24),
-      
+
       // 6. Growth Suggestions
       Obx(() {
         final items = controller.growthSuggestions;
@@ -97,9 +101,9 @@ class DefaultLayout implements NicheLayoutStrategy {
           ],
         );
       }),
-      
+
       const SizedBox(height: 12),
-      
+
       // 7. Recent Bookings
       _buildSectionTitle(
         "Recent Bookings",
@@ -174,11 +178,11 @@ class DefaultLayout implements NicheLayoutStrategy {
   }
 
   Widget _buildSectionTitle(
-      String title, {
-        VoidCallback? seeAll,
-        String? actionLabel,
-        VoidCallback? onAction,
-      }) {
+    String title, {
+    VoidCallback? seeAll,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -197,17 +201,15 @@ class DefaultLayout implements NicheLayoutStrategy {
                   style: TextStyle(fontSize: 16, color: Colors.deepPurple),
                 ),
               ),
-            if (seeAll != null && actionLabel != null) const SizedBox(width: 12),
+            if (seeAll != null && actionLabel != null)
+              const SizedBox(width: 12),
             if (actionLabel != null)
               TextButton(
                 onPressed: onAction,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      actionLabel,
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    Text(actionLabel, style: const TextStyle(fontSize: 16)),
                     const SizedBox(width: 4),
                     const Icon(Icons.chevron_right, size: 18),
                   ],
@@ -242,13 +244,21 @@ class DefaultLayout implements NicheLayoutStrategy {
             : booking.userEmail;
         // Use timezone-aware formatting for correct time display
         final timeStr = booking.shopTimezone != null
-            ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+            ? formatApiTimeInTimezone(
+                booking.slotTimeIso,
+                booking.shopTimezone!,
+              )
             : DateFormat('hh:mm a').format(booking.slotTime);
         final dateStr = booking.shopTimezone != null
-            ? formatApiDateInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+            ? formatApiDateInTimezone(
+                booking.slotTimeIso,
+                booking.shopTimezone!,
+              )
             : DateFormat('d MMM yyyy').format(booking.slotTime);
         final when = "$timeStr at $dateStr";
-        final ImageProvider avatar = (booking.profileImage != null && booking.profileImage!.trim().isNotEmpty)
+        final ImageProvider avatar =
+            (booking.profileImage != null &&
+                booking.profileImage!.trim().isNotEmpty)
             ? NetworkImage(booking.profileImage!)
             : const AssetImage(ImagePath.profileImage);
 

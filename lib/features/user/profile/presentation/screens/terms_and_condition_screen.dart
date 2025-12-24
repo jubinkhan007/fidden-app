@@ -23,7 +23,7 @@ class TermsAndConditionScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios),
         ),
         title: CustomText(
-          text: "Term & Policy",
+          text: "Terms & Policies",
           color: Color(0xff212121),
           fontWeight: FontWeight.w600,
           fontSize: getWidth(24),

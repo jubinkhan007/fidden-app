@@ -91,18 +91,23 @@ class ServiceDetailsScreen extends StatelessWidget {
                         background: Stack(
                           children: [
                             Positioned.fill(
-                              child: CachedNetworkImage(
-                                imageUrl: (d?.serviceImg?.isNotEmpty ?? false)
-                                    ? d!.serviceImg!
-                                    : fallbackImg,
-                                fit: BoxFit.cover,
-                                placeholder: (_, __) =>
-                                    Container(color: Colors.grey[300]),
-                                errorWidget: (_, __, ___) => Image.network(
-                                  fallbackImg,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
+                              child: d == null
+                                  // Still loading - show gray placeholder, not fallback image
+                                  ? Container(color: Colors.grey[300])
+                                  : CachedNetworkImage(
+                                      imageUrl:
+                                          (d.serviceImg?.isNotEmpty ?? false)
+                                          ? d.serviceImg!
+                                          : fallbackImg,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) =>
+                                          Container(color: Colors.grey[300]),
+                                      errorWidget: (_, __, ___) =>
+                                          Image.network(
+                                            fallbackImg,
+                                            fit: BoxFit.cover,
+                                          ),
+                                    ),
                             ),
                             // top bar icons
                             Positioned(
