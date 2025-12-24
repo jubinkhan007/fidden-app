@@ -42,14 +42,14 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: Obx(() {
-  // use the BO profile controller’s loader, not ProfileController
-  if (controller1.isLoading.value) {
-    return const BusinessOwnerProfileShimmer();
-  }
+        // use the BO profile controller’s loader, not ProfileController
+        if (controller1.isLoading.value) {
+          return const BusinessOwnerProfileShimmer();
+        }
 
-  final business = controller1.profileDetails.value.data;
-  final shopId = business?.id?.toString();
-  final hasBusiness = shopId != null && shopId.isNotEmpty;
+        final business = controller1.profileDetails.value.data;
+        final shopId = business?.id?.toString();
+        final hasBusiness = shopId != null && shopId.isNotEmpty;
         return SingleChildScrollView(
           child: Column(
             children: [
@@ -94,7 +94,7 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                 final status = boc.stripeStatus.value; // <-- reactive read
                 if (isLoading) {
                   return const Padding(
-                    padding: EdgeInsets.fromLTRB(16.0,0,16.0,16.0),
+                    padding: EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
@@ -131,25 +131,29 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
               SizedBox(height: getHeight(16)),
               hasBusiness
                   ? CustomProfileButton(
-  title: 'Edit Business Profile',
-  firstImageString: IconPath.editIcon,
-  onTap: () async {
-    final boc = Get.find<BusinessOwnerProfileController>();
+                      title: 'Edit Business Profile',
+                      firstImageString: IconPath.editIcon,
+                      onTap: () async {
+                        final boc = Get.find<BusinessOwnerProfileController>();
 
-    final res = await Get.to(() => EditBusinessOwnerProfileScreen(
-      id: boc.profileDetails.value.data?.id ?? '',
-    ));
+                        final res = await Get.to(
+                          () => EditBusinessOwnerProfileScreen(
+                            id: boc.profileDetails.value.data?.id ?? '',
+                          ),
+                        );
 
-    // if user deleted or saved successfully, refresh this screen's data
-    if (res == true) {
-      await boc.fetchProfileDetails(); // this will set data=null after delete
-      // optional: also refresh guards/banners if your home uses them
-      if (Get.isRegistered<BusinessOwnerController>()) {
-        await Get.find<BusinessOwnerController>().refreshGuardsAndServices();
-      }
-    }
-  },
-)
+                        // if user deleted or saved successfully, refresh this screen's data
+                        if (res == true) {
+                          await boc
+                              .fetchProfileDetails(); // this will set data=null after delete
+                          // optional: also refresh guards/banners if your home uses them
+                          if (Get.isRegistered<BusinessOwnerController>()) {
+                            await Get.find<BusinessOwnerController>()
+                                .refreshGuardsAndServices();
+                          }
+                        }
+                      },
+                    )
                   : CustomProfileButton(
                       title: 'Business Profile',
                       firstImageString: IconPath.addIcon,
@@ -202,7 +206,7 @@ class BusinessOwnerProfileScreen extends StatelessWidget {
                   Get.toNamed(AppRoute.transactionsScreen);
                 },
               ),
-SizedBox(height: getHeight(16)),
+              SizedBox(height: getHeight(16)),
               CustomProfileButton(
                 title: 'My Coupons',
                 firstImageString: IconPath.couponIcon,
@@ -228,7 +232,7 @@ SizedBox(height: getHeight(16)),
               ),
               SizedBox(height: getHeight(16)),
               CustomProfileButton(
-                title: 'Term & Policy',
+                title: 'Terms & Policies',
                 firstImageString: IconPath.termsAndConditionIcon,
                 onTap: () {
                   Get.toNamed(AppRoute.termsAndConditionScreen);

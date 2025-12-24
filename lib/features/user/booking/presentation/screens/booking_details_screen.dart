@@ -29,14 +29,14 @@ class BookingDetailsScreen extends StatelessWidget {
         ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
         : formatApiTime(booking.slotTimeIso);
     final chatController = Get.put(
-  ChatController(
-    threadId: 0,                    // no existing thread yet
-    shopId: booking.shop,           // <- from your booking
-    shopName: booking.shopName,     // <- from your booking
-    isOwner: false,                 // this is the USER app
-  ),
-  tag: 'bk_msg_${booking.id}',      // unique tag, avoids clashes
-);
+      ChatController(
+        threadId: 0, // no existing thread yet
+        shopId: booking.shop, // <- from your booking
+        shopName: booking.shopName, // <- from your booking
+        isOwner: false, // this is the USER app
+      ),
+      tag: 'bk_msg_${booking.id}', // unique tag, avoids clashes
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xffF4F4F4),
@@ -61,301 +61,337 @@ class BookingDetailsScreen extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(getWidth(16)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // === Card: Shop summary =========================================================
-            Container(
-              padding: EdgeInsets.all(getWidth(10)),
-              decoration: BoxDecoration(
-                color: const Color(0xffFFFFFF),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 16,
-                    color: Colors.black.withOpacity(0.06),
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  NetThumb( // <-- safe network image with fallback
-                    url: booking.shopImg,
-                    w: getWidth(100),
-                    h: getHeight(80),
-                    borderRadius: 10,
-                  ),
-                  SizedBox(width: getWidth(12)),
-                  Expanded( // <-- prevents overflow
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // top row: title + status badge
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                booking.shopName,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xff111827),
-                                  height: 1.2,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(getWidth(16)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // === Card: Shop summary =========================================================
+              Container(
+                padding: EdgeInsets.all(getWidth(10)),
+                decoration: BoxDecoration(
+                  color: const Color(0xffFFFFFF),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 16,
+                      color: Colors.black.withOpacity(0.06),
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    NetThumb(
+                      // <-- safe network image with fallback
+                      url: booking.shopImg,
+                      w: getWidth(100),
+                      h: getHeight(80),
+                      borderRadius: 10,
+                    ),
+                    SizedBox(width: getWidth(12)),
+                    Expanded(
+                      // <-- prevents overflow
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // top row: title + status badge
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  booking.shopName,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xff111827),
+                                    height: 1.2,
+                                  ),
                                 ),
                               ),
-                            ),
-                            SizedBox(width: getWidth(8)),
-                            _StatusBadge(text: booking.status),
-                          ],
-                        ),
-                        SizedBox(height: getHeight(8)),
-                        Row(
-                          children: [
-                            Icon(Icons.location_on,
+                              SizedBox(width: getWidth(8)),
+                              _StatusBadge(text: booking.status),
+                            ],
+                          ),
+                          SizedBox(height: getHeight(8)),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
                                 size: 16,
-                                color: const Color(0xff7A49A5).withOpacity(.7)),
-                            SizedBox(width: getWidth(6)),
-                            Expanded(
-                              child: Text(
-                                booking.shopAddress,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: const Color(0xff7A49A5).withOpacity(.7),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: getHeight(8)),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.star,
-                                size: 16,
-                                color: const Color(0xff7A49A5).withOpacity(.7)),
-                            SizedBox(width: getWidth(6)),
-                            Text(
-                              "${booking.avgRating.toStringAsFixed(1)}  (${booking.totalReviews})",
-                              style: TextStyle(
-                                fontSize: 14,
                                 color: const Color(0xff7A49A5).withOpacity(.7),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                              SizedBox(width: getWidth(6)),
+                              Expanded(
+                                child: Text(
+                                  booking.shopAddress,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: const Color(
+                                      0xff7A49A5,
+                                    ).withOpacity(.7),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: getHeight(8)),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.star,
+                                size: 16,
+                                color: const Color(0xff7A49A5).withOpacity(.7),
+                              ),
+                              SizedBox(width: getWidth(6)),
+                              Text(
+                                "${booking.avgRating.toStringAsFixed(1)}  (${booking.totalReviews})",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: const Color(
+                                    0xff7A49A5,
+                                  ).withOpacity(.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: getHeight(20)),
+              const Divider(height: 1),
+
+              // === Date & time ================================================================
+              SizedBox(height: getHeight(18)),
+              Row(
+                children: [
+                  Image.asset(
+                    "assets/images/date_time.png",
+                    height: getHeight(22),
+                    width: getWidth(22),
+                    color: Colors.black87,
+                  ),
+                  SizedBox(width: getWidth(10)),
+                  CustomText(
+                    text: "Date & time",
+                    fontSize: getWidth(18),
+                    fontWeight: FontWeight.w700,
                   ),
                 ],
               ),
-            ),
-
-            SizedBox(height: getHeight(20)),
-            const Divider(height: 1),
-
-            // === Date & time ================================================================
-            SizedBox(height: getHeight(18)),
-            Row(
-              children: [
-                Image.asset(
-                  "assets/images/date_time.png",
-                  height: getHeight(22),
-                  width: getWidth(22),
-                  color: Colors.black87,
-                ),
-                SizedBox(width: getWidth(10)),
-                CustomText(
-                  text: "Date & time",
-                  fontSize: getWidth(18),
-                  fontWeight: FontWeight.w700,
-                ),
-              ],
-            ),
-            SizedBox(height: getHeight(10)),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _InfoChip(icon: Icons.event, label: dateText),
-                _InfoChip(icon: Icons.schedule, label: timeText),
-              ],
-            ),
-
-            // === Service selected ===========================================================
-            SizedBox(height: getHeight(24)),
-            Row(
-              children: [
-                Image.asset(
-                  IconPath.serviceIcon,
-                  height: getHeight(18),
-                  width: getWidth(18),
-                ),
-                SizedBox(width: getWidth(8)),
-                CustomText(
-                  text: "Service selected",
-                  fontSize: getWidth(16),
-                  fontWeight: FontWeight.w600,
-                ),
-              ],
-            ),
-            SizedBox(height: getHeight(10)),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: getWidth(8),
-                vertical: getHeight(8),
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xffFFFFFF),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
+              SizedBox(height: getHeight(10)),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  // Main service
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      radius: getWidth(26),
-                      backgroundImage:
-                          const AssetImage("assets/images/barber_image.png"),
-                    ),
-                    title: Text(
-                      booking.serviceTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: getWidth(16),
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xff111827),
-                      ),
-                    ),
-                    subtitle: Text(
-                      "Duration: ${booking.serviceDuration} min",
-                      style: TextStyle(
-                        fontSize: getWidth(14),
-                        color: const Color(0xff6B7280),
-                      ),
-                    ),
+                  _InfoChip(icon: Icons.event, label: dateText),
+                  _InfoChip(icon: Icons.schedule, label: timeText),
+                ],
+              ),
+
+              // === Service selected ===========================================================
+              SizedBox(height: getHeight(24)),
+              Row(
+                children: [
+                  Image.asset(
+                    IconPath.serviceIcon,
+                    height: getHeight(18),
+                    width: getWidth(18),
                   ),
-                  
-                  // Add-on services
-                  if (booking.addOnServices.isNotEmpty) ...[
-                    const Divider(),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: getHeight(8)),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Add-on Services",
-                          style: TextStyle(
-                            fontSize: getWidth(14),
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xff6B7280),
+                  SizedBox(width: getWidth(8)),
+                  CustomText(
+                    text: "Service selected",
+                    fontSize: getWidth(16),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ],
+              ),
+              SizedBox(height: getHeight(10)),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: getWidth(8),
+                  vertical: getHeight(8),
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xffFFFFFF),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    // Main service
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(getWidth(26)),
+                        child: SizedBox(
+                          width: getWidth(52),
+                          height: getWidth(52),
+                          child: NetThumb(
+                            url: booking.serviceImg ?? booking.shopImg,
+                            w: getWidth(52),
+                            h: getWidth(52),
                           ),
                         ),
                       ),
+                      title: Text(
+                        booking.serviceTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: getWidth(16),
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xff111827),
+                        ),
+                      ),
+                      subtitle: Text(
+                        "Duration: ${booking.serviceDuration} min",
+                        style: TextStyle(
+                          fontSize: getWidth(14),
+                          color: const Color(0xff6B7280),
+                        ),
+                      ),
                     ),
-                    ...booking.addOnServices.map((addOn) {
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: getHeight(8)),
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            radius: getWidth(22),
-                            backgroundColor: const Color(0xFFF5F6FA),
-                            child: Icon(
-                              Icons.add_circle_outline,
-                              size: getWidth(20),
-                              color: const Color(0xff7A49A5),
-                            ),
-                          ),
-                          title: Text(
-                            addOn.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+
+                    // Add-on services
+                    if (booking.addOnServices.isNotEmpty) ...[
+                      const Divider(),
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: getHeight(8)),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "Add-on Services",
                             style: TextStyle(
-                              fontSize: getWidth(15),
+                              fontSize: getWidth(14),
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xff111827),
-                            ),
-                          ),
-                          subtitle: Text(
-                            "Duration: ${addOn.duration} min",
-                            style: TextStyle(
-                              fontSize: getWidth(13),
                               color: const Color(0xff6B7280),
                             ),
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      ...booking.addOnServices.map((addOn) {
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: getHeight(8)),
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              radius: getWidth(22),
+                              backgroundColor: const Color(0xFFF5F6FA),
+                              child: Icon(
+                                Icons.add_circle_outline,
+                                size: getWidth(20),
+                                color: const Color(0xff7A49A5),
+                              ),
+                            ),
+                            title: Text(
+                              addOn.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: getWidth(15),
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xff111827),
+                              ),
+                            ),
+                            subtitle: Text(
+                              "Duration: ${addOn.duration} min",
+                              style: TextStyle(
+                                fontSize: getWidth(13),
+                                color: const Color(0xff6B7280),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ],
                   ],
+                ),
+              ),
+
+              SizedBox(height: getHeight(12)),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _InfoChip(
+                    icon: Icons.confirmation_number_outlined,
+                    label: "Booking #${booking.id}",
+                  ),
+                  // _InfoChip(icon: Icons.store_mall_directory_outlined, label: "Shop ID: ${booking.shop}"),
+                  _InfoChip(
+                    icon: Icons.person_outline,
+                    label: booking.userEmail,
+                  ),
                 ],
               ),
-            ),
 
-            SizedBox(height: getHeight(12)),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _InfoChip(icon: Icons.confirmation_number_outlined, label: "Booking #${booking.id}"),
-                // _InfoChip(icon: Icons.store_mall_directory_outlined, label: "Shop ID: ${booking.shop}"),
-                _InfoChip(icon: Icons.person_outline, label: booking.userEmail),
-              ],
-            ),
-
-            // Complete Payment button - shows when checkout has been initiated by owner
-            if (booking.checkoutInitiated && booking.depositStatus == 'held') ...[
-              SizedBox(height: getHeight(20)),
-              SizedBox(
-                width: double.infinity,
-                height: getHeight(52),
-                child: ElevatedButton(
-                  onPressed: () {
-                    Get.toNamed(
-                      AppRoute.checkoutScreen,
-                      arguments: {'bookingId': booking.id},
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff7A49A5),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.payment, size: 20),
-                      SizedBox(width: getWidth(8)),
-                      Text(
-                        'Complete Payment',
-                        style: TextStyle(
-                          fontSize: getWidth(16),
-                          fontWeight: FontWeight.w600,
-                        ),
+              SizedBox(height: getHeight(20)), // small end spacing
+            ],
+          ),
+        ),
+      ),
+      // Complete Payment button in bottomNavigationBar - never clipped
+      bottomNavigationBar: booking.depositStatus == 'held'
+          ? SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: getWidth(16),
+                  right: getWidth(16),
+                  bottom: getHeight(24),
+                  top: getHeight(10),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: getHeight(56), // was 52
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Get.toNamed(
+                        AppRoute.checkoutScreen,
+                        arguments: {'bookingId': booking.id},
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff7A49A5),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
+                      elevation: 2,
+                      padding: EdgeInsets.symmetric(vertical: getHeight(12)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.payment, size: 20),
+                        SizedBox(width: getWidth(8)),
+                        Text(
+                          'Complete Payment',
+                          style: TextStyle(
+                            fontSize: getWidth(16),
+                            fontWeight: FontWeight.w600,
+                            height: 1.1, // prevents bottom clipping
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ],
-
-            SizedBox(height: getHeight(24)),
-          ],
-        ),
-      ),
+            )
+          : null,
     );
   }
 
@@ -366,28 +402,23 @@ class BookingDetailsScreen extends StatelessWidget {
         title: const Text("Message Shop"),
         content: TextFormField(
           controller: messageController,
-          decoration: const InputDecoration(
-            hintText: "Type your message...",
-          ),
+          decoration: const InputDecoration(hintText: "Type your message..."),
           maxLines: 3,
         ),
         actions: [
-          TextButton(
-            onPressed: Get.back,
-            child: const Text("Cancel"),
-          ),
+          TextButton(onPressed: Get.back, child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () async {
-  final text = messageController.text.trim();
-  if (text.isEmpty) return;
+              final text = messageController.text.trim();
+              if (text.isEmpty) return;
 
-  Get.back(); // close dialog
+              Get.back(); // close dialog
 
-  await chatController.send(text);
+              await chatController.send(text);
 
-  // toast/snackbar
-  AppSnackBar.showSuccess('Message sent');
-},
+              // toast/snackbar
+              AppSnackBar.showSuccess('Message sent');
+            },
             child: const Text("Send"),
           ),
         ],
