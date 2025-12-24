@@ -30,19 +30,20 @@ class NailTechDashboardContent extends StatelessWidget {
     final styleRequestController = Get.put(StyleRequestController());
     final dashboardController = Get.put(NailTechDashboardController());
     final portfolioController = Get.put(PortfolioController());
-    
+
     // Always fetch portfolio with nail niche when dashboard loads
     // Use WidgetsBinding to avoid calling setState during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (portfolioController.currentNiche.value != 'nail' || portfolioController.portfolioItems.isEmpty) {
+      if (portfolioController.currentNiche.value != 'nail' ||
+          portfolioController.portfolioItems.isEmpty) {
         portfolioController.fetchPortfolioItems(niche: 'nail');
       }
     });
-    
+
     // Get shop ID for reviews
     final shopIdValue = myShopId.value;
     final shopId = shopIdValue?.toString() ?? '';
-    
+
     if (shopId.isNotEmpty) {
       Get.put(ReviewController())..fetchReviews(shopId);
     }
@@ -73,14 +74,20 @@ class NailTechDashboardContent extends StatelessWidget {
           const SizedBox(height: 8),
           WeekCalendarWidget(
             selectedDate: DateTime.now(),
-            onDateSelected: (date) => _showDayAppointments(context, date, boController),
+            onDateSelected: (date) =>
+                _showDayAppointments(context, date, boController),
             getConsultationsCount: (date) {
-              final appointments = todayController.appointmentsData.value?.appointments ?? [];
-              return appointments.where((a) =>
-                a.startTime.year == date.year &&
-                a.startTime.month == date.month &&
-                a.startTime.day == date.day
-              ).length;
+              // Use same data source as _showDayAppointments for consistency
+              final bookings =
+                  boController.allBusinessOwnerBookingOne.value.results;
+              return bookings
+                  .where(
+                    (b) =>
+                        b.slotTime.year == date.year &&
+                        b.slotTime.month == date.month &&
+                        b.slotTime.day == date.day,
+                  )
+                  .length;
             },
           ),
 
@@ -98,18 +105,24 @@ class NailTechDashboardContent extends StatelessWidget {
           const SizedBox(height: 20),
 
           // === STYLE REQUESTS ===
-          _buildSectionTitle('Style Requests', trailing: _buildViewAllButton(() {
-            Get.to(() => const StyleRequestsScreen());
-          })),
+          _buildSectionTitle(
+            'Style Requests',
+            trailing: _buildViewAllButton(() {
+              Get.to(() => const StyleRequestsScreen());
+            }),
+          ),
           const SizedBox(height: 8),
           _buildStyleRequestsPreview(styleRequestController),
 
           const SizedBox(height: 20),
 
           // === LOOK-BOOK ===
-          _buildSectionTitle('Look-book', trailing: _buildViewAllButton(() {
-            Get.to(() => const NailTechLookbookScreen());
-          })),
+          _buildSectionTitle(
+            'Look-book',
+            trailing: _buildViewAllButton(() {
+              Get.to(() => const NailTechLookbookScreen());
+            }),
+          ),
           const SizedBox(height: 8),
           _buildLookbookPreview(portfolioController),
 
@@ -119,7 +132,9 @@ class NailTechDashboardContent extends StatelessWidget {
           _buildSectionTitle(
             'Reviews',
             trailing: shopId.isNotEmpty
-                ? _buildViewAllButton(() => Get.to(() => ReviewsScreen(shopId: shopId)))
+                ? _buildViewAllButton(
+                    () => Get.to(() => ReviewsScreen(shopId: shopId)),
+                  )
                 : null,
           ),
           const SizedBox(height: 8),
@@ -171,7 +186,7 @@ class NailTechDashboardContent extends StatelessWidget {
   Widget _buildUpcomingAppointment(BusinessOwnerController boController) {
     return Obx(() {
       final bookings = boController.allBusinessOwnerBookingOne.value.results;
-      
+
       final upcomingBookings = bookings.where((b) {
         final shopTz = b.shopTimezone ?? 'America/New_York';
         final nowUtc = DateTime.now().toUtc();
@@ -181,21 +196,25 @@ class NailTechDashboardContent extends StatelessWidget {
         } catch (_) {
           slotTimeUtc = b.slotTime.toUtc();
         }
-        
+
         final isFuture = slotTimeUtc.isAfter(nowUtc);
         final shopNow = TimezoneHelper.toTimezone(nowUtc, shopTz);
         final shopSlot = TimezoneHelper.toTimezone(slotTimeUtc, shopTz);
-        final isToday = shopSlot.year == shopNow.year && 
-                        shopSlot.month == shopNow.month && 
-                        shopSlot.day == shopNow.day;
-        final isActive = b.status.toLowerCase() == 'active' || 
-                         b.status.toLowerCase() == 'confirmed';
-        
+        final isToday =
+            shopSlot.year == shopNow.year &&
+            shopSlot.month == shopNow.month &&
+            shopSlot.day == shopNow.day;
+        final isActive =
+            b.status.toLowerCase() == 'active' ||
+            b.status.toLowerCase() == 'confirmed';
+
         return isFuture || (isToday && isActive);
       }).toList();
-      
+
       upcomingBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));
-      final nextBooking = upcomingBookings.isNotEmpty ? upcomingBookings.first : null;
+      final nextBooking = upcomingBookings.isNotEmpty
+          ? upcomingBookings.first
+          : null;
 
       if (nextBooking == null) {
         return GestureDetector(
@@ -215,17 +234,24 @@ class NailTechDashboardContent extends StatelessWidget {
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.calendar_today_outlined, color: Colors.grey),
+                  child: const Icon(
+                    Icons.calendar_today_outlined,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('No upcoming appointments', 
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                      Text('View all bookings', 
-                        style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(
+                        'No upcoming appointments',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        'View all bookings',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
                     ],
                   ),
                 ),
@@ -237,7 +263,10 @@ class NailTechDashboardContent extends StatelessWidget {
       }
 
       final timeText = nextBooking.shopTimezone != null
-          ? formatApiTimeInTimezone(nextBooking.slotTimeIso, nextBooking.shopTimezone!)
+          ? formatApiTimeInTimezone(
+              nextBooking.slotTimeIso,
+              nextBooking.shopTimezone!,
+            )
           : DateFormat('hh:mm a').format(nextBooking.slotTime);
 
       return GestureDetector(
@@ -254,11 +283,11 @@ class NailTechDashboardContent extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.grey.shade200,
-                backgroundImage: nextBooking.profileImage != null 
-                    ? NetworkImage(nextBooking.profileImage!) 
+                backgroundImage: nextBooking.profileImage != null
+                    ? NetworkImage(nextBooking.profileImage!)
                     : null,
-                child: nextBooking.profileImage == null 
-                    ? const Icon(Icons.person, color: Colors.grey) 
+                child: nextBooking.profileImage == null
+                    ? const Icon(Icons.person, color: Colors.grey)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -268,14 +297,20 @@ class NailTechDashboardContent extends StatelessWidget {
                   children: [
                     Text(
                       nextBooking.userName ?? 'Customer',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
                     Row(
                       children: [
                         Flexible(
                           child: Text(
                             nextBooking.serviceTitle,
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -291,7 +326,10 @@ class NailTechDashboardContent extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           timeText,
-                          style: const TextStyle(color: Colors.grey, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -313,7 +351,7 @@ class NailTechDashboardContent extends StatelessWidget {
     return Obx(() {
       final revenue = controller.revenueData.value;
       final isLoading = controller.isLoading.value;
-      
+
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -357,7 +395,7 @@ class NailTechDashboardContent extends StatelessWidget {
     return Obx(() {
       final tips = controller.weeklyTips;
       final isLoading = controller.isLoading.value;
-      
+
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -375,7 +413,11 @@ class NailTechDashboardContent extends StatelessWidget {
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.volunteer_activism, size: 14, color: Colors.grey),
+                const Icon(
+                  Icons.volunteer_activism,
+                  size: 14,
+                  color: Colors.grey,
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -406,7 +448,7 @@ class NailTechDashboardContent extends StatelessWidget {
   Widget _buildStyleRequestsPreview(StyleRequestController controller) {
     return Obx(() {
       final pending = controller.pendingRequests.take(2).toList();
-      
+
       if (pending.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(16),
@@ -422,7 +464,7 @@ class NailTechDashboardContent extends StatelessWidget {
           ),
         );
       }
-      
+
       return Column(
         children: pending.map((request) {
           return Container(
@@ -466,7 +508,10 @@ class NailTechDashboardContent extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF3E0),
                     borderRadius: BorderRadius.circular(8),
@@ -506,7 +551,7 @@ class NailTechDashboardContent extends StatelessWidget {
   Widget _buildLookbookPreview(PortfolioController controller) {
     return Obx(() {
       final items = controller.portfolioItems.take(4).toList();
-      
+
       if (items.isEmpty) {
         return Container(
           height: 100,
@@ -522,7 +567,7 @@ class NailTechDashboardContent extends StatelessWidget {
           ),
         );
       }
-      
+
       return SizedBox(
         height: 100,
         child: ListView.builder(
@@ -566,23 +611,20 @@ class NailTechDashboardContent extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Center(
-          child: Text(
-            'No reviews yet',
-            style: TextStyle(color: Colors.grey),
-          ),
+          child: Text('No reviews yet', style: TextStyle(color: Colors.grey)),
         ),
       );
     }
 
     final reviewController = Get.find<ReviewController>();
-    
+
     return Obx(() {
       if (reviewController.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
       }
-      
+
       final reviews = reviewController.reviews.take(2).toList();
-      
+
       if (reviews.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(16),
@@ -591,14 +633,11 @@ class NailTechDashboardContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
-            child: Text(
-              'No reviews yet',
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: Text('No reviews yet', style: TextStyle(color: Colors.grey)),
           ),
         );
       }
-      
+
       return Column(
         children: reviews.map((review) {
           return Container(
@@ -621,7 +660,11 @@ class NailTechDashboardContent extends StatelessWidget {
                           ? NetworkImage(review.avatarUrl!)
                           : null,
                       child: review.avatarUrl?.isNotEmpty != true
-                          ? const Icon(Icons.person, size: 18, color: Colors.grey)
+                          ? const Icon(
+                              Icons.person,
+                              size: 18,
+                              color: Colors.grey,
+                            )
                           : null,
                     ),
                     const SizedBox(width: 10),
@@ -661,22 +704,27 @@ class NailTechDashboardContent extends StatelessWidget {
   // ==================
   // DAY APPOINTMENTS BOTTOM SHEET
   // ==================
-  void _showDayAppointments(BuildContext context, DateTime date, BusinessOwnerController boController) {
+  void _showDayAppointments(
+    BuildContext context,
+    DateTime date,
+    BusinessOwnerController boController,
+  ) {
     final bookings = boController.allBusinessOwnerBookingOne.value.results;
-    
+
     final dayBookings = bookings.where((b) {
       return b.slotTime.year == date.year &&
-             b.slotTime.month == date.month &&
-             b.slotTime.day == date.day;
+          b.slotTime.month == date.month &&
+          b.slotTime.day == date.day;
     }).toList();
-    
+
     dayBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));
-    
+
     final dateLabel = DateFormat('EEEE, MMM d').format(date);
-    final isToday = date.day == DateTime.now().day && 
-                    date.month == DateTime.now().month && 
-                    date.year == DateTime.now().year;
-    
+    final isToday =
+        date.day == DateTime.now().day &&
+        date.month == DateTime.now().month &&
+        date.year == DateTime.now().year;
+
     Get.bottomSheet(
       Container(
         constraints: BoxConstraints(
@@ -708,7 +756,10 @@ class NailTechDashboardContent extends StatelessWidget {
                     children: [
                       Text(
                         isToday ? 'Today\'s Appointments' : dateLabel,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         '${dayBookings.length} appointment${dayBookings.length == 1 ? '' : 's'}',
@@ -730,7 +781,11 @@ class NailTechDashboardContent extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.event_available, size: 48, color: Colors.grey[400]),
+                          Icon(
+                            Icons.event_available,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'No appointments',
@@ -745,9 +800,12 @@ class NailTechDashboardContent extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final booking = dayBookings[index];
                         final timeText = booking.shopTimezone != null
-                            ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
+                            ? formatApiTimeInTimezone(
+                                booking.slotTimeIso,
+                                booking.shopTimezone!,
+                              )
                             : DateFormat('hh:mm a').format(booking.slotTime);
-                        
+
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
@@ -760,11 +818,15 @@ class NailTechDashboardContent extends StatelessWidget {
                               CircleAvatar(
                                 radius: 20,
                                 backgroundColor: Colors.grey.shade200,
-                                backgroundImage: booking.profileImage != null 
-                                    ? NetworkImage(booking.profileImage!) 
+                                backgroundImage: booking.profileImage != null
+                                    ? NetworkImage(booking.profileImage!)
                                     : null,
-                                child: booking.profileImage == null 
-                                    ? const Icon(Icons.person, size: 20, color: Colors.grey) 
+                                child: booking.profileImage == null
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 20,
+                                        color: Colors.grey,
+                                      )
                                     : null,
                               ),
                               const SizedBox(width: 12),
@@ -774,11 +836,16 @@ class NailTechDashboardContent extends StatelessWidget {
                                   children: [
                                     Text(
                                       booking.userName ?? 'Customer',
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                     Text(
                                       '${booking.serviceTitle} • $timeText',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -832,7 +899,11 @@ class NailTechDashboardContent extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
       ),
     );
   }

@@ -27,11 +27,11 @@ class MUADashboardContent extends StatelessWidget {
     final muaDashboardController = Get.put(MUADashboardController());
     final faceChartController = Get.put(FaceChartController());
     final productKitController = Get.put(ProductKitController());
-    
+
     // Get shop ID for reviews
     final shopIdValue = myShopId.value;
     final shopId = shopIdValue?.toString() ?? '';
-    
+
     if (shopId.isNotEmpty) {
       Get.put(ReviewController())..fetchReviews(shopId);
     }
@@ -57,22 +57,40 @@ class MUADashboardContent extends StatelessWidget {
             children: [
               Expanded(child: _buildNextAppointmentCard(todayController)),
               const SizedBox(width: 12),
-              Expanded(child: _buildRevenueCard(revenueController, muaDashboardController)),
+              Expanded(
+                child: _buildRevenueCard(
+                  revenueController,
+                  muaDashboardController,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
 
           // === TODAY'S SCHEDULE ===
-          _buildSectionTitle("Today's Schedule", trailing: _buildViewAllButton(() {})),
+          _buildSectionTitle(
+            "Today's Schedule",
+            trailing: _buildViewAllButton(() {}),
+          ),
           const SizedBox(height: 8),
-          Obx(() {
-            final count = todayController.appointmentsData.value?.count ?? 0;
-            return WeekCalendarWidget(
-              selectedDate: DateTime.now(),
-              onDateSelected: (date) => _showDayAppointments(context, date, boController),
-              getConsultationsCount: (date) => date.day == DateTime.now().day ? count : 0,
-            );
-          }),
+          WeekCalendarWidget(
+            selectedDate: DateTime.now(),
+            onDateSelected: (date) =>
+                _showDayAppointments(context, date, boController),
+            getConsultationsCount: (date) {
+              // Use same data source as _showDayAppointments for consistency
+              final bookings =
+                  boController.allBusinessOwnerBookingOne.value.results;
+              return bookings
+                  .where(
+                    (b) =>
+                        b.slotTime.year == date.year &&
+                        b.slotTime.month == date.month &&
+                        b.slotTime.day == date.day,
+                  )
+                  .length;
+            },
+          ),
           const SizedBox(height: 20),
 
           // === QUICK STATS ===
@@ -82,17 +100,23 @@ class MUADashboardContent extends StatelessWidget {
           const SizedBox(height: 20),
 
           // === FACE CHARTS ===
-          _buildSectionTitle('Face Charts', trailing: _buildViewAllButton(() {
-            Get.to(() => const FaceChartsScreen());
-          })),
+          _buildSectionTitle(
+            'Face Charts',
+            trailing: _buildViewAllButton(() {
+              Get.to(() => const FaceChartsScreen());
+            }),
+          ),
           const SizedBox(height: 8),
           _buildFaceChartsPreview(faceChartController),
           const SizedBox(height: 20),
 
           // === PRODUCT KIT ===
-          _buildSectionTitle('Product Kit Checklist', trailing: _buildViewAllButton(() {
-            Get.to(() => const ProductKitScreen());
-          })),
+          _buildSectionTitle(
+            'Product Kit Checklist',
+            trailing: _buildViewAllButton(() {
+              Get.to(() => const ProductKitScreen());
+            }),
+          ),
           const SizedBox(height: 8),
           _buildProductKitPreview(productKitController),
           const SizedBox(height: 20),
@@ -101,7 +125,9 @@ class MUADashboardContent extends StatelessWidget {
           _buildSectionTitle(
             'Reviews',
             trailing: shopId.isNotEmpty
-                ? _buildViewAllButton(() => Get.to(() => ReviewsScreen(shopId: shopId)))
+                ? _buildViewAllButton(
+                    () => Get.to(() => ReviewsScreen(shopId: shopId)),
+                  )
                 : null,
           ),
           const SizedBox(height: 8),
@@ -148,7 +174,10 @@ class MUADashboardContent extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         if (trailing != null) trailing,
       ],
     );
@@ -178,7 +207,11 @@ class MUADashboardContent extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
@@ -186,21 +219,38 @@ class MUADashboardContent extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 16, color: Color(0xFFB8192E)),
+                const Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: Color(0xFFB8192E),
+                ),
                 const SizedBox(width: 8),
-                const Text('Next Appointment', style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  'Next Appointment',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             if (next != null) ...[
               Text(
                 DateFormat('h:mm a').format(next.startTime),
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFB8192E)),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFB8192E),
+                ),
               ),
               const SizedBox(height: 4),
-              Text(next.customerName, style: TextStyle(color: Colors.grey[600])),
+              Text(
+                next.customerName,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
             ] else
-              Text('No upcoming appointments', style: TextStyle(color: Colors.grey[600])),
+              Text(
+                'No upcoming appointments',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
           ],
         ),
       );
@@ -210,7 +260,10 @@ class MUADashboardContent extends StatelessWidget {
   // ==================
   // REVENUE CARD
   // ==================
-  Widget _buildRevenueCard(DailyRevenueController revenueController, MUADashboardController muaController) {
+  Widget _buildRevenueCard(
+    DailyRevenueController revenueController,
+    MUADashboardController muaController,
+  ) {
     return Obx(() {
       final revenue = revenueController.revenueData.value?.totalRevenue ?? 0.0;
       final mobile = muaController.mobileServicesCount;
@@ -221,7 +274,11 @@ class MUADashboardContent extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
@@ -229,22 +286,36 @@ class MUADashboardContent extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.attach_money, size: 16, color: Color(0xFF4CAF50)),
+                const Icon(
+                  Icons.attach_money,
+                  size: 16,
+                  color: Color(0xFF4CAF50),
+                ),
                 const SizedBox(width: 8),
-                const Text("Today's Revenue", style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  "Today's Revenue",
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
               '\$${revenue.toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50)),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF4CAF50),
+              ),
             ),
             const SizedBox(height: 4),
             Row(
               children: [
                 const Icon(Icons.directions_car, size: 14, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text('Mobile: $mobile', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                Text(
+                  'Mobile: $mobile',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
               ],
             ),
           ],
@@ -260,11 +331,23 @@ class MUADashboardContent extends StatelessWidget {
     return Obx(() {
       return Row(
         children: [
-          _buildStatBox(Icons.person_outline, controller.clientProfilesCount, 'Clients'),
+          _buildStatBox(
+            Icons.person_outline,
+            controller.clientProfilesCount,
+            'Clients',
+          ),
           const SizedBox(width: 12),
-          _buildStatBox(Icons.palette_outlined, controller.faceChartsCount, 'Charts'),
+          _buildStatBox(
+            Icons.palette_outlined,
+            controller.faceChartsCount,
+            'Charts',
+          ),
           const SizedBox(width: 12),
-          _buildStatBox(Icons.inventory_2_outlined, controller.productKitCount, 'Kit Items'),
+          _buildStatBox(
+            Icons.inventory_2_outlined,
+            controller.productKitCount,
+            'Kit Items',
+          ),
         ],
       );
     });
@@ -278,15 +361,25 @@ class MUADashboardContent extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
           children: [
             Icon(icon, size: 28, color: const Color(0xFFB8192E)),
             const SizedBox(height: 8),
-            Text('$count', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text(
+              '$count',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
           ],
         ),
       ),
@@ -299,7 +392,7 @@ class MUADashboardContent extends StatelessWidget {
   Widget _buildFaceChartsPreview(FaceChartController controller) {
     return Obx(() {
       final charts = controller.faceCharts.take(4).toList();
-      
+
       if (charts.isEmpty) {
         return Container(
           height: 100,
@@ -308,11 +401,14 @@ class MUADashboardContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
-            child: Text('No face charts yet', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              'No face charts yet',
+              style: TextStyle(color: Colors.grey),
+            ),
           ),
         );
       }
-      
+
       return SizedBox(
         height: 100,
         child: ListView.builder(
@@ -350,7 +446,7 @@ class MUADashboardContent extends StatelessWidget {
   Widget _buildProductKitPreview(ProductKitController controller) {
     return Obx(() {
       final items = controller.items.take(3).toList();
-      
+
       if (items.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(16),
@@ -359,18 +455,25 @@ class MUADashboardContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
-            child: Text('No items in your kit', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              'No items in your kit',
+              style: TextStyle(color: Colors.grey),
+            ),
           ),
         );
       }
-      
+
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
@@ -380,21 +483,30 @@ class MUADashboardContent extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    item.isPacked ? Icons.check_box : Icons.check_box_outline_blank,
-                    color: item.isPacked ? const Color(0xFF4CAF50) : Colors.grey,
+                    item.isPacked
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    color: item.isPacked
+                        ? const Color(0xFF4CAF50)
+                        : Colors.grey,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       '${item.brand != null ? "${item.brand} " : ""}${item.name}',
                       style: TextStyle(
-                        decoration: item.isPacked ? TextDecoration.lineThrough : null,
+                        decoration: item.isPacked
+                            ? TextDecoration.lineThrough
+                            : null,
                         color: item.isPacked ? Colors.grey : Colors.black,
                       ),
                     ),
                   ),
                   if (item.quantity > 1)
-                    Text('(${item.quantity})', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                    Text(
+                      '(${item.quantity})',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
                 ],
               ),
             );
@@ -424,7 +536,7 @@ class MUADashboardContent extends StatelessWidget {
     return Obx(() {
       final reviewController = Get.find<ReviewController>();
       final reviews = reviewController.reviews.take(2).toList();
-      
+
       if (reviews.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(16),
@@ -447,7 +559,11 @@ class MUADashboardContent extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
             child: Row(
@@ -464,13 +580,19 @@ class MUADashboardContent extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(review.author, style: const TextStyle(fontWeight: FontWeight.w500)),
+                      Text(
+                        review.author,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
                       if (review.comment.isNotEmpty)
                         Text(
                           review.comment,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
                         ),
                     ],
                   ),
@@ -478,7 +600,10 @@ class MUADashboardContent extends StatelessWidget {
                 Row(
                   children: [
                     const Icon(Icons.star, color: Colors.amber, size: 16),
-                    Text('${review.rating}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      '${review.rating}',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ],
                 ),
               ],
@@ -492,24 +617,29 @@ class MUADashboardContent extends StatelessWidget {
   // ==================
   // DAY APPOINTMENTS BOTTOM SHEET
   // ==================
-  void _showDayAppointments(BuildContext context, DateTime date, BusinessOwnerController boController) {
+  void _showDayAppointments(
+    BuildContext context,
+    DateTime date,
+    BusinessOwnerController boController,
+  ) {
     final bookings = boController.allBusinessOwnerBookingOne.value.results;
-    
+
     // Filter bookings for the selected date
     final dayBookings = bookings.where((b) {
       return b.slotTime.year == date.year &&
-             b.slotTime.month == date.month &&
-             b.slotTime.day == date.day;
+          b.slotTime.month == date.month &&
+          b.slotTime.day == date.day;
     }).toList();
-    
+
     // Sort by time
     dayBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));
-    
+
     final dateLabel = DateFormat('EEEE, MMM d').format(date);
-    final isToday = date.day == DateTime.now().day && 
-                    date.month == DateTime.now().month && 
-                    date.year == DateTime.now().year;
-    
+    final isToday =
+        date.day == DateTime.now().day &&
+        date.month == DateTime.now().month &&
+        date.year == DateTime.now().year;
+
     Get.bottomSheet(
       Container(
         constraints: BoxConstraints(
@@ -532,7 +662,7 @@ class MUADashboardContent extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Header
             Padding(
               padding: const EdgeInsets.all(16),
@@ -551,10 +681,7 @@ class MUADashboardContent extends StatelessWidget {
                       ),
                       Text(
                         '${dayBookings.length} ${dayBookings.length == 1 ? 'appointment' : 'appointments'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -565,9 +692,9 @@ class MUADashboardContent extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const Divider(height: 1),
-            
+
             // Appointments list
             Flexible(
               child: dayBookings.isEmpty
@@ -589,13 +716,14 @@ class MUADashboardContent extends StatelessWidget {
       isScrollControlled: true,
     );
   }
-  
+
   Widget _buildEmptyState(DateTime date) {
-    final isToday = date.day == DateTime.now().day && 
-                    date.month == DateTime.now().month && 
-                    date.year == DateTime.now().year;
+    final isToday =
+        date.day == DateTime.now().day &&
+        date.month == DateTime.now().month &&
+        date.year == DateTime.now().year;
     final isFuture = date.isAfter(DateTime.now());
-    
+
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -608,11 +736,11 @@ class MUADashboardContent extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            isToday 
+            isToday
                 ? 'No appointments today'
-                : isFuture 
-                    ? 'No appointments scheduled'
-                    : 'No appointments were booked',
+                : isFuture
+                ? 'No appointments scheduled'
+                : 'No appointments were booked',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
@@ -624,24 +752,21 @@ class MUADashboardContent extends StatelessWidget {
             isToday || isFuture
                 ? 'Your schedule is free!'
                 : 'This day had no bookings',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[400],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[400]),
           ),
         ],
       ),
     );
   }
-  
+
   Widget _buildAppointmentCard(dynamic booking) {
     final status = booking.status.toString().toLowerCase();
-    
+
     // Get status styling based on actual booking status
     Color statusBgColor;
     Color statusTextColor;
     String statusText;
-    
+
     switch (status) {
       case 'completed':
       case 'confirmed':
@@ -666,12 +791,12 @@ class MUADashboardContent extends StatelessWidget {
         statusText = 'Pending';
         break;
     }
-    
+
     // Use timezone-aware formatting if shop timezone is available
     final timeText = booking.shopTimezone != null
         ? formatApiTimeInTimezone(booking.slotTimeIso, booking.shopTimezone!)
         : DateFormat('hh:mm a').format(booking.slotTime);
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -698,7 +823,7 @@ class MUADashboardContent extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          
+
           // Customer info
           Expanded(
             child: Column(
@@ -715,10 +840,7 @@ class MUADashboardContent extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   booking.serviceTitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -726,16 +848,13 @@ class MUADashboardContent extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${booking.serviceDuration} min',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[400],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                   ),
                 ],
               ],
             ),
           ),
-          
+
           // Status indicator
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

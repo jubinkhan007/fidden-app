@@ -73,15 +73,15 @@ class _MassageDashboardContentState extends State<MassageDashboardContent> {
                   _showDayAppointments(date);
                 },
                 getConsultationsCount: (date) {
-                  final appointments =
-                      todayController.appointmentsData.value?.appointments ??
-                      [];
-                  return appointments
+                  // Use same data source as _showDayAppointments for consistency
+                  final bookings =
+                      boController.allBusinessOwnerBookingOne.value.results;
+                  return bookings
                       .where(
-                        (a) =>
-                            a.startTime.year == date.year &&
-                            a.startTime.month == date.month &&
-                            a.startTime.day == date.day,
+                        (b) =>
+                            b.slotTime.year == date.year &&
+                            b.slotTime.month == date.month &&
+                            b.slotTime.day == date.day,
                       )
                       .length;
                 },
