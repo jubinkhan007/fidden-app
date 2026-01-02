@@ -14,7 +14,9 @@ class DesignRequestImage {
     return DesignRequestImage(
       id: json['id'] as int,
       imageUrl: json['image'] as String,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 
@@ -38,6 +40,7 @@ class DesignRequest {
   final String placement;
   final String sizeApprox;
   final String status;
+  final String? serviceNiche; // 'tattoo_artist', 'nail_tech', etc.
   final List<DesignRequestImage> images;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -53,6 +56,7 @@ class DesignRequest {
     required this.placement,
     required this.sizeApprox,
     required this.status,
+    this.serviceNiche,
     required this.images,
     required this.createdAt,
     required this.updatedAt,
@@ -62,10 +66,10 @@ class DesignRequest {
   String get customerName => userName;
   String get customerEmail => userEmail;
   String get designDescription => description;
-  
+
   /// Get list of image URLs for easy access
   List<String> get designImages => images.map((img) => img.imageUrl).toList();
-  
+
   /// Get first image URL or null
   String? get firstImageUrl => images.isNotEmpty ? images.first.imageUrl : null;
 
@@ -91,9 +95,14 @@ class DesignRequest {
       placement: json['placement'] as String? ?? '',
       sizeApprox: json['size_approx'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
+      serviceNiche: json['service_niche'] as String?,
       images: imagesList,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      updatedAt:
+          DateTime.tryParse(json['updated_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 

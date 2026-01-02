@@ -114,10 +114,10 @@ class BarberDashboardContent extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // === LOYALTY MEMBERS ===
-          _buildLoyaltySection(loyaltyController),
+          // === LOYALTY MEMBERS === (Commented out)
+          // _buildLoyaltySection(loyaltyController),
 
-          const SizedBox(height: 20),
+          // const SizedBox(height: 20),
 
           // === REVIEWS ===
           _buildSectionTitle(

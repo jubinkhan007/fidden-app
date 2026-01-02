@@ -55,7 +55,7 @@ class MUADashboardContent extends StatelessWidget {
           // === NEXT APPOINTMENT + TODAY REVENUE ===
           Row(
             children: [
-              Expanded(child: _buildNextAppointmentCard(todayController)),
+              Expanded(child: _buildNextAppointmentCard(boController)),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildRevenueCard(
@@ -205,10 +205,27 @@ class MUADashboardContent extends StatelessWidget {
   // ==================
   // NEXT APPOINTMENT CARD
   // ==================
-  Widget _buildNextAppointmentCard(TodayAppointmentsController controller) {
+  Widget _buildNextAppointmentCard(BusinessOwnerController controller) {
     return Obx(() {
-      final appointments = controller.upcomingAppointments;
-      final next = appointments.isNotEmpty ? appointments.first : null;
+      final bookings = controller.allBusinessOwnerBookingOne.value.results;
+      final now = DateTime.now();
+
+      // Filter for MUA services and upcoming appointments
+      final upcomingMUA = bookings.where((b) {
+        final isUpcoming = b.status == 'active' && b.slotTime.isAfter(now);
+        final serviceTitle = b.serviceTitle.toLowerCase();
+        final isMUA =
+            serviceTitle.contains('makeup') ||
+            serviceTitle.contains('make up') ||
+            serviceTitle.contains('bridal') ||
+            serviceTitle.contains('glam') ||
+            serviceTitle.contains('cosmetic') ||
+            serviceTitle.contains('contour') ||
+            serviceTitle.contains('foundation');
+        return isUpcoming && isMUA;
+      }).toList()..sort((a, b) => a.slotTime.compareTo(b.slotTime));
+
+      final next = upcomingMUA.isNotEmpty ? upcomingMUA.first : null;
 
       return Container(
         padding: const EdgeInsets.all(16),
@@ -243,7 +260,10 @@ class MUADashboardContent extends StatelessWidget {
             const SizedBox(height: 12),
             if (next != null) ...[
               Text(
-                DateFormat('h:mm a').format(next.startTime),
+                formatApiTimeInTimezone(
+                  next.slotTimeIso,
+                  next.shopTimezone ?? 'UTC',
+                ),
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -252,7 +272,7 @@ class MUADashboardContent extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                next.customerName,
+                next.userName ?? 'Client',
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ] else

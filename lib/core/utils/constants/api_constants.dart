@@ -94,9 +94,13 @@ class AppUrls {
   static const String dailyRevenue = '$_baseUrl/api/barber/daily-revenue/';
   static const String noShowAlerts = '$_baseUrl/api/barber/no-show-alerts/';
 
-  // Walk-In Queue
-  static const String walkIns = '$_baseUrl/api/barber/walk-ins/';
-  static String walkInDetail(int id) => '$_baseUrl/api/barber/walk-ins/$id/';
+  // Walk-In Queue (new API structure)
+  static const String walkIns = '$_baseUrl/api/walk-in/';
+  static String walkInDetail(int id) => '$_baseUrl/api/walk-in/$id/';
+  static String walkInStart(int id) => '$_baseUrl/api/walk-in/$id/start/';
+  static String walkInComplete(int id) => '$_baseUrl/api/walk-in/$id/complete/';
+  static String walkInNoShow(int id) => '$_baseUrl/api/walk-in/$id/no_show/';
+  static const String walkInStats = '$_baseUrl/api/walk-in/stats/';
 
   // Loyalty Program
   static const String loyaltyProgram = '$_baseUrl/api/barber/loyalty/program/';

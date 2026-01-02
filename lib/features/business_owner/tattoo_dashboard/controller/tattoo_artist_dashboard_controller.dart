@@ -146,10 +146,16 @@ class TattooArtistDashboardController extends GetxController {
         .length;
   }
 
-  /// Get pending design requests (max 3 for dashboard)
+  /// Get pending design requests (max 3 for dashboard, filtered for tattoo_artist niche)
   List<DesignRequest> get pendingDesignRequests {
     final pending =
-        designRequestController.requests.where((r) => r.isPending).toList()
+        designRequestController.requests
+            .where(
+              (r) =>
+                  r.isPending &&
+                  (r.serviceNiche == 'tattoo_artist' || r.serviceNiche == null),
+            )
+            .toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return pending.take(3).toList();
@@ -178,7 +184,13 @@ class TattooArtistDashboardController extends GetxController {
   // === ACTIVITY STATS ===
 
   int get pendingDesignRequestsCount {
-    return designRequestController.requests.where((r) => r.isPending).length;
+    return designRequestController.requests
+        .where(
+          (r) =>
+              r.isPending &&
+              (r.serviceNiche == 'tattoo_artist' || r.serviceNiche == null),
+        )
+        .length;
   }
 
   int get pendingIDVerificationsCount {

@@ -466,9 +466,10 @@ class NailTechDashboardContent extends StatelessWidget {
   // ==================
   Widget _buildStyleRequestsPreview(StyleRequestController controller) {
     return Obx(() {
-      final pending = controller.pendingRequests.take(2).toList();
+      final pendingStyle = controller.pendingRequests.take(2).toList();
+      final pendingDesign = controller.pendingDesignRequests.take(2).toList();
 
-      if (pending.isEmpty) {
+      if (pendingStyle.isEmpty && pendingDesign.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -485,71 +486,167 @@ class NailTechDashboardContent extends StatelessWidget {
       }
 
       return Column(
-        children: pending.map((request) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                // Image preview
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: request.previewImageUrl != null
-                      ? Image.network(
-                          request.previewImageUrl!,
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _defaultStyleIcon(),
-                        )
-                      : _defaultStyleIcon(),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        request.title,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${request.userName ?? "Client"} • ${request.nailStyleTypeDisplay ?? ""}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3E0),
+        children: [
+          // Style Requests
+          ...pendingStyle.map((request) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                children: [
+                  // Image preview
+                  ClipRRect(
                     borderRadius: BorderRadius.circular(8),
+                    child: request.previewImageUrl != null
+                        ? Image.network(
+                            request.previewImageUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _defaultStyleIcon(),
+                          )
+                        : _defaultStyleIcon(),
                   ),
-                  child: const Text(
-                    'Pending',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFF57C00),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          request.title,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${request.userName ?? "Client"} • ${request.nailStyleTypeDisplay ?? ""}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Pending',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFF57C00),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          // Design Requests from booking
+          ...pendingDesign.map((request) {
+            final imageUrl = request.images.isNotEmpty
+                ? request.images.first.imageUrl
+                : null;
+            return GestureDetector(
+              onTap: () => Get.to(() => const StyleRequestsScreen()),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFE91E8C).withOpacity(0.3),
+                  ),
                 ),
-              ],
-            ),
-          );
-        }).toList(),
+                child: Row(
+                  children: [
+                    // Image preview
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: imageUrl != null
+                          ? Image.network(
+                              imageUrl,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _defaultDesignIcon(),
+                            )
+                          : _defaultDesignIcon(),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            request.description.length > 30
+                                ? '${request.description.substring(0, 30)}...'
+                                : request.description,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '${request.userName} • ${request.placement.isNotEmpty ? request.placement : "Design Request"}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFCE4EC),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Design',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFE91E8C),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       );
     });
+  }
+
+  Widget _defaultDesignIcon() {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCE4EC),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Icon(Icons.auto_awesome, color: Color(0xFFE91E8C)),
+    );
   }
 
   Widget _defaultStyleIcon() {

@@ -34,6 +34,7 @@ class ClientDesignRequest {
   final String placement;
   final String sizeApprox;
   final String status;
+  final String? serviceNiche; // 'tattoo_artist', 'nail_tech', etc.
   final List<DesignRequestImage> images;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -50,6 +51,7 @@ class ClientDesignRequest {
     required this.placement,
     required this.sizeApprox,
     required this.status,
+    this.serviceNiche,
     required this.images,
     required this.createdAt,
     required this.updatedAt,
@@ -78,6 +80,7 @@ class ClientDesignRequest {
       placement: json['placement'] as String? ?? '',
       sizeApprox: json['size_approx'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
+      serviceNiche: json['service_niche'] as String?,
       images: imagesList,
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
@@ -150,5 +153,37 @@ class TattooSize {
     'Half Sleeve',
     'Full Back',
     'Custom Size',
+  ];
+}
+
+/// Placement options for nail designs
+class NailPlacement {
+  static const List<String> options = [
+    'All Nails',
+    'Accent Nail Only',
+    'Thumb Only',
+    'Index Finger Only',
+    'Ring Finger Only',
+    'French Tips',
+    'Full Set',
+    'Pedicure - Toes',
+    'Custom Selection',
+  ];
+}
+
+/// Size/Style options for nail designs
+class NailSize {
+  static const List<String> options = [
+    'Short Length',
+    'Medium Length',
+    'Long Length',
+    'Extra Long',
+    'Coffin Shape',
+    'Stiletto Shape',
+    'Square Shape',
+    'Almond Shape',
+    'Oval Shape',
+    'Round Shape',
+    'Custom Style',
   ];
 }

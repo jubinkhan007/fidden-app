@@ -15,6 +15,8 @@ class ServiceDetailsModel {
   final int shopId;
   final String shopName;
   final String? shopImg; // NEW: shop logo/image
+  final String?
+  serviceNiche; // Service niche category (tattoo_artist, nail_tech, etc.)
   final double? avgRating;
   final int? reviewCount;
   final List<ServiceReview> reviews;
@@ -33,6 +35,7 @@ class ServiceDetailsModel {
     required this.shopId,
     required this.shopName,
     this.shopImg,
+    this.serviceNiche,
     this.avgRating,
     this.reviewCount,
     required this.reviews,
@@ -51,6 +54,7 @@ class ServiceDetailsModel {
       shopId: json["shop_id"],
       shopName: json["shop_name"] ?? '',
       shopImg: json["shop_img"],
+      serviceNiche: json["service_niche"],
       avgRating: (json["avg_rating"] as num?)?.toDouble(),
       reviewCount: json["review_count"],
       shopAddress: json["shop_address"].toString(),

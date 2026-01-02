@@ -56,13 +56,23 @@ class BookingSummaryController extends GetxController {
     final desc = designRequestData['description'] as String?;
     if (desc == null || desc.trim().isEmpty) return;
     try {
-      final service = Get.find<ClientDesignRequestService>();
+      // Directly instantiate service (not registered with GetX)
+      final service = ClientDesignRequestService();
+
+      // Get placement and size with defaults if not provided (backend requires these)
+      final placement = designRequestData['placement'] as String?;
+      final size = designRequestData['size'] as String?;
+      final niche = designRequestData['serviceNiche'] as String?;
+
       final request = await service.createDesignRequest(
         shopId: shopId,
         description: desc,
-        bookingId: bookingId,
-        placement: designRequestData['placement'],
-        sizeApprox: designRequestData['size'],
+        // Don't pass bookingId - booking may not be committed yet
+        // The design request can be linked manually by shop owner
+        bookingId: null,
+        placement: placement?.isNotEmpty == true ? placement : 'Other',
+        sizeApprox: size?.isNotEmpty == true ? size : 'Custom Style',
+        serviceNiche: niche, // Pass niche for filtering on dashboards
       );
 
       final image = designRequestData['image'];
@@ -73,10 +83,9 @@ class BookingSummaryController extends GetxController {
           print('Failed to upload design request image: $e');
         }
       }
-    } catch (_) {
-      // If service not found or other error, try direct instantiation if import available
-      // or just swallow to avoid blocking user flow
-      print("Failed to auto-submit design request");
+      print('✅ Design request submitted successfully: ${request.id}');
+    } catch (e) {
+      print("Failed to auto-submit design request: $e");
     }
   }
 

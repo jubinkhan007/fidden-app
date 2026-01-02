@@ -3,6 +3,7 @@ import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../data/style_request_model.dart';
 import '../data/nailtech_dashboard_model.dart';
+import '../../../../features/user/design_requests/data/client_design_request_model.dart';
 
 /// Service for Nail Tech Dashboard API calls
 class NailTechDashboardService {
@@ -41,19 +42,50 @@ class NailTechDashboardService {
       List<dynamic> data;
       if (response.responseData is List) {
         data = response.responseData;
-      } else if (response.responseData is Map && response.responseData['results'] != null) {
+      } else if (response.responseData is Map &&
+          response.responseData['results'] != null) {
         data = response.responseData['results'] as List;
       } else {
         data = [];
       }
-      return data.map((e) => StyleRequest.fromJson(e as Map<String, dynamic>)).toList();
+      return data
+          .map((e) => StyleRequest.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
     throw Exception('Failed to fetch style requests');
   }
 
+  /// Get design requests for the shop (from booking flow)
+  Future<List<ClientDesignRequest>> getDesignRequests() async {
+    final response = await _networkCaller.getRequest(
+      AppUrls.designRequests,
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess) {
+      List<dynamic> data;
+      if (response.responseData is List) {
+        data = response.responseData;
+      } else if (response.responseData is Map &&
+          response.responseData['results'] != null) {
+        data = response.responseData['results'] as List;
+      } else {
+        data = [];
+      }
+      return data
+          .map((e) => ClientDesignRequest.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw Exception('Failed to fetch design requests');
+  }
+
   /// Update style request status
-  Future<StyleRequest> updateStyleRequestStatus(int id, StyleRequestStatus status) async {
+  Future<StyleRequest> updateStyleRequestStatus(
+    int id,
+    StyleRequestStatus status,
+  ) async {
     final response = await _networkCaller.patchRequest(
       AppUrls.styleRequestDetail(id),
       body: {'status': status.toApiString()},

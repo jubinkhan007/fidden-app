@@ -110,18 +110,56 @@ class BarberDashboardService {
   // WALK-IN QUEUE METHODS
   // =====================
 
-  /// Get walk-in queue
-  Future<WalkInQueueResponse> getWalkInQueue() async {
+  /// Get walk-in queue (returns list, not wrapped object)
+  Future<List<WalkInEntry>> getWalkInQueue({
+    String? status,
+    String? serviceNiche,
+  }) async {
+    var url = AppUrls.walkIns;
+    final params = <String, String>{};
+    if (status != null) params['status'] = status;
+    if (serviceNiche != null) params['service_niche'] = serviceNiche;
+    if (params.isNotEmpty) {
+      url =
+          '$url?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    }
+
     final response = await _networkCaller.getRequest(
-      AppUrls.walkIns,
+      url,
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is List) {
+      return (response.responseData as List)
+          .map((e) => WalkInEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw Exception('Failed to fetch walk-in queue');
+  }
+
+  /// Get walk-in queue stats
+  Future<Map<String, int>> getWalkInStats({String? serviceNiche}) async {
+    var url = AppUrls.walkInStats;
+    if (serviceNiche != null) url = '$url?service_niche=$serviceNiche';
+
+    final response = await _networkCaller.getRequest(
+      url,
       token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
-      return WalkInQueueResponse.fromJson(response.responseData);
+      final data = response.responseData as Map<String, dynamic>;
+      return {
+        'waiting': data['waiting'] as int? ?? 0,
+        'in_service': data['in_service'] as int? ?? 0,
+        'completed': data['completed'] as int? ?? 0,
+        'no_show': data['no_show'] as int? ?? 0,
+        'total': data['total'] as int? ?? 0,
+      };
     }
 
-    throw Exception('Failed to fetch walk-in queue');
+    throw Exception('Failed to fetch walk-in stats');
   }
 
   /// Add customer to walk-in queue
@@ -149,11 +187,11 @@ class BarberDashboardService {
     throw Exception('Failed to add to walk-in queue');
   }
 
-  /// Update walk-in status (call, complete, no-show, cancel)
-  Future<WalkInEntry> updateWalkInStatus(int id, WalkInStatus status) async {
-    final response = await _networkCaller.patchRequest(
-      AppUrls.walkInDetail(id),
-      body: {'status': status.toApiString()},
+  /// Start service for a walk-in customer (POST /start/)
+  Future<WalkInEntry> startWalkInService(int id) async {
+    final response = await _networkCaller.postRequest(
+      AppUrls.walkInStart(id),
+      body: {},
       token: AuthService.accessToken,
     );
 
@@ -161,7 +199,64 @@ class BarberDashboardService {
       return WalkInEntry.fromJson(response.responseData);
     }
 
-    throw Exception('Failed to update walk-in status');
+    throw Exception('Failed to start service');
+  }
+
+  /// Complete walk-in with payment (POST /complete/) - Creates SlotBooking + Payment
+  Future<WalkInEntry> completeWalkInWithPayment({
+    required int id,
+    required String paymentMethod, // 'cash', 'card', 'other'
+    required double amountPaid,
+    double tipsAmount = 0,
+  }) async {
+    final response = await _networkCaller.postRequest(
+      AppUrls.walkInComplete(id),
+      body: {
+        'payment_method': paymentMethod,
+        'amount_paid': amountPaid,
+        'tips_amount': tipsAmount,
+      },
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return WalkInEntry.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to complete walk-in');
+  }
+
+  /// Mark walk-in as no-show (POST /no_show/)
+  Future<WalkInEntry> markWalkInNoShow(int id) async {
+    final response = await _networkCaller.postRequest(
+      AppUrls.walkInNoShow(id),
+      body: {},
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return WalkInEntry.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to mark as no-show');
+  }
+
+  /// Update walk-in entry (PATCH) - for notes, etc.
+  Future<WalkInEntry> updateWalkInEntry(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _networkCaller.patchRequest(
+      AppUrls.walkInDetail(id),
+      body: data,
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      return WalkInEntry.fromJson(response.responseData);
+    }
+
+    throw Exception('Failed to update walk-in');
   }
 
   /// Remove customer from walk-in queue

@@ -484,7 +484,7 @@ class TattooArtistDashboardContent extends StatelessWidget {
         ),
         child: const Center(
           child: Text(
-            'No design requests yet',
+            'No design requests pending',
             style: TextStyle(color: Colors.grey),
           ),
         ),

@@ -35,6 +35,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   late final double? discountPrice;
   late int bookingId; // <-- Will hold the booking ID
   late int shopId; // <-- Store shopId
+  late String serviceNiche; // Service niche category for design request
   final _openingSheet = false.obs;
 
   final controller = Get.put(BookingSummaryController());
@@ -86,6 +87,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
     serviceImg = args['service_img'] ?? '';
     shopName = args['shopName'] ?? '';
     shopAddress = args['shopAddress'] ?? '';
+    serviceNiche = args['serviceNiche'] ?? '';
     serviceDuration = args['serviceDurationMinutes'] ?? 0;
     selectedSlot = args['selectedSlotLabel'] ?? '';
     servicePrice = (args['price'] is num)
@@ -262,8 +264,9 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                 ),
               ),
               // NEW: Design Request Field
-              if (serviceName.toLowerCase().contains('tattoo') ||
-                  serviceName.toLowerCase().contains('nail')) ...[
+              // Show design request for tattoo and nail tech niches
+              if (serviceNiche == 'tattoo_artist' ||
+                  serviceNiche == 'nail_tech') ...[
                 const SizedBox(height: 24),
                 _buildSectionTitle(
                   "Add Design Request (Optional)",
@@ -295,6 +298,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                             () => DesignRequestFormScreen(
                               shopId: shopId,
                               shopName: shopName,
+                              serviceNiche: serviceNiche,
                               returnDataOnly: true,
                             ),
                           );
@@ -333,6 +337,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                               () => DesignRequestFormScreen(
                                 shopId: shopId,
                                 shopName: shopName,
+                                serviceNiche: serviceNiche,
                                 returnDataOnly: true,
                                 initialDescription: data['description'],
                                 initialPlacement: data['placement'],

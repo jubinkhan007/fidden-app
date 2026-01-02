@@ -9,6 +9,7 @@ import '../../controller/client_design_request_controller.dart';
 class DesignRequestFormScreen extends StatefulWidget {
   final int shopId;
   final String? shopName;
+  final String serviceNiche; // 'tattoo_artist' or 'nail_tech'
   final int? bookingId;
   final String? initialDescription;
   final bool returnDataOnly;
@@ -19,6 +20,8 @@ class DesignRequestFormScreen extends StatefulWidget {
     super.key,
     required this.shopId,
     this.shopName,
+    this.serviceNiche =
+        'tattoo_artist', // Default to tattoo for backwards compatibility
     this.bookingId,
     this.initialDescription,
     this.returnDataOnly = false,
@@ -40,6 +43,17 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
   bool _isSubmitting = false;
 
   File? _imageFile;
+
+  // Dynamic text based on niche
+  bool get _isNail => widget.serviceNiche == 'nail_tech';
+  String get _nicheLabel => _isNail ? 'Nail Design' : 'Tattoo';
+  String get _artistLabel => _isNail ? 'Nail Technician' : 'Tattoo Artist';
+  List<String> get _placementOptions =>
+      _isNail ? NailPlacement.options : TattooPlacement.options;
+  List<String> get _sizeOptions =>
+      _isNail ? NailSize.options : TattooSize.options;
+  String get _placementLabel => _isNail ? 'Nail Selection' : 'Body Placement';
+  String get _sizeLabel => _isNail ? 'Style & Shape' : 'Approximate Size';
 
   @override
   void initState() {
@@ -88,6 +102,7 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
           'placement': _selectedPlacement,
           'size': _selectedSize,
           'image': _imageFile,
+          'serviceNiche': widget.serviceNiche, // Include niche for filtering
         },
       );
       return;
@@ -187,9 +202,9 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Text(
-                              'Tattoo Artist',
-                              style: TextStyle(color: Colors.grey),
+                            Text(
+                              _artistLabel,
+                              style: const TextStyle(color: Colors.grey),
                             ),
                           ],
                         ),
@@ -201,17 +216,21 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
               const SizedBox(height: 24),
 
               // Description field
-              const Text(
-                'Describe Your Tattoo Idea *',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              Text(
+                'Describe Your $_nicheLabel Idea *',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText:
-                      'Describe your tattoo idea in detail...\n\nInclude style preferences, colors, references, and any special requests.',
+                  hintText: _isNail
+                      ? 'Describe your nail design idea in detail...\n\nInclude style preferences, colors, patterns, and any special requests.'
+                      : 'Describe your tattoo idea in detail...\n\nInclude style preferences, colors, references, and any special requests.',
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
@@ -225,7 +244,7 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please describe your tattoo idea';
+                    return 'Please describe your $_nicheLabel idea';
                   }
                   if (value.trim().length < 20) {
                     return 'Please provide more detail (at least 20 characters)';
@@ -283,15 +302,18 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
                     ),
                   ),
                 ),
-              const Text(
-                'Body Placement',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              Text(
+                _placementLabel,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedPlacement,
                 decoration: InputDecoration(
-                  hintText: 'Select placement area',
+                  hintText: 'Select ${_placementLabel.toLowerCase()}',
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
@@ -299,7 +321,7 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
                     borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
                 ),
-                items: TattooPlacement.options.map((placement) {
+                items: _placementOptions.map((placement) {
                   return DropdownMenuItem(
                     value: placement,
                     child: Text(placement),
@@ -313,15 +335,18 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
               const SizedBox(height: 24),
 
               // Size dropdown
-              const Text(
-                'Approximate Size',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              Text(
+                _sizeLabel,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedSize,
                 decoration: InputDecoration(
-                  hintText: 'Select approximate size',
+                  hintText: 'Select ${_sizeLabel.toLowerCase()}',
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
@@ -329,7 +354,7 @@ class _DesignRequestFormScreenState extends State<DesignRequestFormScreen> {
                     borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
                 ),
-                items: TattooSize.options.map((size) {
+                items: _sizeOptions.map((size) {
                   return DropdownMenuItem(value: size, child: Text(size));
                 }).toList(),
                 onChanged: (value) {

@@ -681,6 +681,9 @@ class ServiceDetailsScreen extends StatelessWidget {
                                                 details?.serviceImg ?? '',
                                             'shopAddress':
                                                 details?.shopAddress ?? '',
+                                            'serviceNiche':
+                                                details?.serviceNiche ??
+                                                '', // Pass service niche for design request
                                             'serviceDurationMinutes': c
                                                 .totalDuration, // Use total duration
                                             'selectedSlotLabel': slotLabel,

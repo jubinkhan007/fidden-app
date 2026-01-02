@@ -15,6 +15,7 @@ class ClientDesignRequestService {
     int? bookingId,
     String? placement,
     String? sizeApprox,
+    String? serviceNiche, // e.g., 'tattoo_artist', 'nail_tech'
   }) async {
     final body = <String, dynamic>{
       'shop': shopId,
@@ -23,6 +24,8 @@ class ClientDesignRequestService {
       if (placement != null && placement.isNotEmpty) 'placement': placement,
       if (sizeApprox != null && sizeApprox.isNotEmpty)
         'size_approx': sizeApprox,
+      if (serviceNiche != null && serviceNiche.isNotEmpty)
+        'service_niche': serviceNiche,
     };
 
     final response = await _networkCaller.postRequest(
