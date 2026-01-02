@@ -86,14 +86,23 @@ class HairstylistDashboardContent extends StatelessWidget {
                 // Use same data source as _showDayAppointments for consistency
                 final bookings =
                     boController.allBusinessOwnerBookingOne.value.results;
-                return bookings
-                    .where(
-                      (b) =>
-                          b.slotTime.year == date.year &&
-                          b.slotTime.month == date.month &&
-                          b.slotTime.day == date.day,
-                    )
-                    .length;
+                // Filter for hairstylist services only
+                return bookings.where((b) {
+                  final isCorrectDate =
+                      b.slotTime.year == date.year &&
+                      b.slotTime.month == date.month &&
+                      b.slotTime.day == date.day;
+                  final serviceTitle = b.serviceTitle.toLowerCase();
+                  final isHairstylist =
+                      serviceTitle.contains('hair') ||
+                      serviceTitle.contains('cut') ||
+                      serviceTitle.contains('loc') ||
+                      serviceTitle.contains('braid') ||
+                      serviceTitle.contains('style') ||
+                      serviceTitle.contains('color') ||
+                      serviceTitle.contains('trim');
+                  return isCorrectDate && isHairstylist;
+                }).length;
               },
               onDateSelected: (date) =>
                   _showDayAppointments(context, date, boController),
@@ -196,11 +205,20 @@ class HairstylistDashboardContent extends StatelessWidget {
     return Obx(() {
       final bookings = controller.allBusinessOwnerBookingOne.value.results;
       final now = DateTime.now();
-      final upcoming =
-          bookings
-              .where((b) => b.status == 'active' && b.slotTime.isAfter(now))
-              .toList()
-            ..sort((a, b) => a.slotTime.compareTo(b.slotTime));
+      // Filter for hairstylist services only
+      final upcoming = bookings.where((b) {
+        final isActive = b.status == 'active' && b.slotTime.isAfter(now);
+        final serviceTitle = b.serviceTitle.toLowerCase();
+        final isHairstylist =
+            serviceTitle.contains('hair') ||
+            serviceTitle.contains('cut') ||
+            serviceTitle.contains('loc') ||
+            serviceTitle.contains('braid') ||
+            serviceTitle.contains('style') ||
+            serviceTitle.contains('color') ||
+            serviceTitle.contains('trim');
+        return isActive && isHairstylist;
+      }).toList()..sort((a, b) => a.slotTime.compareTo(b.slotTime));
 
       if (upcoming.isEmpty) {
         return Container(
@@ -652,10 +670,23 @@ class HairstylistDashboardContent extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => Obx(() {
         final allBookings = controller.allBusinessOwnerBookingOne.value.results;
+        // Filter by date AND by hairstylist niche
         final appointments = allBookings.where((b) {
-          return b.slotTime.year == date.year &&
+          final isCorrectDate =
+              b.slotTime.year == date.year &&
               b.slotTime.month == date.month &&
               b.slotTime.day == date.day;
+          // Filter for hairstylist services
+          final serviceTitle = b.serviceTitle.toLowerCase();
+          final isHairstylist =
+              serviceTitle.contains('hair') ||
+              serviceTitle.contains('cut') ||
+              serviceTitle.contains('loc') ||
+              serviceTitle.contains('braid') ||
+              serviceTitle.contains('style') ||
+              serviceTitle.contains('color') ||
+              serviceTitle.contains('trim');
+          return isCorrectDate && isHairstylist;
         }).toList();
 
         return Container(

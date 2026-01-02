@@ -80,14 +80,22 @@ class NailTechDashboardContent extends StatelessWidget {
               // Use same data source as _showDayAppointments for consistency
               final bookings =
                   boController.allBusinessOwnerBookingOne.value.results;
-              return bookings
-                  .where(
-                    (b) =>
-                        b.slotTime.year == date.year &&
-                        b.slotTime.month == date.month &&
-                        b.slotTime.day == date.day,
-                  )
-                  .length;
+              // Filter for nail tech services only
+              return bookings.where((b) {
+                final isCorrectDate =
+                    b.slotTime.year == date.year &&
+                    b.slotTime.month == date.month &&
+                    b.slotTime.day == date.day;
+                final serviceTitle = b.serviceTitle.toLowerCase();
+                final isNailTech =
+                    serviceTitle.contains('nail') ||
+                    serviceTitle.contains('manicure') ||
+                    serviceTitle.contains('pedicure') ||
+                    serviceTitle.contains('gel') ||
+                    serviceTitle.contains('acrylic') ||
+                    serviceTitle.contains('polish');
+                return isCorrectDate && isNailTech;
+              }).length;
             },
           ),
 
@@ -187,6 +195,7 @@ class NailTechDashboardContent extends StatelessWidget {
     return Obx(() {
       final bookings = boController.allBusinessOwnerBookingOne.value.results;
 
+      // Filter for nail tech services
       final upcomingBookings = bookings.where((b) {
         final shopTz = b.shopTimezone ?? 'America/New_York';
         final nowUtc = DateTime.now().toUtc();
@@ -208,7 +217,17 @@ class NailTechDashboardContent extends StatelessWidget {
             b.status.toLowerCase() == 'active' ||
             b.status.toLowerCase() == 'confirmed';
 
-        return isFuture || (isToday && isActive);
+        // Check if nail tech service
+        final serviceTitle = b.serviceTitle.toLowerCase();
+        final isNailTech =
+            serviceTitle.contains('nail') ||
+            serviceTitle.contains('manicure') ||
+            serviceTitle.contains('pedicure') ||
+            serviceTitle.contains('gel') ||
+            serviceTitle.contains('acrylic') ||
+            serviceTitle.contains('polish');
+
+        return (isFuture || (isToday && isActive)) && isNailTech;
       }).toList();
 
       upcomingBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));
@@ -711,10 +730,21 @@ class NailTechDashboardContent extends StatelessWidget {
   ) {
     final bookings = boController.allBusinessOwnerBookingOne.value.results;
 
+    // Filter by date AND by nail tech niche
     final dayBookings = bookings.where((b) {
-      return b.slotTime.year == date.year &&
+      final isCorrectDate =
+          b.slotTime.year == date.year &&
           b.slotTime.month == date.month &&
           b.slotTime.day == date.day;
+      final serviceTitle = b.serviceTitle.toLowerCase();
+      final isNailTech =
+          serviceTitle.contains('nail') ||
+          serviceTitle.contains('manicure') ||
+          serviceTitle.contains('pedicure') ||
+          serviceTitle.contains('gel') ||
+          serviceTitle.contains('acrylic') ||
+          serviceTitle.contains('polish');
+      return isCorrectDate && isNailTech;
     }).toList();
 
     dayBookings.sort((a, b) => a.slotTime.compareTo(b.slotTime));

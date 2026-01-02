@@ -76,14 +76,23 @@ class _MassageDashboardContentState extends State<MassageDashboardContent> {
                   // Use same data source as _showDayAppointments for consistency
                   final bookings =
                       boController.allBusinessOwnerBookingOne.value.results;
-                  return bookings
-                      .where(
-                        (b) =>
-                            b.slotTime.year == date.year &&
-                            b.slotTime.month == date.month &&
-                            b.slotTime.day == date.day,
-                      )
-                      .length;
+                  // Filter for massage services only
+                  return bookings.where((b) {
+                    final isCorrectDate =
+                        b.slotTime.year == date.year &&
+                        b.slotTime.month == date.month &&
+                        b.slotTime.day == date.day;
+                    final serviceTitle = b.serviceTitle.toLowerCase();
+                    final isMassage =
+                        serviceTitle.contains('massage') ||
+                        serviceTitle.contains('body') ||
+                        serviceTitle.contains('spa') ||
+                        serviceTitle.contains('therapy') ||
+                        serviceTitle.contains('relaxation') ||
+                        serviceTitle.contains('deep tissue') ||
+                        serviceTitle.contains('swedish');
+                    return isCorrectDate && isMassage;
+                  }).length;
                 },
               ),
             ),
@@ -663,13 +672,24 @@ class _MassageDashboardContentState extends State<MassageDashboardContent> {
   }
 
   void _showDayAppointments(DateTime date) {
+    // Filter by date AND by massage therapist niche
     final bookings = boController.allBusinessOwnerBookingOne.value.results
-        .where(
-          (b) =>
+        .where((b) {
+          final isCorrectDate =
               b.slotTime.year == date.year &&
               b.slotTime.month == date.month &&
-              b.slotTime.day == date.day,
-        )
+              b.slotTime.day == date.day;
+          final serviceTitle = b.serviceTitle.toLowerCase();
+          final isMassage =
+              serviceTitle.contains('massage') ||
+              serviceTitle.contains('body') ||
+              serviceTitle.contains('spa') ||
+              serviceTitle.contains('therapy') ||
+              serviceTitle.contains('relaxation') ||
+              serviceTitle.contains('deep tissue') ||
+              serviceTitle.contains('swedish');
+          return isCorrectDate && isMassage;
+        })
         .toList();
 
     if (bookings.isEmpty) {

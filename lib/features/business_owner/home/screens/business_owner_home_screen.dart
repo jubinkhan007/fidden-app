@@ -1,3 +1,4 @@
+import 'package:fidden/features/business_owner/barber/controller/daily_revenue_controller.dart';
 import 'package:fidden/features/business_owner/home/dashboard/dashboard_controller.dart';
 import 'package:fidden/features/business_owner/home/dashboard/tile_registry.dart';
 import 'package:fidden/features/business_owner/home/dashboard/widgets/context_chips.dart';
@@ -28,6 +29,8 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
     final controller = Get.find<BusinessOwnerController>();
     final profileController = Get.find<ProfileController>();
     final dashboardController = Get.put(DashboardController());
+    // Register DailyRevenueController for niche-filtered revenue data
+    Get.put(DailyRevenueController());
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),

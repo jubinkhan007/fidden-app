@@ -79,14 +79,24 @@ class _EstheticianDashboardContentState
                   // Use same data source as _showDayAppointments for consistency
                   final bookings =
                       boController.allBusinessOwnerBookingOne.value.results;
-                  return bookings
-                      .where(
-                        (b) =>
-                            b.slotTime.year == date.year &&
-                            b.slotTime.month == date.month &&
-                            b.slotTime.day == date.day,
-                      )
-                      .length;
+                  // Filter for esthetician services only
+                  return bookings.where((b) {
+                    final isCorrectDate =
+                        b.slotTime.year == date.year &&
+                        b.slotTime.month == date.month &&
+                        b.slotTime.day == date.day;
+                    final serviceTitle = b.serviceTitle.toLowerCase();
+                    final isEsthetician =
+                        serviceTitle.contains('facial') ||
+                        serviceTitle.contains('skin') ||
+                        serviceTitle.contains('peel') ||
+                        serviceTitle.contains('microderm') ||
+                        serviceTitle.contains('wax') ||
+                        serviceTitle.contains('lash') ||
+                        serviceTitle.contains('brow') ||
+                        serviceTitle.contains('esthetician');
+                    return isCorrectDate && isEsthetician;
+                  }).length;
                 },
               ),
             ),
@@ -677,13 +687,25 @@ class _EstheticianDashboardContentState
   }
 
   void _showDayAppointments(DateTime date) {
+    // Filter by date AND by esthetician niche
     final bookings = boController.allBusinessOwnerBookingOne.value.results
-        .where(
-          (b) =>
+        .where((b) {
+          final isCorrectDate =
               b.slotTime.year == date.year &&
               b.slotTime.month == date.month &&
-              b.slotTime.day == date.day,
-        )
+              b.slotTime.day == date.day;
+          final serviceTitle = b.serviceTitle.toLowerCase();
+          final isEsthetician =
+              serviceTitle.contains('facial') ||
+              serviceTitle.contains('skin') ||
+              serviceTitle.contains('peel') ||
+              serviceTitle.contains('microderm') ||
+              serviceTitle.contains('wax') ||
+              serviceTitle.contains('lash') ||
+              serviceTitle.contains('brow') ||
+              serviceTitle.contains('esthetician');
+          return isCorrectDate && isEsthetician;
+        })
         .toList();
 
     if (bookings.isEmpty) {

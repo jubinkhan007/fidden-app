@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controller/business_owner_controller.dart';
+import '../dashboard/dashboard_controller.dart';
+import '../../barber/controller/daily_revenue_controller.dart';
 import 'niche_layout_strategy.dart';
 import '../widgets/dashboard_stats_card.dart';
 import '../widgets/revenue_chart.dart';
@@ -39,25 +41,55 @@ class DefaultLayout implements NicheLayoutStrategy {
       ),
       const SizedBox(height: 16),
 
-      // 3. Key Stats Cards
-      Row(
-        children: [
-          DashboardStatsCard(
-            title: "Revenue",
-            value: "\$${controller.totalRevenue.value.toStringAsFixed(2)}",
-            icon: Icons.attach_money,
-            color: Colors.green,
-          ),
-          const SizedBox(width: 16),
-          DashboardStatsCard(
-            title: "New Bookings",
-            value:
-                "${controller.allBusinessOwnerBookingOne.value.stats?.newBookings ?? 0}",
-            icon: Icons.calendar_today,
-            color: Colors.blue,
-          ),
-        ],
-      ),
+      // 3. Key Stats Cards - Use niche-filtered revenue when a specific niche is selected
+      Obx(() {
+        // Check if a specific niche is selected (not "All")
+        final dashboardController = Get.find<DashboardController>();
+        final selectedNiche = dashboardController.selectedChip.value;
+        final isNicheSelected = selectedNiche != 'All';
+
+        String revenueValue;
+        String bookingsValue;
+
+        debugPrint(
+          '[DefaultLayout] selectedNiche: $selectedNiche, isNicheSelected: $isNicheSelected',
+        );
+
+        if (isNicheSelected) {
+          // Use DailyRevenueController for niche-filtered data
+          final revenueController = Get.find<DailyRevenueController>();
+          debugPrint(
+            '[DefaultLayout] Using DailyRevenueController - totalRevenue: ${revenueController.totalRevenue}, bookingCount: ${revenueController.bookingCount}',
+          );
+          revenueValue =
+              "\$${revenueController.totalRevenue.toStringAsFixed(2)}";
+          bookingsValue = "${revenueController.bookingCount}";
+        } else {
+          // Use default total revenue for "All"
+          revenueValue =
+              "\$${controller.totalRevenue.value.toStringAsFixed(2)}";
+          bookingsValue =
+              "${controller.allBusinessOwnerBookingOne.value.stats?.newBookings ?? 0}";
+        }
+
+        return Row(
+          children: [
+            DashboardStatsCard(
+              title: "Revenue",
+              value: revenueValue,
+              icon: Icons.attach_money,
+              color: Colors.green,
+            ),
+            const SizedBox(width: 16),
+            DashboardStatsCard(
+              title: "New Bookings",
+              value: bookingsValue,
+              icon: Icons.calendar_today,
+              color: Colors.blue,
+            ),
+          ],
+        );
+      }),
 
       const SizedBox(height: 24),
 

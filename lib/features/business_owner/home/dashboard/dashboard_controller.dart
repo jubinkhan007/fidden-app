@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
+import 'package:fidden/features/business_owner/barber/controller/daily_revenue_controller.dart';
 import 'tile_registry.dart';
 
 class DashboardController extends GetxController {
@@ -7,7 +9,7 @@ class DashboardController extends GetxController {
 
   // Selected chip (e.g., "All", "Barber", "Tattoo Artist")
   final RxString selectedChip = 'All'.obs;
-  
+
   // Reactive list of available chips - this will trigger UI updates
   final RxList<String> availableChips = <String>['All'].obs;
 
@@ -16,7 +18,7 @@ class DashboardController extends GetxController {
     super.onInit();
     // Initialize chips from current profile
     _updateChipsFromProfile();
-    
+
     // Listen to shopNiches changes and update chips reactively
     ever(_profileController.shopNiches, (_) {
       _updateChipsFromProfile();
@@ -31,7 +33,7 @@ class DashboardController extends GetxController {
       availableChips.value = ['All', ...niches.map((e) => e.trim())];
     }
   }
-  
+
   /// Call this to force refresh chips (e.g., after updating niches)
   void refreshChips() {
     _updateChipsFromProfile();
@@ -91,7 +93,25 @@ class DashboardController extends GetxController {
   }
 
   void selectChip(String chip) {
+    debugPrint('[DashboardController] selectChip called with: $chip');
     selectedChip.value = chip;
+    debugPrint(
+      '[DashboardController] selectedChip.value is now: ${selectedChip.value}',
+    );
+    // Trigger revenue data refresh with the selected niche
+    _refreshRevenueData();
+  }
+
+  void _refreshRevenueData() {
+    try {
+      final revenueController = Get.find<DailyRevenueController>();
+      // Pass the selected niche (or null for "All")
+      final niche = selectedChip.value == 'All' ? null : selectedChip.value;
+      revenueController.niche = niche;
+      revenueController.fetchRevenue(forNiche: niche);
+    } catch (e) {
+      // DailyRevenueController might not be registered in all contexts
+      debugPrint('[DashboardController] Could not refresh revenue: $e');
+    }
   }
 }
-

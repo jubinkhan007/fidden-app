@@ -31,13 +31,18 @@ class BarberDashboardService {
 
   /// Get daily revenue metrics with optional filters
   /// [date] - Filter by specific date (YYYY-MM-DD)
-  /// [niche] - Filter by niche: 'esthetician', 'massage', 'hair', 'nail', 'barber', 'tattoo'
+  /// [niche] - Filter by niche: 'hairstylist' uses separate endpoint, others use query param
   /// [serviceType] - Filter by specific service type
   Future<DailyRevenueResponse> getDailyRevenue({
     String? date,
     String? niche,
     String? serviceType,
   }) async {
+    // Hairstylist uses a different endpoint with different response format
+    if (niche?.toLowerCase() == 'hairstylist') {
+      return _getHairstylistRevenue();
+    }
+
     final queryParams = <String, String>{};
     if (date != null) queryParams['date'] = date;
     if (niche != null) queryParams['niche'] = niche;
@@ -58,6 +63,28 @@ class BarberDashboardService {
     }
 
     throw Exception('Failed to fetch daily revenue');
+  }
+
+  /// Get hairstylist-specific revenue from the hairstylist dashboard endpoint
+  Future<DailyRevenueResponse> _getHairstylistRevenue() async {
+    final response = await _networkCaller.getRequest(
+      AppUrls.hairstylistDashboard,
+      token: AuthService.accessToken,
+    );
+
+    if (response.isSuccess && response.responseData is Map<String, dynamic>) {
+      final data = response.responseData as Map<String, dynamic>;
+      // Map hairstylist dashboard response to DailyRevenueResponse
+      // Hairstylist returns: { "today_revenue": 32.0, "today_appointments_count": 2, ... }
+      return DailyRevenueResponse(
+        date: DateTime.now().toString().split(' ')[0], // Today's date
+        totalRevenue: (data['today_revenue'] as num?)?.toDouble() ?? 0.0,
+        bookingCount: data['today_appointments_count'] as int? ?? 0,
+        averageBookingValue: 0.0, // Not provided by this endpoint
+      );
+    }
+
+    throw Exception('Failed to fetch hairstylist revenue');
   }
 
   /// Get no-show alerts

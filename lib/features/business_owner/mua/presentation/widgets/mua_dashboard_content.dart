@@ -81,14 +81,23 @@ class MUADashboardContent extends StatelessWidget {
               // Use same data source as _showDayAppointments for consistency
               final bookings =
                   boController.allBusinessOwnerBookingOne.value.results;
-              return bookings
-                  .where(
-                    (b) =>
-                        b.slotTime.year == date.year &&
-                        b.slotTime.month == date.month &&
-                        b.slotTime.day == date.day,
-                  )
-                  .length;
+              // Filter for makeup artist services only
+              return bookings.where((b) {
+                final isCorrectDate =
+                    b.slotTime.year == date.year &&
+                    b.slotTime.month == date.month &&
+                    b.slotTime.day == date.day;
+                final serviceTitle = b.serviceTitle.toLowerCase();
+                final isMUA =
+                    serviceTitle.contains('makeup') ||
+                    serviceTitle.contains('make up') ||
+                    serviceTitle.contains('bridal') ||
+                    serviceTitle.contains('glam') ||
+                    serviceTitle.contains('cosmetic') ||
+                    serviceTitle.contains('contour') ||
+                    serviceTitle.contains('foundation');
+                return isCorrectDate && isMUA;
+              }).length;
             },
           ),
           const SizedBox(height: 20),
@@ -624,11 +633,22 @@ class MUADashboardContent extends StatelessWidget {
   ) {
     final bookings = boController.allBusinessOwnerBookingOne.value.results;
 
-    // Filter bookings for the selected date
+    // Filter bookings for the selected date AND by makeup artist niche
     final dayBookings = bookings.where((b) {
-      return b.slotTime.year == date.year &&
+      final isCorrectDate =
+          b.slotTime.year == date.year &&
           b.slotTime.month == date.month &&
           b.slotTime.day == date.day;
+      final serviceTitle = b.serviceTitle.toLowerCase();
+      final isMUA =
+          serviceTitle.contains('makeup') ||
+          serviceTitle.contains('make up') ||
+          serviceTitle.contains('bridal') ||
+          serviceTitle.contains('glam') ||
+          serviceTitle.contains('cosmetic') ||
+          serviceTitle.contains('contour') ||
+          serviceTitle.contains('foundation');
+      return isCorrectDate && isMUA;
     }).toList();
 
     // Sort by time
