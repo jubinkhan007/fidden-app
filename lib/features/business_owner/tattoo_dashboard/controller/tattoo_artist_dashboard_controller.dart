@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../consultation/controller/consultation_controller.dart';
 import '../../design_requests/controller/design_request_controller.dart';
@@ -9,6 +10,7 @@ import '../../portfolio/data/portfolio_item_model.dart';
 import '../../id_verification/data/id_verification_model.dart';
 import '../../barber/services/barber_dashboard_service.dart';
 import '../../barber/data/daily_revenue_model.dart';
+import '../../barber/controller/today_appointments_controller.dart';
 
 /// Lightweight coordinator controller for Tattoo Artist Dashboard
 /// Reuses all existing feature controllers - no new API calls
@@ -22,6 +24,8 @@ class TattooArtistDashboardController extends GetxController {
       Get.find<PortfolioController>();
   IDVerificationController get idVerificationController =>
       Get.find<IDVerificationController>();
+  TodayAppointmentsController get todayAppointmentsController =>
+      Get.find<TodayAppointmentsController>();
 
   final RxBool isRefreshing = false.obs;
 
@@ -35,10 +39,20 @@ class TattooArtistDashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    debugPrint('🎨 TattooArtistDashboardController: onInit');
     // Initialize all feature controllers if not already initialized
     _initializeControllers();
     // Fetch tattoo-specific revenue
     fetchNicheRevenue();
+    // Fetch today's tattoo appointments
+    _fetchTodayTattooAppointments();
+  }
+
+  Future<void> _fetchTodayTattooAppointments() async {
+    debugPrint(
+      '🎨 TattooArtistDashboardController: fetching today\'s tattoo appointments',
+    );
+    await todayAppointmentsController.fetchAppointments(niche: 'tattoo');
   }
 
   void _initializeControllers() {
@@ -54,6 +68,9 @@ class TattooArtistDashboardController extends GetxController {
     }
     if (!Get.isRegistered<IDVerificationController>()) {
       Get.put(IDVerificationController());
+    }
+    if (!Get.isRegistered<TodayAppointmentsController>()) {
+      Get.put(TodayAppointmentsController());
     }
 
     // Always fetch portfolio with tattoo niche on dashboard init
@@ -95,6 +112,7 @@ class TattooArtistDashboardController extends GetxController {
         portfolioController.fetchPortfolioItems(niche: 'tattoo'),
         idVerificationController.fetchIDVerifications(),
         fetchNicheRevenue(),
+        _fetchTodayTattooAppointments(),
       ]);
     } finally {
       isRefreshing.value = false;

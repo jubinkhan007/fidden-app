@@ -31,7 +31,11 @@ class BusinessOwnerController extends GetxController {
       <GetMyServiceModel>[].obs;
   final RxList<GrowthSuggestion> growthSuggestions = <GrowthSuggestion>[].obs;
 
-  var allBusinessOwnerBookingOne = OwnerBookingsResponse(next: null, previous: null, results: []).obs;
+  var allBusinessOwnerBookingOne = OwnerBookingsResponse(
+    next: null,
+    previous: null,
+    results: [],
+  ).obs;
   final shopMissing = false.obs;
   final shopMissingMessage = ''.obs;
 
@@ -39,19 +43,27 @@ class BusinessOwnerController extends GetxController {
   final verificationMessage = ''.obs;
 
   void onInit() {
-  super.onInit();
+    super.onInit();
 
-  // React only when shop id is known
-  ever<int?>(myShopId, (id) {
-    if (id != null && id > 0) {
+    // React only when shop id is known
+    ever<int?>(myShopId, (id) {
+      if (id != null && id > 0) {
+        fetchShopRevenues(shopId: id);
+        fetchGrowthSuggestions();
+        fetchBusinessOwnerBooking(); // moved here so it runs only when we truly have shopId
+      }
+    });
+
+    // Check initial value immediately (in case it was set before this controller loaded)
+    if (myShopId.value != null && myShopId.value! > 0) {
+      final id = myShopId.value!;
       fetchShopRevenues(shopId: id);
       fetchGrowthSuggestions();
-      fetchBusinessOwnerBooking();   // moved here so it runs only when we truly have shopId
+      fetchBusinessOwnerBooking();
     }
-  });
 
-  _boot();
-}
+    _boot();
+  }
 
   /// track in-flight actions to disable buttons per booking
   final RxSet<int> _busyBookingIds = <int>{}.obs;
@@ -71,10 +83,14 @@ class BusinessOwnerController extends GetxController {
   void _patchBookingStatusLocally(int bookingId, String newStatus) {
     final current = allBusinessOwnerBookingOne.value;
     final list = [...current.results];
-    final idx = list.indexWhere((e) => e.id == bookingId); // <-- assumes `id` exists
+    final idx = list.indexWhere(
+      (e) => e.id == bookingId,
+    ); // <-- assumes `id` exists
     if (idx != -1) {
       final old = list[idx];
-      list[idx] = old.copyWith(status: newStatus); // if you don't have copyWith, just: old.status = newStatus;
+      list[idx] = old.copyWith(
+        status: newStatus,
+      ); // if you don't have copyWith, just: old.status = newStatus;
       allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
         next: current.next,
         previous: current.previous,
@@ -96,7 +112,6 @@ class BusinessOwnerController extends GetxController {
     }
   }
 
-
   /// POST /payments/bookings/{booking_id}/mark-no-show/
   Future<void> markAsNoShow(int bookingId) async {
     if (isBusy(bookingId)) return;
@@ -106,7 +121,6 @@ class BusinessOwnerController extends GetxController {
 
       final res = await NetworkCaller().postRequest(
         AppUrls.markNoShow(bookingId),
-        token: AuthService.accessToken,
       );
 
       if (res.isSuccess) {
@@ -134,15 +148,20 @@ class BusinessOwnerController extends GetxController {
 
       final res = await NetworkCaller().postRequest(
         AppUrls.cancelBooking(bookingId),
-        token: AuthService.accessToken,
         body: const {"reason": "requested_by_customer"}, // <-- important
       );
 
       if (res.isSuccess) {
         _patchBookingStatusLocally(bookingId, 'cancelled');
-        AppSnackBar.showSuccess('Booking has been cancelled', title: 'Cancelled');
+        AppSnackBar.showSuccess(
+          'Booking has been cancelled',
+          title: 'Cancelled',
+        );
       } else {
-        AppSnackBar.showError(_extractServerMessage(res.responseData), title: 'Failed');
+        AppSnackBar.showError(
+          _extractServerMessage(res.responseData),
+          title: 'Failed',
+        );
       }
     } catch (e) {
       AppSnackBar.showError(e.toString());
@@ -151,26 +170,24 @@ class BusinessOwnerController extends GetxController {
     }
   }
 
-
-
   Future<void> _ensureAuthReady() async {
-  // Wait briefly until AuthService.accessToken is non-empty
-  for (var i = 0; i < 100; i++) {                   // ~10s max
-    final t = AuthService.accessToken;
-    if (t != null && t.isNotEmpty) return;
-    await Future.delayed(const Duration(milliseconds: 100));
+    // Wait briefly until AuthService.accessToken is non-empty
+    for (var i = 0; i < 100; i++) {
+      // ~10s max
+      final t = AuthService.accessToken;
+      if (t != null && t.isNotEmpty) return;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    // If still not ready, just return; callers will handle gracefully.
   }
-  // If still not ready, just return; callers will handle gracefully.
-}
 
-Future<void> _boot() async {
-  await _ensureAuthReady();          // <-- wait for token
-  await _initProfileAndGuards();     // <-- sets myShopId (triggers ever above)
-  await fetchAllMyService();         // services do not depend on shopId
-  // DO NOT call fetchShopRevenues()/fetchBusinessOwnerBooking() here:
-  // 'ever(myShopId, …)' will trigger them exactly once with a non-null id.
-}
-
+  Future<void> _boot() async {
+    await _ensureAuthReady(); // <-- wait for token
+    await _initProfileAndGuards(); // <-- sets myShopId (triggers ever above)
+    await fetchAllMyService(); // services do not depend on shopId
+    // DO NOT call fetchShopRevenues()/fetchBusinessOwnerBooking() here:
+    // 'ever(myShopId, …)' will trigger them exactly once with a non-null id.
+  }
 
   Future<void> refreshGuardsAndServices() async {
     await _initProfileAndGuards();
@@ -230,80 +247,109 @@ Future<void> _boot() async {
 
   final isPaging = false.obs;
 
-Future<void> fetchBusinessOwnerBooking({bool reset = true}) async {
-  if (reset) isPaging.value = false;
-  isLoading.value = reset;                // only show big loader on first page
-  try {
-    await _ensureAuthReady();
+  Future<void> fetchBusinessOwnerBooking({bool reset = true}) async {
+    if (reset) isPaging.value = false;
+    isLoading.value = reset; // only show big loader on first page
+    try {
+      await _ensureAuthReady();
 
-    final id = myShopId.value;
-    if (id == null || id <= 0) {
-      allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
-        next: null, previous: null, results: [],
-        stats: OwnerBookingStats(totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0),
+      final id = myShopId.value;
+      if (id == null || id <= 0) {
+        allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+          next: null,
+          previous: null,
+          results: [],
+          stats: OwnerBookingStats(
+            totalBookings: 0,
+            newBookings: 0,
+            cancelled: 0,
+            completed: 0,
+          ),
+        );
+        return;
+      }
+
+      final res = await NetworkCaller().getRequest(
+        AppUrls.ownerBooking(id.toString()),
+        treat404AsEmpty: true,
+        emptyPayload: const {
+          "next": null,
+          "previous": null,
+          "results": [],
+          "stats": {
+            "total_bookings": 0,
+            "new_bookings": 0,
+            "cancelled": 0,
+            "completed": 0,
+          },
+        },
       );
-      return;
+
+      if (res.isSuccess && res.responseData is Map<String, dynamic>) {
+        final page1 = OwnerBookingsResponse.fromJson(
+          Map<String, dynamic>.from(res.responseData),
+        );
+        allBusinessOwnerBookingOne.value = page1; // first page only
+      } else {
+        allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+          next: null,
+          previous: null,
+          results: [],
+          stats: OwnerBookingStats(
+            totalBookings: 0,
+            newBookings: 0,
+            cancelled: 0,
+            completed: 0,
+          ),
+        );
+      }
+    } finally {
+      isLoading.value = false;
     }
-
-    final res = await NetworkCaller().getRequest(
-      AppUrls.ownerBooking(id.toString()),
-      token: AuthService.accessToken,
-      treat404AsEmpty: true,
-      emptyPayload: const {"next": null,"previous": null,"results": [],"stats":{
-        "total_bookings":0,"new_bookings":0,"cancelled":0,"completed":0}}
-    );
-
-    if (res.isSuccess && res.responseData is Map<String, dynamic>) {
-      final page1 = OwnerBookingsResponse.fromJson(
-        Map<String, dynamic>.from(res.responseData),
-      );
-      allBusinessOwnerBookingOne.value = page1;     // first page only
-    } else {
-      allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
-        next: null, previous: null, results: [],
-        stats: OwnerBookingStats(totalBookings: 0, newBookings: 0, cancelled: 0, completed: 0),
-      );
-    }
-  } finally {
-    isLoading.value = false;
   }
-}
 
-/// Call this when you’re near the bottom.
-/// Uses the absolute `next` URL returned by the API.
-Future<void> fetchMoreBookings() async {
-  final nextUrl = allBusinessOwnerBookingOne.value.next;
-  if (nextUrl == null || nextUrl.isEmpty) return;
-  if (isPaging.value) return;
+  /// Call this when you’re near the bottom.
+  /// Uses the absolute `next` URL returned by the API.
+  Future<void> fetchMoreBookings() async {
+    final nextUrl = _normalizeUrl(allBusinessOwnerBookingOne.value.next);
+    if (nextUrl == null || nextUrl.isEmpty) return;
+    if (isPaging.value) return;
 
-  isPaging.value = true;
-  try {
-    final res = await NetworkCaller().getRequest(
-      nextUrl,                              // <-- absolute URL
-      token: AuthService.accessToken,
-      treat404AsEmpty: true,
-      emptyPayload: const {"next": null, "previous": null, "results": []}
-    );
-
-    if (res.isSuccess && res.responseData is Map<String, dynamic>) {
-      final nextPage = OwnerBookingsResponse.fromJson(
-        Map<String, dynamic>.from(res.responseData),
+    isPaging.value = true;
+    try {
+      final res = await NetworkCaller().getRequest(
+        nextUrl, // <-- normalized URL
+        treat404AsEmpty: true,
+        emptyPayload: const {"next": null, "previous": null, "results": []},
       );
 
-      // append new results; keep latest cursor & stats
-      final current = allBusinessOwnerBookingOne.value;
-      allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
-        next: nextPage.next,
-        previous: current.previous,
-        results: [...current.results, ...nextPage.results],
-        stats: nextPage.stats ?? current.stats,
-      );
+      if (res.isSuccess && res.responseData is Map<String, dynamic>) {
+        final nextPage = OwnerBookingsResponse.fromJson(
+          Map<String, dynamic>.from(res.responseData),
+        );
+
+        // append new results; keep latest cursor & stats
+        final current = allBusinessOwnerBookingOne.value;
+        allBusinessOwnerBookingOne.value = OwnerBookingsResponse(
+          next: nextPage.next,
+          previous: current.previous,
+          results: [...current.results, ...nextPage.results],
+          stats: nextPage.stats ?? current.stats,
+        );
+      }
+    } finally {
+      isPaging.value = false;
     }
-  } finally {
-    isPaging.value = false;
   }
-}
 
+  /// Normalize URL to https:// to prevent auth header stripping on redirect
+  String? _normalizeUrl(String? url) {
+    if (url == null) return null;
+    if (url.startsWith('http://')) {
+      return url.replaceFirst('http://', 'https://');
+    }
+    return url;
+  }
 
   Future<void> fetchGrowthSuggestions() async {
     try {
@@ -315,14 +361,15 @@ Future<void> fetchMoreBookings() async {
 
       final res = await NetworkCaller().getRequest(
         AppUrls.growthSuggestions(id.toString()),
-        token: AuthService.accessToken,
         treat404AsEmpty: true,
         emptyPayload: const [], // API returns an array
       );
 
       dynamic data = res.responseData;
       if (data is String) {
-        try { data = json.decode(data); } catch (_) {}
+        try {
+          data = json.decode(data);
+        } catch (_) {}
       }
 
       if (res.isSuccess && data is List) {
@@ -354,21 +401,17 @@ Future<void> fetchMoreBookings() async {
     }
   }
 
-
-
-
   Future<void> fetchAllMyService() async {
     isLoading.value = true;
     shopMissing.value = false;
     shopMissingMessage.value = '';
 
     try {
-      await _ensureAuthReady(); 
+      await _ensureAuthReady();
       final res = await NetworkCaller().getRequest(
         AppUrls.getMyService,
-        token: AuthService.accessToken,
         treat404AsEmpty: true,
-  emptyPayload: const [], 
+        emptyPayload: const [],
       );
 
       if (kDebugMode) {
@@ -437,13 +480,12 @@ Future<void> fetchMoreBookings() async {
     debugPrint("inside fetchShopRevenues");
     try {
       isRevenueLoading.value = true;
-      await _ensureAuthReady();                       // <-- NEW
+      await _ensureAuthReady(); // <-- NEW
 
       final res = await NetworkCaller().getRequest(
         AppUrls.shopRevenues(shopId, day: day),
-        token: AuthService.accessToken,
         treat404AsEmpty: true,
-  emptyPayload: const {"total": 0.0, "points": []},
+        emptyPayload: const {"total": 0.0, "points": []},
       );
 
       if (res.isSuccess && res.statusCode == 200) {

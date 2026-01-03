@@ -10,10 +10,27 @@ import 'package:fidden/features/business_owner/home/controller/business_owner_co
 import 'package:fidden/features/business_owner/reviews/state/review_controller.dart';
 import 'package:fidden/features/business_owner/reviews/ui/reviews_screen.dart';
 import 'package:fidden/features/business_owner/tattoo_dashboard/widgets/week_calendar_widget.dart';
-import 'package:fidden/features/user/booking/presentation/api_time_format.dart';
 import 'package:fidden/features/business_owner/barber/controller/daily_revenue_controller.dart';
 import 'package:fidden/features/business_owner/barber/controller/today_appointments_controller.dart';
 import 'package:fidden/features/business_owner/portfolio/presentation/screens/portfolio_grid_screen.dart';
+import 'package:fidden/features/business_owner/shared/widgets/today_appointments_widgets.dart';
+import 'package:fidden/features/user/booking/presentation/api_time_format.dart';
+import 'package:fidden/features/business_owner/barber/data/today_appointments_model.dart';
+
+/// Filter function to check if an appointment is hair-related.
+/// Matches services containing: hair, cut, loc, braid, style, color, trim, weave, extension
+bool _isHairRelatedService(Appointment a) {
+  final serviceName = a.serviceName.toLowerCase();
+  return serviceName.contains('hair') ||
+      serviceName.contains('cut') ||
+      serviceName.contains('loc') ||
+      serviceName.contains('braid') ||
+      serviceName.contains('style') ||
+      serviceName.contains('color') ||
+      serviceName.contains('trim') ||
+      serviceName.contains('weave') ||
+      serviceName.contains('extension');
+}
 
 /// Main dashboard content widget for Hairstylist/Loctician
 class HairstylistDashboardContent extends StatelessWidget {
@@ -25,6 +42,8 @@ class HairstylistDashboardContent extends StatelessWidget {
     final controller = Get.put(HairstylistDashboardController());
     final boController = Get.find<BusinessOwnerController>();
     final todayController = Get.put(TodayAppointmentsController());
+    // Fetch today's appointments (no niche filter - show all hair-related services)
+    todayController.fetchAppointments();
     final revenueController = Get.put(DailyRevenueController());
     final portfolioController = Get.put(PortfolioController());
     final reviewController = Get.put(ReviewController());
@@ -64,10 +83,13 @@ class HairstylistDashboardContent extends StatelessWidget {
           children: [
             const SizedBox(height: 8),
 
-            // === UPCOMING APPOINTMENT ===
+            // === UPCOMING APPOINTMENT (uses shared widget with hair filter) ===
             _buildSectionTitle('Upcoming Appointment'),
             const SizedBox(height: 8),
-            _buildUpcomingAppointment(boController),
+            UpcomingAppointmentCard(
+              controller: todayController,
+              serviceFilter: _isHairRelatedService,
+            ),
 
             const SizedBox(height: 20),
 
@@ -82,30 +104,24 @@ class HairstylistDashboardContent extends StatelessWidget {
             const SizedBox(height: 8),
             WeekCalendarWidget(
               selectedDate: DateTime.now(),
+              onDateSelected: (date) => showDayAppointmentsBottomSheet(
+                context,
+                date,
+                todayController,
+                serviceFilter: _isHairRelatedService,
+              ),
               getConsultationsCount: (date) {
-                // Use same data source as _showDayAppointments for consistency
-                final bookings =
-                    boController.allBusinessOwnerBookingOne.value.results;
-                // Filter for hairstylist services only
-                return bookings.where((b) {
-                  final isCorrectDate =
-                      b.slotTime.year == date.year &&
-                      b.slotTime.month == date.month &&
-                      b.slotTime.day == date.day;
-                  final serviceTitle = b.serviceTitle.toLowerCase();
-                  final isHairstylist =
-                      serviceTitle.contains('hair') ||
-                      serviceTitle.contains('cut') ||
-                      serviceTitle.contains('loc') ||
-                      serviceTitle.contains('braid') ||
-                      serviceTitle.contains('style') ||
-                      serviceTitle.contains('color') ||
-                      serviceTitle.contains('trim');
-                  return isCorrectDate && isHairstylist;
-                }).length;
+                // Use TodayAppointmentsController with hair filter
+                return todayController.allAppointments
+                    .where(_isHairRelatedService)
+                    .where(
+                      (a) =>
+                          a.startTime.year == date.year &&
+                          a.startTime.month == date.month &&
+                          a.startTime.day == date.day,
+                    )
+                    .length;
               },
-              onDateSelected: (date) =>
-                  _showDayAppointments(context, date, boController),
             ),
 
             const SizedBox(height: 20),

@@ -45,6 +45,7 @@ class NetworkCaller {
       log('GET Request: $endpoint');
       // --- MODIFIED: Reliably get token if not provided ---
       final effectiveToken = token ?? await AuthService.getValidAccessToken();
+      log('GET Token: ${effectiveToken?.substring(0, 20) ?? "NULL"}...');
 
       final response = await http.get(
         Uri.parse(endpoint),

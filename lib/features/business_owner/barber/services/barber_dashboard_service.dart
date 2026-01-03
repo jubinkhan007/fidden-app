@@ -5,28 +5,34 @@ import '../data/walk_in_model.dart';
 import '../data/loyalty_model.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../../../../core/services/network_caller.dart';
-import '../../../../core/services/Auth_service.dart';
 
 class BarberDashboardService {
   final NetworkCaller _networkCaller = NetworkCaller();
 
   /// Get today's appointments with stats
-  Future<TodayAppointmentsResponse> getTodayAppointments({String? date}) async {
+  /// [date] - Optional date in YYYY-MM-DD format (defaults to today)
+  /// [niche] - Optional service niche filter (tattoo, barber, hairstylist, etc.)
+  Future<TodayAppointmentsResponse> getTodayAppointments({
+    String? date,
+    String? niche,
+  }) async {
+    final params = <String, String>{};
+    if (date != null) params['date'] = date;
+    if (niche != null) params['niche'] = niche;
+
     String url = AppUrls.todayAppointments;
-    if (date != null) {
-      url = '$url?date=$date';
+    if (params.isNotEmpty) {
+      url = Uri.parse(url).replace(queryParameters: params).toString();
     }
 
-    final response = await _networkCaller.getRequest(
-      url,
-      token: AuthService.accessToken,
-    );
+    final response = await _networkCaller.getRequest(url);
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
-      return TodayAppointmentsResponse.fromJson(response.responseData);
+      final result = TodayAppointmentsResponse.fromJson(response.responseData);
+      return result;
     }
 
-    throw Exception('Failed to fetch today\'s appointments');
+    throw Exception("Failed to fetch today's appointments");
   }
 
   /// Get daily revenue metrics with optional filters
@@ -53,10 +59,7 @@ class BarberDashboardService {
       url = Uri.parse(url).replace(queryParameters: queryParams).toString();
     }
 
-    final response = await _networkCaller.getRequest(
-      url,
-      token: AuthService.accessToken,
-    );
+    final response = await _networkCaller.getRequest(url);
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
       return DailyRevenueResponse.fromJson(response.responseData);
@@ -69,7 +72,6 @@ class BarberDashboardService {
   Future<DailyRevenueResponse> _getHairstylistRevenue() async {
     final response = await _networkCaller.getRequest(
       AppUrls.hairstylistDashboard,
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
@@ -94,10 +96,7 @@ class BarberDashboardService {
       url = '$url?days=$days';
     }
 
-    final response = await _networkCaller.getRequest(
-      url,
-      token: AuthService.accessToken,
-    );
+    final response = await _networkCaller.getRequest(url);
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
       return NoShowAlertsResponse.fromJson(response.responseData);
@@ -124,10 +123,7 @@ class BarberDashboardService {
           '$url?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
     }
 
-    final response = await _networkCaller.getRequest(
-      url,
-      token: AuthService.accessToken,
-    );
+    final response = await _networkCaller.getRequest(url);
 
     if (response.isSuccess && response.responseData is List) {
       return (response.responseData as List)
@@ -143,10 +139,7 @@ class BarberDashboardService {
     var url = AppUrls.walkInStats;
     if (serviceNiche != null) url = '$url?service_niche=$serviceNiche';
 
-    final response = await _networkCaller.getRequest(
-      url,
-      token: AuthService.accessToken,
-    );
+    final response = await _networkCaller.getRequest(url);
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
       final data = response.responseData as Map<String, dynamic>;
@@ -177,7 +170,6 @@ class BarberDashboardService {
         if (serviceId != null) 'service': serviceId,
         if (notes != null) 'notes': notes,
       },
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
@@ -192,7 +184,6 @@ class BarberDashboardService {
     final response = await _networkCaller.postRequest(
       AppUrls.walkInStart(id),
       body: {},
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
@@ -216,7 +207,6 @@ class BarberDashboardService {
         'amount_paid': amountPaid,
         'tips_amount': tipsAmount,
       },
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
@@ -231,7 +221,6 @@ class BarberDashboardService {
     final response = await _networkCaller.postRequest(
       AppUrls.walkInNoShow(id),
       body: {},
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
@@ -249,7 +238,6 @@ class BarberDashboardService {
     final response = await _networkCaller.patchRequest(
       AppUrls.walkInDetail(id),
       body: data,
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
@@ -263,7 +251,6 @@ class BarberDashboardService {
   Future<void> removeFromWalkInQueue(int id) async {
     final response = await _networkCaller.deleteRequest(
       AppUrls.walkInDetail(id),
-      token: AuthService.accessToken,
     );
 
     if (!response.isSuccess) {
@@ -277,10 +264,7 @@ class BarberDashboardService {
 
   /// Get loyalty program settings
   Future<LoyaltyProgram> getLoyaltyProgram() async {
-    final response = await _networkCaller.getRequest(
-      AppUrls.loyaltyProgram,
-      token: AuthService.accessToken,
-    );
+    final response = await _networkCaller.getRequest(AppUrls.loyaltyProgram);
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
       return LoyaltyProgram.fromJson(response.responseData);
@@ -307,7 +291,6 @@ class BarberDashboardService {
         if (rewardType != null) 'reward_type': rewardType,
         if (rewardValue != null) 'reward_value': rewardValue,
       },
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess) {
@@ -333,10 +316,7 @@ class BarberDashboardService {
 
   /// Get list of loyal customers
   Future<LoyaltyCustomersResponse> getLoyaltyCustomers() async {
-    final response = await _networkCaller.getRequest(
-      AppUrls.loyaltyCustomers,
-      token: AuthService.accessToken,
-    );
+    final response = await _networkCaller.getRequest(AppUrls.loyaltyCustomers);
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
       return LoyaltyCustomersResponse.fromJson(response.responseData);
@@ -353,7 +333,6 @@ class BarberDashboardService {
     final response = await _networkCaller.postRequest(
       AppUrls.loyaltyAddPoints,
       body: {'user_id': userId, 'amount_spent': amountSpent},
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {
@@ -368,7 +347,6 @@ class BarberDashboardService {
     final response = await _networkCaller.postRequest(
       AppUrls.loyaltyRedeem,
       body: {'user_id': userId},
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess && response.responseData is Map<String, dynamic>) {

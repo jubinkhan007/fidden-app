@@ -9,6 +9,7 @@ import 'package:fidden/features/business_owner/tattoo_dashboard/widgets/week_cal
 import 'package:fidden/features/business_owner/tattoo_dashboard/widgets/dashboard_portfolio_grid.dart';
 import 'package:fidden/features/business_owner/portfolio/presentation/screens/portfolio_grid_screen.dart';
 import 'package:fidden/features/business_owner/reviews/ui/reviews_screen.dart';
+import 'package:fidden/features/business_owner/shared/widgets/today_appointments_widgets.dart';
 import '../../controller/massage_dashboard_controller.dart';
 import '../../data/massage_models.dart';
 import '../screens/massage_client_profiles_screen.dart';
@@ -39,6 +40,8 @@ class _MassageDashboardContentState extends State<MassageDashboardContent> {
     super.initState();
     dashboardController = Get.put(MassageDashboardController());
     todayController = Get.put(TodayAppointmentsController());
+    // Fetch today's appointments for massage niche
+    todayController.fetchAppointments(niche: 'massage');
     revenueController = Get.put(DailyRevenueController());
     revenueController.niche = 'massage'; // Set niche for revenue filtering
     revenueController.fetchRevenue(); // Fetch with niche filter
@@ -70,29 +73,22 @@ class _MassageDashboardContentState extends State<MassageDashboardContent> {
                 selectedDate: _selectedDate,
                 onDateSelected: (date) {
                   setState(() => _selectedDate = date);
-                  _showDayAppointments(date);
+                  showDayAppointmentsBottomSheet(
+                    context,
+                    date,
+                    todayController,
+                  );
                 },
                 getConsultationsCount: (date) {
-                  // Use same data source as _showDayAppointments for consistency
-                  final bookings =
-                      boController.allBusinessOwnerBookingOne.value.results;
-                  // Filter for massage services only
-                  return bookings.where((b) {
-                    final isCorrectDate =
-                        b.slotTime.year == date.year &&
-                        b.slotTime.month == date.month &&
-                        b.slotTime.day == date.day;
-                    final serviceTitle = b.serviceTitle.toLowerCase();
-                    final isMassage =
-                        serviceTitle.contains('massage') ||
-                        serviceTitle.contains('body') ||
-                        serviceTitle.contains('spa') ||
-                        serviceTitle.contains('therapy') ||
-                        serviceTitle.contains('relaxation') ||
-                        serviceTitle.contains('deep tissue') ||
-                        serviceTitle.contains('swedish');
-                    return isCorrectDate && isMassage;
-                  }).length;
+                  // Use TodayAppointmentsController for consistency
+                  return todayController.allAppointments
+                      .where(
+                        (a) =>
+                            a.startTime.year == date.year &&
+                            a.startTime.month == date.month &&
+                            a.startTime.day == date.day,
+                      )
+                      .length;
                 },
               ),
             ),

@@ -7,9 +7,8 @@ const String _defaultShopTimezone = 'America/New_York';
 
 /// Extract wall-clock time from ISO string, ignoring timezone
 /// This preserves the time as-is from the string (e.g., 09:00 stays 09:00)
-Map<String,int>? _parts(String iso) {
-  final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})')
-      .firstMatch(iso);
+Map<String, int>? _parts(String iso) {
+  final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})').firstMatch(iso);
   if (m == null) return null;
   return {
     'y': int.parse(m.group(1)!),
@@ -18,6 +17,19 @@ Map<String,int>? _parts(String iso) {
     'H': int.parse(m.group(4)!),
     'm': int.parse(m.group(5)!),
   };
+}
+
+/// Format time from ISO string, strictly using the wall-clock time in the string.
+/// Does NOT perform any timezone conversion.
+/// e.g. "2023-10-10T15:00:00" -> "03:00 PM" regardless of device or shop timezone.
+String formatWallClockTime(String iso) {
+  final p = _parts(iso);
+  if (p == null) return '—';
+  var h = p['H']!, m = p['m']!;
+  final ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h == 0) h = 12;
+  return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')} $ampm';
 }
 
 /// Format date from ISO string (ignores timezone, uses wall-clock date)
@@ -45,7 +57,7 @@ String formatApiDateInTimezone(String iso, String? shopTimezone) {
     return DateFormat('EEE, d MMM yyyy').format(shopLocal);
   } catch (_) {
     // Fallback to wall-clock parsing
-    final p = _parts(iso); 
+    final p = _parts(iso);
     if (p == null) return '—';
     final d = DateTime(p['y']!, p['M']!, p['d']!);
     return DateFormat('EEE, d MMM yyyy').format(d);
@@ -64,11 +76,12 @@ String formatApiTimeInTimezone(String iso, String? shopTimezone) {
     return TimezoneHelper.formatInTimezone(utc, tz);
   } catch (_) {
     // Fallback to wall-clock parsing
-    final p = _parts(iso); 
+    final p = _parts(iso);
     if (p == null) return '—';
     var h = p['H']!, m = p['m']!;
     final ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12; if (h == 0) h = 12;
-    return '${h.toString().padLeft(2,'0')}:${m.toString().padLeft(2,'0')} $ampm';
+    h = h % 12;
+    if (h == 0) h = 12;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')} $ampm';
   }
 }

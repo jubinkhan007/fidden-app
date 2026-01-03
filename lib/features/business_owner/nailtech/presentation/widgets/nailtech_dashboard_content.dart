@@ -15,6 +15,20 @@ import 'package:fidden/features/business_owner/nav_bar/controllers/user_nav_bar_
 import 'package:fidden/features/user/booking/presentation/api_time_format.dart';
 import 'package:fidden/features/business_owner/nailtech/presentation/screens/style_requests_screen.dart';
 import 'package:fidden/features/business_owner/nailtech/presentation/screens/nailtech_lookbook_screen.dart';
+import 'package:fidden/features/business_owner/shared/widgets/today_appointments_widgets.dart';
+import 'package:fidden/features/business_owner/barber/data/today_appointments_model.dart';
+
+/// Filter function to check if an appointment is nail-related.
+/// Matches services containing: nail, manicure, pedicure, gel, acrylic, polish
+bool _isNailRelatedService(Appointment a) {
+  final serviceName = a.serviceName.toLowerCase();
+  return serviceName.contains('nail') ||
+      serviceName.contains('manicure') ||
+      serviceName.contains('pedicure') ||
+      serviceName.contains('gel') ||
+      serviceName.contains('acrylic') ||
+      serviceName.contains('polish');
+}
 
 /// Embeddable content widget for nail tech dashboard.
 /// Matches the Figma design with modifications per spec.
@@ -26,6 +40,8 @@ class NailTechDashboardContent extends StatelessWidget {
     // Initialize controllers
     final boController = Get.find<BusinessOwnerController>();
     final todayController = Get.put(TodayAppointmentsController());
+    // Fetch all appointments (client-side filtering with _isNailRelatedService)
+    todayController.fetchAppointments();
     final revenueController = Get.put(DailyRevenueController());
     final styleRequestController = Get.put(StyleRequestController());
     final dashboardController = Get.put(NailTechDashboardController());
@@ -62,10 +78,13 @@ class NailTechDashboardContent extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
 
-          // === UPCOMING APPOINTMENT ===
+          // === UPCOMING APPOINTMENT (uses shared widget with nail filter) ===
           _buildSectionTitle('Upcoming Appointment'),
           const SizedBox(height: 8),
-          _buildUpcomingAppointment(boController),
+          UpcomingAppointmentCard(
+            controller: todayController,
+            serviceFilter: _isNailRelatedService,
+          ),
 
           const SizedBox(height: 20),
 
@@ -74,28 +93,23 @@ class NailTechDashboardContent extends StatelessWidget {
           const SizedBox(height: 8),
           WeekCalendarWidget(
             selectedDate: DateTime.now(),
-            onDateSelected: (date) =>
-                _showDayAppointments(context, date, boController),
+            onDateSelected: (date) => showDayAppointmentsBottomSheet(
+              context,
+              date,
+              todayController,
+              serviceFilter: _isNailRelatedService,
+            ),
             getConsultationsCount: (date) {
-              // Use same data source as _showDayAppointments for consistency
-              final bookings =
-                  boController.allBusinessOwnerBookingOne.value.results;
-              // Filter for nail tech services only
-              return bookings.where((b) {
-                final isCorrectDate =
-                    b.slotTime.year == date.year &&
-                    b.slotTime.month == date.month &&
-                    b.slotTime.day == date.day;
-                final serviceTitle = b.serviceTitle.toLowerCase();
-                final isNailTech =
-                    serviceTitle.contains('nail') ||
-                    serviceTitle.contains('manicure') ||
-                    serviceTitle.contains('pedicure') ||
-                    serviceTitle.contains('gel') ||
-                    serviceTitle.contains('acrylic') ||
-                    serviceTitle.contains('polish');
-                return isCorrectDate && isNailTech;
-              }).length;
+              // Use TodayAppointmentsController with nail filter
+              return todayController.allAppointments
+                  .where(_isNailRelatedService)
+                  .where(
+                    (a) =>
+                        a.startTime.year == date.year &&
+                        a.startTime.month == date.month &&
+                        a.startTime.day == date.day,
+                  )
+                  .length;
             },
           ),
 

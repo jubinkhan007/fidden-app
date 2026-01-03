@@ -13,6 +13,7 @@ import 'package:fidden/features/business_owner/mua/controller/product_kit_contro
 import 'package:fidden/features/business_owner/mua/presentation/screens/face_charts_screen.dart';
 import 'package:fidden/features/business_owner/mua/presentation/screens/product_kit_screen.dart';
 import 'package:fidden/features/user/booking/presentation/api_time_format.dart';
+import 'package:fidden/features/business_owner/shared/widgets/today_appointments_widgets.dart';
 
 /// Embeddable content widget for MUA dashboard.
 class MUADashboardContent extends StatelessWidget {
@@ -23,6 +24,8 @@ class MUADashboardContent extends StatelessWidget {
     // Initialize controllers
     final boController = Get.find<BusinessOwnerController>();
     final todayController = Get.put(TodayAppointmentsController());
+    // Fetch today's appointments for MUA niche
+    todayController.fetchAppointments(niche: 'mua');
     final revenueController = Get.put(DailyRevenueController());
     final muaDashboardController = Get.put(MUADashboardController());
     final faceChartController = Get.put(FaceChartController());
@@ -38,7 +41,7 @@ class MUADashboardContent extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        todayController.fetchAppointments();
+        todayController.fetchAppointments(niche: 'mua');
         revenueController.fetchRevenue();
         muaDashboardController.fetchDashboard();
         faceChartController.fetchFaceCharts();
@@ -52,19 +55,12 @@ class MUADashboardContent extends StatelessWidget {
           _buildGreeting(),
           const SizedBox(height: 16),
 
-          // === NEXT APPOINTMENT + TODAY REVENUE ===
-          Row(
-            children: [
-              Expanded(child: _buildNextAppointmentCard(boController)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildRevenueCard(
-                  revenueController,
-                  muaDashboardController,
-                ),
-              ),
-            ],
-          ),
+          // === NEXT APPOINTMENT (above revenue) ===
+          UpcomingAppointmentCard(controller: todayController),
+          const SizedBox(height: 12),
+
+          // === TODAY'S REVENUE ===
+          _buildRevenueCard(revenueController, muaDashboardController),
           const SizedBox(height: 20),
 
           // === TODAY'S SCHEDULE ===
@@ -76,28 +72,17 @@ class MUADashboardContent extends StatelessWidget {
           WeekCalendarWidget(
             selectedDate: DateTime.now(),
             onDateSelected: (date) =>
-                _showDayAppointments(context, date, boController),
+                showDayAppointmentsBottomSheet(context, date, todayController),
             getConsultationsCount: (date) {
-              // Use same data source as _showDayAppointments for consistency
-              final bookings =
-                  boController.allBusinessOwnerBookingOne.value.results;
-              // Filter for makeup artist services only
-              return bookings.where((b) {
-                final isCorrectDate =
-                    b.slotTime.year == date.year &&
-                    b.slotTime.month == date.month &&
-                    b.slotTime.day == date.day;
-                final serviceTitle = b.serviceTitle.toLowerCase();
-                final isMUA =
-                    serviceTitle.contains('makeup') ||
-                    serviceTitle.contains('make up') ||
-                    serviceTitle.contains('bridal') ||
-                    serviceTitle.contains('glam') ||
-                    serviceTitle.contains('cosmetic') ||
-                    serviceTitle.contains('contour') ||
-                    serviceTitle.contains('foundation');
-                return isCorrectDate && isMUA;
-              }).length;
+              // Use TodayAppointmentsController for consistency
+              return todayController.allAppointments
+                  .where(
+                    (a) =>
+                        a.startTime.year == date.year &&
+                        a.startTime.month == date.month &&
+                        a.startTime.day == date.day,
+                  )
+                  .length;
             },
           ),
           const SizedBox(height: 20),

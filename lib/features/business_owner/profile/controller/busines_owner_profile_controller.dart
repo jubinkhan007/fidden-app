@@ -25,6 +25,7 @@ import '../../subscription/controller/subscription_controller.dart';
 import '../data/business_profile_model.dart';
 import '../../../user/profile/controller/profile_controller.dart';
 import '../../home/dashboard/dashboard_controller.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Simple, UI-friendly (start,end) for a day. Stored as "hh:mm AM/PM".
@@ -76,8 +77,9 @@ class BusinessOwnerProfileController extends GetxController {
   final websiteUrl = ''.obs;
 
   // Niche selection
-  final RxList<String> selectedNiches = <String>[].obs; // First = primary, rest = capabilities
-  
+  final RxList<String> selectedNiches =
+      <String>[].obs; // First = primary, rest = capabilities
+
   static const List<Map<String, String>> availableNiches = [
     {'key': 'tattoo_artist', 'label': 'Tattoo Artist', 'emoji': '🖋️'},
     {'key': 'barber', 'label': 'Barber', 'emoji': '✂️'},
@@ -211,9 +213,21 @@ class BusinessOwnerProfileController extends GetxController {
         .toString();
     isDepositRequired.value = data.isDepositRequired ?? false;
 
+    // Generic debug log for fetched data
+    debugPrint(
+      '👤 ProfileController: Seeding UI. Data Timezone: ${data.timeZone}',
+    );
+
     // Timezone
     if (data.timeZone != null && data.timeZone!.isNotEmpty) {
       timeZone.value = data.timeZone!;
+      debugPrint(
+        '👤 ProfileController: Updated timeZone observable to: ${timeZone.value}',
+      );
+    } else {
+      debugPrint(
+        '👤 ProfileController: Timezone is null/empty in data! Keeping default: ${timeZone.value}',
+      );
     }
 
     // Social links
@@ -227,10 +241,7 @@ class BusinessOwnerProfileController extends GetxController {
       selectedNiches.value = List<String>.from(data.niches!);
     } else if (data.primaryNiche != null) {
       // Fallback to primary_niche + capabilities if niches not available
-      selectedNiches.value = [
-        data.primaryNiche!,
-        ...?data.capabilities,
-      ];
+      selectedNiches.value = [data.primaryNiche!, ...?data.capabilities];
     }
 
     // Business hours
@@ -653,8 +664,20 @@ class BusinessOwnerProfileController extends GetxController {
       }
 
       if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
+        if (kDebugMode) {
+          print('👤 RAW PROFILE JSON: ${resp.responseData}');
+        }
         profileDetails.value = GetBusinesModel.fromJson(resp.responseData);
         _populateBusinessHoursFromModel(profileDetails.value.data);
+
+        // Sync myShopId to trigger BusinessOwnerController fetching
+        if (profileDetails.value.data?.id != null) {
+          final sid = int.tryParse(profileDetails.value.data!.id!);
+          if (sid != null) {
+            myShopId.value = sid;
+            debugPrint('👤 ProfileController: Set global myShopId to $sid');
+          }
+        }
       } else {
         profileDetails.value = GetBusinesModel(data: null);
       }
@@ -680,19 +703,19 @@ class BusinessOwnerProfileController extends GetxController {
       AppSnackBar.showError('Please select at least one niche.');
       return false;
     }
-    
+
     final shopId = profileDetails.value.data?.id;
     if (shopId == null) {
       AppSnackBar.showError('Shop ID not found.');
       return false;
     }
-    
+
     final token = await AuthService.getValidAccessToken();
     if (token == null) {
       AppSnackBar.showError('Unauthorized. Please login again.');
       return false;
     }
-    
+
     isLoading.value = true;
     try {
       final url = AppUrls.editBusinessProfile(shopId.toString());
@@ -704,16 +727,16 @@ class BusinessOwnerProfileController extends GetxController {
         },
         body: jsonEncode({'niches': niches}),
       );
-      
+
       log('PATCH niches: $url -> ${response.statusCode}');
-      
+
       if (response.statusCode == 200) {
         // Update local state
         selectedNiches.value = List<String>.from(niches);
-        
+
         // Re-fetch full profile to get updated data
         await fetchProfileDetails();
-        
+
         // Also update ProfileController so dashboard chips update
         if (Get.isRegistered<ProfileController>()) {
           final pc = Get.find<ProfileController>();
@@ -721,7 +744,7 @@ class BusinessOwnerProfileController extends GetxController {
           if (niches.isNotEmpty) {
             pc.shopNiche.value = niches.first;
           }
-          
+
           // Cache the updated niches for persistence
           final prefs = await SharedPreferences.getInstance();
           await prefs.setStringList('cached_shop_niches', niches);
@@ -729,22 +752,23 @@ class BusinessOwnerProfileController extends GetxController {
             await prefs.setString('selected_niche', niches.first);
           }
         }
-        
+
         // Refresh DashboardController if available
         if (Get.isRegistered<DashboardController>()) {
           Get.find<DashboardController>().refreshChips();
         }
-        
+
         AppSnackBar.showSuccess('Niches updated successfully!');
         return true;
       } else {
         // Log the full response for debugging
         log('PATCH niches failed: ${response.statusCode}');
         log('Response body: ${response.body}');
-        
+
         try {
           final errorBody = jsonDecode(response.body);
-          final msg = errorBody['detail'] ?? errorBody['error'] ?? errorBody.toString();
+          final msg =
+              errorBody['detail'] ?? errorBody['error'] ?? errorBody.toString();
           AppSnackBar.showError('Failed: $msg');
         } catch (_) {
           AppSnackBar.showError('Failed to update niches: ${response.body}');

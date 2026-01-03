@@ -1,6 +1,5 @@
 // lib/features/user/booking/presentation/screens/home_controller.dart
 
-
 import 'dart:convert';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/features/user/home/data/promotion_offers_model.dart';
@@ -17,7 +16,6 @@ import '../data/nearest_bar_bar_single_details.dart';
 import '../data/nearest_barbar_model.dart';
 import '../data/trending_service_model.dart';
 import '../../shops/data/all_shops_model.dart';
-
 
 class HomeController extends GetxController {
   // --- Existing Properties ---
@@ -74,96 +72,91 @@ class HomeController extends GetxController {
 
   // --- New Individual Fetch Methods ---
   Future<void> fetchPromotions() async {
-  try {
-    final resp = await NetworkCaller().getRequest(
-      AppUrls.promotions,
-      token: AuthService.accessToken,
-    );
-    if (!resp.isSuccess) return;
+    try {
+      final resp = await NetworkCaller().getRequest(AppUrls.promotions);
+      if (!resp.isSuccess) return;
 
-    final raw = resp.responseData;
+      final raw = resp.responseData;
 
-    // Accept both: root array OR any map that contains a list
-    late final List<dynamic> arr;
-    if (raw is List) {
-      arr = raw;
-    } else if (raw is Map && raw['data'] is List) {
-      arr = raw['data'] as List;
-    } else if (raw is Map && raw['results'] is List) {
-      arr = raw['results'] as List;
-    } else if (raw is Map && raw.values.isNotEmpty && raw.values.first is List) {
-      arr = raw.values.first as List;
-    } else {
-      throw Exception('Unexpected promotions format: ${raw.runtimeType}');
+      // Accept both: root array OR any map that contains a list
+      late final List<dynamic> arr;
+      if (raw is List) {
+        arr = raw;
+      } else if (raw is Map && raw['data'] is List) {
+        arr = raw['data'] as List;
+      } else if (raw is Map && raw['results'] is List) {
+        arr = raw['results'] as List;
+      } else if (raw is Map &&
+          raw.values.isNotEmpty &&
+          raw.values.first is List) {
+        arr = raw.values.first as List;
+      } else {
+        throw Exception('Unexpected promotions format: ${raw.runtimeType}');
+      }
+
+      final list = arr
+          .whereType<Map>() // only maps
+          .map((e) => PromotionModel.fromJson(Map<String, dynamic>.from(e)))
+          .where(
+            (p) => p.isActive != false,
+          ) // keep active (or null treated as active)
+          .toList();
+
+      // ✅ Sort newest first; fall back to id if dates missing
+      list.sort((a, b) {
+        final ca = a.createdAt, cb = b.createdAt;
+        if (ca != null && cb != null) return cb.compareTo(ca);
+        return (b.id ?? 0).compareTo(a.id ?? 0);
+      });
+
+      promotions.value = list;
+    } catch (e) {
+      AppSnackBar.showError('Could not fetch promotions: $e');
     }
-
-    final list = arr
-        .whereType<Map>()                            // only maps
-        .map((e) => PromotionModel.fromJson(Map<String, dynamic>.from(e)))
-        .where((p) => p.isActive != false)           // keep active (or null treated as active)
-        .toList();
-
-    // ✅ Sort newest first; fall back to id if dates missing
-    list.sort((a, b) {
-      final ca = a.createdAt, cb = b.createdAt;
-      if (ca != null && cb != null) return cb.compareTo(ca);
-      return (b.id ?? 0).compareTo(a.id ?? 0);
-    });
-
-    promotions.value = list;
-  } catch (e) {
-    AppSnackBar.showError('Could not fetch promotions: $e');
   }
-}
-
 
   Future<void> fetchCategories() async {
-  try {
-    final response = await NetworkCaller().getRequest(
-      AppUrls.categories,
-      token: AuthService.accessToken,
-    );
+    try {
+      final response = await NetworkCaller().getRequest(AppUrls.categories);
 
-    if (!response.isSuccess) return;
+      if (!response.isSuccess) return;
 
-    final raw = response.responseData;
+      final raw = response.responseData;
 
-    // Support either:
-    // 1) [ {...}, {...} ]                 // root array
-    // 2) { "data": [ {...}, {...} ] }     // wrapped in a map
-    final List<dynamic> list;
-    if (raw is List) {
-      list = raw;
-    } else if (raw is Map && raw['data'] is List) {
-      list = raw['data'] as List;
-    } else {
-      throw Exception('Unexpected categories format: ${raw.runtimeType}');
+      // Support either:
+      // 1) [ {...}, {...} ]                 // root array
+      // 2) { "data": [ {...}, {...} ] }     // wrapped in a map
+      final List<dynamic> list;
+      if (raw is List) {
+        list = raw;
+      } else if (raw is Map && raw['data'] is List) {
+        list = raw['data'] as List;
+      } else {
+        throw Exception('Unexpected categories format: ${raw.runtimeType}');
+      }
+
+      categories.value = list
+          .map(
+            (e) => CategoryModel.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
+          .toList();
+    } catch (e) {
+      AppSnackBar.showError('Could not fetch categories: $e');
     }
-
-    categories.value = list
-        .map((e) => CategoryModel.fromJson(
-              Map<String, dynamic>.from(e as Map),
-            ))
-        .toList();
-  } catch (e) {
-    AppSnackBar.showError('Could not fetch categories: $e');
   }
-}
-
 
   Future<void> fetchTrendingServices() async {
     try {
       // 1. Try fetching trending (top=5)
-      var res = await NetworkCaller().getRequest(
-        AppUrls.trendingServices,
-        token: AuthService.accessToken,
-      );
-      
+      var res = await NetworkCaller().getRequest(AppUrls.trendingServices);
+
       // 2. If failed or empty, fallback to all services
       bool isEmpty = true;
       if (res.isSuccess) {
         final raw = res.responseData;
-        if (raw is Map<String, dynamic> && raw['results'] is List && (raw['results'] as List).isNotEmpty) {
+        if (raw is Map<String, dynamic> &&
+            raw['results'] is List &&
+            (raw['results'] as List).isNotEmpty) {
           isEmpty = false;
         } else if (raw is List && raw.isNotEmpty) {
           isEmpty = false;
@@ -172,10 +165,7 @@ class HomeController extends GetxController {
 
       if (isEmpty) {
         print('DEBUG: Trending empty, falling back to all services');
-        res = await NetworkCaller().getRequest(
-          AppUrls.allServices,
-          token: AuthService.accessToken,
-        );
+        res = await NetworkCaller().getRequest(AppUrls.allServices);
       }
 
       if (!res.isSuccess) return;
@@ -187,54 +177,51 @@ class HomeController extends GetxController {
       } else if (raw is List) {
         trendingServices.value = TrendingServiceModel.fromList(raw);
       } else {
-        throw Exception('Unexpected trending services format: ${raw.runtimeType}');
+        throw Exception(
+          'Unexpected trending services format: ${raw.runtimeType}',
+        );
       }
     } catch (e) {
       AppSnackBar.showError('Could not fetch trending services: $e');
     }
   }
 
-
   Future<void> fetchPopularShops() async {
-  try {
-    final resp = await NetworkCaller().getRequest(
-      AppUrls.popularShops,
-      token: AuthService.accessToken,
-    );
-    if (!resp.isSuccess) return;
+    try {
+      final resp = await NetworkCaller().getRequest(AppUrls.popularShops);
+      if (!resp.isSuccess) return;
 
-    final raw = resp.responseData;
+      final raw = resp.responseData;
 
-    // normalize to a list of shops
-    late final List<dynamic> list;
-    String? next;
-    String? previous;
+      // normalize to a list of shops
+      late final List<dynamic> list;
+      String? next;
+      String? previous;
 
-    if (raw is List) {
-      list = raw;
-    } else if (raw is Map && raw['results'] is List) {
-      list = raw['results'] as List;
-      next = raw['next'] .toString();
-      previous = raw['previous'] .toString();
-    } else {
-      throw Exception('Unexpected popular shops format: ${raw.runtimeType}');
+      if (raw is List) {
+        list = raw;
+      } else if (raw is Map && raw['results'] is List) {
+        list = raw['results'] as List;
+        next = raw['next'].toString();
+        previous = raw['previous'].toString();
+      } else {
+        throw Exception('Unexpected popular shops format: ${raw.runtimeType}');
+      }
+
+      final shops = list
+          .map((e) => Shop.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+
+      // build the model your UI expects
+      popularShops.value = AllShopsModel(
+        next: next,
+        previous: previous,
+        shops: shops,
+      );
+    } catch (e) {
+      AppSnackBar.showError('Could not fetch popular shops: $e');
     }
-
-    final shops = list
-        .map((e) => Shop.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
-
-    // build the model your UI expects
-    popularShops.value = AllShopsModel(
-      next: next,
-      previous: previous,
-      shops: shops,
-    );
-  } catch (e) {
-    AppSnackBar.showError('Could not fetch popular shops: $e');
   }
-}
-
 
   // --- Existing Methods (Unchanged) ---
   void updateSearch(String value) {
@@ -256,7 +243,6 @@ class HomeController extends GetxController {
     try {
       final response = await NetworkCaller().getRequest(
         "${AppUrls.searchBusinessProfile}?search=${searchText.value}",
-        token: AuthService.accessToken,
       );
       if (response.isSuccess &&
           response.responseData is Map<String, dynamic> &&
@@ -280,7 +266,6 @@ class HomeController extends GetxController {
     try {
       final response = await NetworkCaller().getRequest(
         AppUrls.getNearByService(lat: lat, lon: lon),
-        token: AuthService.accessToken,
       );
       if (response.isSuccess) {
         if (response.responseData is Map<String, dynamic>) {
@@ -303,7 +288,6 @@ class HomeController extends GetxController {
     try {
       final response = await NetworkCaller().getRequest(
         AppUrls.shopDetails(id),
-        token: AuthService.accessToken,
       );
       if (response.isSuccess) {
         if (response.responseData is Map<String, dynamic>) {
@@ -326,7 +310,6 @@ class HomeController extends GetxController {
     try {
       final response = await NetworkCaller().getRequest(
         AppUrls.getAllMostRecommendedBusinessProfile,
-        token: AuthService.accessToken,
       );
       if (response.isSuccess) {
         if (response.responseData is Map<String, dynamic>) {
@@ -348,10 +331,7 @@ class HomeController extends GetxController {
   Future<void> fetchOfferService() async {
     isLoading.value = true;
     try {
-      final response = await NetworkCaller().getRequest(
-        AppUrls.offerService,
-        token: AuthService.accessToken,
-      );
+      final response = await NetworkCaller().getRequest(AppUrls.offerService);
       if (response.isSuccess) {
         if (response.responseData is Map<String, dynamic>) {
           allOfferServiceDetails.value = GetOfferServiceModel.fromJson(

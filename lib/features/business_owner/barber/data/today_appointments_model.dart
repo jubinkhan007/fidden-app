@@ -70,10 +70,14 @@ class Appointment {
   final String customerEmail;
   final String serviceName;
   final int serviceDuration;
+  final String startTimeIso;
+  final String endTimeIso;
   final DateTime startTime;
   final DateTime endTime;
   final String status;
   final DateTime createdAt;
+  final String? shopTimezone;
+  final String? serviceNiche;
 
   Appointment({
     required this.id,
@@ -81,23 +85,34 @@ class Appointment {
     required this.customerEmail,
     required this.serviceName,
     required this.serviceDuration,
+    required this.startTimeIso,
+    required this.endTimeIso,
     required this.startTime,
     required this.endTime,
     required this.status,
     required this.createdAt,
+    this.shopTimezone,
+    this.serviceNiche,
   });
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
+    // DEBUG: Inspect raw JSON for timezone or alternative time fields
+    // if (json['id'].toString() == '50')
+    print('📅 RAW APPOINTMENT JSON (ID ${json['id']}): $json');
     return Appointment(
       id: json['id'] as int,
       customerName: json['customer_name'] as String,
       customerEmail: json['customer_email'] as String,
       serviceName: json['service_name'] as String,
       serviceDuration: json['service_duration'] as int,
+      startTimeIso: json['start_time'] as String,
+      endTimeIso: json['end_time'] as String,
       startTime: DateTime.parse(json['start_time'] as String),
       endTime: DateTime.parse(json['end_time'] as String),
       status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
+      shopTimezone: json['shop_timezone'] as String?,
+      serviceNiche: json['service_niche'] as String?,
     );
   }
 

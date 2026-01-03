@@ -1,9 +1,7 @@
-// lib/features/user/booking/controller/booking_controller.dart
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/models/response_data.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../../core/services/Auth_service.dart';
 import '../../../../core/services/network_caller.dart';
 import '../../../../core/utils/constants/api_constants.dart';
 import '../data/user_booking_model.dart';
@@ -70,16 +68,26 @@ class BookingController extends GetxController {
     await _fetchHistory();
   }
 
+  /// Normalize URL to https:// to prevent auth header stripping on redirect
+  String? _normalizeUrl(String? url) {
+    if (url == null) return null;
+    if (url.startsWith('http://')) {
+      return url.replaceFirst('http://', 'https://');
+    }
+    return url;
+  }
+
   Future<void> _fetchActive({bool reset = false}) async {
     pagingActive.value = true;
     try {
-      // First page should include active items
-      final firstPage = AppUrls.userBookings(_email!, excludeActive: false);
+      // Request only active bookings from server (includes active + confirmed)
+      final firstPage = AppUrls.userBookings(_email!, status: 'active');
       final url = _nextActiveUrl ?? firstPage;
 
-      final resp = await NetworkCaller().getRequest(
-        url,
-        token: AuthService.accessToken,
+      debugPrint('📱 BookingController._fetchActive: url=$url');
+      final resp = await NetworkCaller().getRequest(url);
+      debugPrint(
+        '📱 BookingController._fetchActive: success=${resp.isSuccess}, status=${resp.statusCode}',
       );
 
       if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
@@ -87,13 +95,37 @@ class BookingController extends GetxController {
           Map<String, dynamic>.from(resp.responseData),
         );
 
-        _nextActiveUrl = parsed.next;
+        debugPrint(
+          '📱 BookingController._fetchActive: total results=${parsed.results.length}',
+        );
+
+        // Log status counts for debugging
+        final statusCounts = <String, int>{};
+        for (final b in parsed.results) {
+          statusCounts[b.status] = (statusCounts[b.status] ?? 0) + 1;
+        }
+        debugPrint(
+          '📱 BookingController._fetchActive: status counts=$statusCounts',
+        );
+
+        _nextActiveUrl = _normalizeUrl(parsed.next);
 
         if (reset) active.clear();
-        // defensive: keep only active
-        active.addAll(parsed.results.where((b) => b.status == 'active'));
+
+        // Include both 'active' and 'confirmed' status bookings
+        final activeBookings = parsed.results.where((b) {
+          final status = b.status.toLowerCase();
+          return status == 'active' || status == 'confirmed';
+        }).toList();
+
+        debugPrint(
+          '📱 BookingController._fetchActive: after filter=${activeBookings.length}',
+        );
+        active.addAll(activeBookings);
       } else {
-        // your existing error handling (optional)
+        debugPrint(
+          '📱 BookingController._fetchActive: failed - ${resp.errorMessage}',
+        );
       }
     } finally {
       pagingActive.value = false;
@@ -109,17 +141,14 @@ class BookingController extends GetxController {
       final firstPage = AppUrls.userBookings(_email!, excludeActive: true);
       final url = _nextHistoryUrl ?? firstPage;
 
-      final resp = await NetworkCaller().getRequest(
-        url,
-        token: AuthService.accessToken,
-      );
+      final resp = await NetworkCaller().getRequest(url);
 
       if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
         final parsed = BookingListResponse.fromJson(
           Map<String, dynamic>.from(resp.responseData),
         );
 
-        _nextHistoryUrl = parsed.next;
+        _nextHistoryUrl = _normalizeUrl(parsed.next);
 
         if (reset) {
           historyAll.clear();
@@ -144,10 +173,7 @@ class BookingController extends GetxController {
   Future<BookingItem?> fetchBookingById(int id) async {
     try {
       final url = AppUrls.userBookingDetail(id);
-      final resp = await NetworkCaller().getRequest(
-        url,
-        token: AuthService.accessToken,
-      );
+      final resp = await NetworkCaller().getRequest(url);
 
       if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
         return BookingItem.fromJson(resp.responseData as Map<String, dynamic>);
@@ -172,7 +198,6 @@ class BookingController extends GetxController {
     final response = await NetworkCaller().postRequest(
       AppUrls.createReview,
       body: body,
-      token: AuthService.accessToken,
     );
 
     if (response.isSuccess) {
@@ -190,10 +215,7 @@ class BookingController extends GetxController {
   Future<void> _ensureEmail() async {
     if ((_email ?? '').isNotEmpty) return;
 
-    final resp = await NetworkCaller().getRequest(
-      AppUrls.getMyProfile,
-      token: AuthService.accessToken,
-    );
+    final resp = await NetworkCaller().getRequest(AppUrls.getMyProfile);
 
     if (resp.isSuccess && resp.responseData is Map<String, dynamic>) {
       final m = resp.responseData as Map<String, dynamic>;
@@ -230,7 +252,6 @@ class BookingController extends GetxController {
         try {
           response = await NetworkCaller().postRequest(
             AppUrls.cancelBooking(booking.id),
-            token: AuthService.accessToken,
           );
         } catch (e) {
           response = null;

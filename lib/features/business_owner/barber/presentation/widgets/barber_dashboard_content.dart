@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:fidden/core/utils/timezone_helper.dart';
+import '../../../../user/booking/presentation/api_time_format.dart';
 import '../../controller/today_appointments_controller.dart';
 import '../../controller/daily_revenue_controller.dart';
 import '../../controller/no_show_alerts_controller.dart';
@@ -12,7 +13,7 @@ import '../../../home/controller/business_owner_controller.dart';
 import '../../../reviews/state/review_controller.dart';
 import '../../../reviews/ui/reviews_screen.dart';
 import '../../../nav_bar/controllers/user_nav_bar_controller.dart';
-import '../../../../user/booking/presentation/api_time_format.dart';
+import '../../../shared/widgets/today_appointments_widgets.dart';
 import '../screens/walk_in_queue_screen.dart';
 import '../screens/loyalty_program_screen.dart';
 import '../screens/no_show_alerts_screen.dart';
@@ -27,6 +28,8 @@ class BarberDashboardContent extends StatelessWidget {
     // Initialize controllers
     final boController = Get.find<BusinessOwnerController>();
     final todayController = Get.put(TodayAppointmentsController());
+    // Fetch today's appointments for barber niche
+    todayController.fetchAppointments(niche: 'barber');
     final revenueController = Get.put(DailyRevenueController(), tag: 'barber');
     // Always fetch with barber niche to ensure fresh, correctly-filtered data
     revenueController.niche = 'barber';
@@ -45,7 +48,7 @@ class BarberDashboardContent extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        todayController.fetchAppointments();
+        todayController.fetchAppointments(niche: 'barber');
         revenueController.fetchRevenue(forNiche: 'barber');
         noShowController.fetchAlerts();
         walkInController.fetchQueue();
@@ -58,10 +61,10 @@ class BarberDashboardContent extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
 
-          // === UPCOMING APPOINTMENT ===
+          // === UPCOMING APPOINTMENT (uses shared widget) ===
           _buildSectionTitle('Upcoming Appointment'),
           const SizedBox(height: 8),
-          _buildUpcomingAppointment(boController),
+          UpcomingAppointmentCard(controller: todayController),
 
           const SizedBox(height: 20),
 
@@ -71,7 +74,7 @@ class BarberDashboardContent extends StatelessWidget {
           WeekCalendarWidget(
             selectedDate: DateTime.now(),
             onDateSelected: (date) =>
-                _showDayAppointments(context, date, boController),
+                showDayAppointmentsBottomSheet(context, date, todayController),
             getConsultationsCount: (date) {
               // Filter bookings by date AND barber niche
               final bookings =

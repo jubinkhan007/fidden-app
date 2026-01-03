@@ -34,11 +34,16 @@ class AppUrls {
   static String cancelBooking(int bookingId) =>
       '$_baseUrl/payments/bookings/cancel/$bookingId/';
 
-  static String userBookings(String email, {bool excludeActive = false}) {
+  static String userBookings(
+    String email, {
+    bool excludeActive = false,
+    String? status,
+  }) {
     final base = '$_baseUrl/payments/bookings/';
     final qp = <String, String>{
       'user_email': email,
       if (excludeActive) 'exclude_active': 'true',
+      if (status != null) 'status': status,
     };
     return Uri.parse(base).replace(queryParameters: qp).toString();
   }
