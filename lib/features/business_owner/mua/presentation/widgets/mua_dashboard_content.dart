@@ -56,7 +56,10 @@ class MUADashboardContent extends StatelessWidget {
           const SizedBox(height: 16),
 
           // === NEXT APPOINTMENT (above revenue) ===
-          UpcomingAppointmentCard(controller: todayController),
+          UpcomingAppointmentCard(
+            controller: todayController,
+            serviceFilter: (a) => a.serviceNiche == 'makeup_artist',
+          ),
           const SizedBox(height: 12),
 
           // === TODAY'S REVENUE ===
@@ -71,13 +74,18 @@ class MUADashboardContent extends StatelessWidget {
           const SizedBox(height: 8),
           WeekCalendarWidget(
             selectedDate: DateTime.now(),
-            onDateSelected: (date) =>
-                showDayAppointmentsBottomSheet(context, date, todayController),
+            onDateSelected: (date) => showDayAppointmentsBottomSheet(
+              context,
+              date,
+              todayController,
+              serviceFilter: (a) => a.serviceNiche == 'makeup_artist',
+            ),
             getConsultationsCount: (date) {
-              // Use TodayAppointmentsController for consistency
+              // Use TodayAppointmentsController for consistency - filtered by MUA niche
               return todayController.allAppointments
                   .where(
                     (a) =>
+                        a.serviceNiche == 'makeup_artist' &&
                         a.startTime.year == date.year &&
                         a.startTime.month == date.month &&
                         a.startTime.day == date.day,

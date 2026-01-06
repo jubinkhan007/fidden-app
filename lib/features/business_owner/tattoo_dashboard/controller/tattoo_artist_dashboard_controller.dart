@@ -52,7 +52,8 @@ class TattooArtistDashboardController extends GetxController {
     debugPrint(
       '🎨 TattooArtistDashboardController: fetching today\'s tattoo appointments',
     );
-    await todayAppointmentsController.fetchAppointments(niche: 'tattoo');
+    // Fetch ALL appointments - client-side filtering handles niche
+    await todayAppointmentsController.fetchAppointments();
   }
 
   void _initializeControllers() {
