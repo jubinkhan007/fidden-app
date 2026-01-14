@@ -33,7 +33,6 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   late final double servicePrice;
   late final double? discountPrice;
   late int bookingId; // <-- Will hold the booking ID
-  late List<Map<String, dynamic>> addOns; // Add-ons for display
   final _openingSheet = false.obs;
 
   final controller = Get.put(BookingSummaryController());
@@ -97,19 +96,17 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
     // Safely get the bookingId
     bookingId = args['bookingId'] as int? ?? 0;
 
-    // Extract add-ons for display
-    final rawAddOns = args['add_ons'] as List?;
-    addOns = rawAddOns != null
-        ? rawAddOns.map((e) => Map<String, dynamic>.from(e as Map)).toList()
-        : <Map<String, dynamic>>[];
-
-    // Extract shopId like you already do elsewhere
-    final booking = (args['booking'] as Map<String, dynamic>?) ?? {};
-    final int shopId =
-        booking['shop_id'] as int? ?? args['shopId'] as int? ?? 0;
+    // RULE-BASED: Extract extra parameters
+    final shopId = args['shop_id'] as int? ?? args['shopId'] as int? ?? 0;
 
     if (shopId > 0) {
       controller.fetchPolicy(shopId); // <-- fetch immediately
+    }
+
+    final startAt = args['start_at'] as String? ?? '';
+    // Seed controller state if rule-based
+    if (bookingId == 0 && startAt.isNotEmpty) {
+      controller.selectedSlotIso.value = startAt;
     }
 
     // Log an error if the bookingId is missing, for easier debugging
@@ -186,8 +183,6 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                 duration: serviceDuration,
                 serviceImg: serviceImg, // Pass the image URL
               ),
-
-              // Add-ons Section
               const SizedBox(height: 24),
               _buildSectionTitle("Date & Time", color: primaryTextColor),
               const SizedBox(height: 12),
@@ -341,6 +336,39 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                       amount: _payable, // ✅ Use discounted amount
                       isTotal: true,
                     ),
+
+                    // NEW: Deposit Amount Display
+                    Obx(() {
+                      if (controller.isDepositRequired.value) {
+                        final deposit = controller.getDepositAmount(
+                          _payable,
+                        ); // ✅ Use discounted amount
+                        if (deposit > 0) {
+                          return Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              _PriceRow(
+                                label:
+                                    'Deposit to Pay Now (${controller.defaultDepositPercentage.value}%)',
+                                amount: deposit,
+                                isTotal: true, // bold
+                                color: Get.theme.primaryColor,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Remaining amount will be paid at the shop.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                      }
+                      return const SizedBox.shrink();
+                    }),
                   ],
                 ),
               ),
@@ -461,32 +489,23 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                                   .toList()
                             : <int>[];
 
-                        // Rule-Based Args Extraction
-                        // Rule-Based Args Extraction
-                        final argsMap = Get.arguments as Map<String, dynamic>?;
-                        final startAt = argsMap?['start_at'] as String?;
-                        final timezoneId = argsMap?['timezone_id'] as String?;
-                        final bookingMap =
-                            argsMap?['booking'] as Map<String, dynamic>?;
-
-                        // Robust extraction: Check booking map first, then root args
+                        // RULE-BASED: Pass extra parameters
+                        final startAt = (Get.arguments as Map?)?['start_at'];
                         final serviceId =
-                            bookingMap?['service_id'] as int? ??
-                            argsMap?['serviceId']
-                                as int?; // serviceId sent at root?
+                            (Get.arguments as Map?)?['service_id'] ??
+                            (Get.arguments as Map?)?['serviceId'];
                         final shopId =
-                            bookingMap?['shop_id'] as int? ??
-                            argsMap?['shopId'] as int?;
-                        final providerId = bookingMap?['provider_id'] as int?;
+                            (Get.arguments as Map?)?['shop_id'] ??
+                            (Get.arguments as Map?)?['shopId'];
+                        final providerId =
+                            (Get.arguments as Map?)?['provider_id'];
 
                         controller.processPayment(
-                          slotId:
-                              bookingId, // Legacy slot ID (held in local var bookingId)
+                          slotId: bookingId,
                           startAt: startAt,
                           serviceId: serviceId,
                           shopId: shopId,
                           providerId: providerId,
-                          timezoneId: timezoneId,
                           couponId: _appliedCoupon?.id,
                           addOnIds: addOnIds,
                           successArgs: {
@@ -494,15 +513,10 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                             'dateTimeText': selectedSlot,
                             'shopName': shopName,
                             'location': shopAddress,
-                            // 'bookingId': bookingId, // Do NOT pass legacy ID here if we want confirmation to show real ID.
-                            // Actually, processPayment will merge real bookingId into successArgs before navigating.
-                            // But here we are passing static info.
-                            // Let's pass legacy slotId just in case, but real ID comes from controller.
+                            'bookingId': bookingId,
                             'service_img': serviceImg,
                             'price': servicePrice,
                             'discountPrice': discountPrice,
-                            'addOns':
-                                addOns, // Pass add-ons for confirmation screen
                             'appliedCoupon': _appliedCoupon == null
                                 ? null
                                 : {
@@ -806,10 +820,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                   top: false,
                   minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   child: Obx(() {
-                    final canUpdate =
-                        // Check if any slot matches the selection criteria
-                        c.slots.any((s) => c.isSlotSelected(s));
-
+                    final canUpdate = c.selectedSlotId.value != null;
                     return SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -822,8 +833,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                                   sel.startTimeUtc,
                                 ); // Use shop timezone, not device local
                                 setState(() {
-                                  bookingId =
-                                      sel.id; // 0 for rule-based, >0 for legacy
+                                  bookingId = sel.id;
                                   selectedSlot = _slotFmt.format(localStart);
                                 });
                                 Navigator.of(context).pop();

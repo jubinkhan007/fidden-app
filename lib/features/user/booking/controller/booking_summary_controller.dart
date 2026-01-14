@@ -27,6 +27,8 @@ class BookingSummaryController extends GetxController {
   final isPaying = false.obs;
 
   // NEW: holds the server booking id once we get it from paymentIntent
+  final RxnInt selectedSlotId = RxnInt();
+  final RxnString selectedSlotIso = RxnString();
   final RxInt paymentBookingId = 0.obs;
   final Rxn<ShopPolicy> policy = Rxn<ShopPolicy>();
 
@@ -399,6 +401,31 @@ class BookingSummaryController extends GetxController {
       }
     } catch (e) {
       debugPrint('[cancelBooking] error: $e');
+    }
+  }
+
+  bool isSlotSelected(dynamic slot) {
+    // slot can be SlotItem from time_slots_model.dart
+    final String? slotIso = (slot as dynamic).startTimeUtcIso;
+    final int? slotId = (slot as dynamic).id;
+
+    if (slotId != null && slotId != 0) {
+      return selectedSlotId.value == slotId;
+    } else {
+      return selectedSlotIso.value != null && selectedSlotIso.value == slotIso;
+    }
+  }
+
+  void selectSlot(dynamic slot) {
+    final String? slotIso = (slot as dynamic).startTimeUtcIso;
+    final int? slotId = (slot as dynamic).id;
+
+    if (slotId != null && slotId != 0) {
+      selectedSlotId.value = slotId;
+      selectedSlotIso.value = null;
+    } else {
+      selectedSlotId.value = null;
+      selectedSlotIso.value = slotIso;
     }
   }
 }
