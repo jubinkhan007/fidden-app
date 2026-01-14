@@ -12,6 +12,7 @@ class BookingConfirmationArgs {
   final String shopName; // e.g. "Serenity Oasis Spa"
   final int bookingId; // e.g. "#FIDDEN-89327"
   final String? successImage; // asset path for the big green tick (optional)
+  final List<Map<String, dynamic>> addOns; // NEW: Add-ons list
 
   const BookingConfirmationArgs({
     required this.serviceName,
@@ -20,6 +21,7 @@ class BookingConfirmationArgs {
     required this.shopName,
     required this.bookingId,
     this.successImage,
+    this.addOns = const [],
   });
 }
 
@@ -33,6 +35,11 @@ class BookingConfirmationScreen extends StatelessWidget {
   BookingConfirmationArgs get _a {
     if (args != null) return args!;
     final Map<String, dynamic> a = Get.arguments ?? {};
+    // Parse add-ons from arguments
+    final rawAddOns = a['addOns'] as List?;
+    final parsedAddOns = rawAddOns != null
+        ? rawAddOns.map((e) => Map<String, dynamic>.from(e as Map)).toList()
+        : <Map<String, dynamic>>[];
     return BookingConfirmationArgs(
       serviceName: a['serviceName'] ?? '',
       dateTimeText: a['dateTimeText'] ?? '',
@@ -40,6 +47,7 @@ class BookingConfirmationScreen extends StatelessWidget {
       shopName: a['shopName'] ?? '',
       bookingId: a['bookingId'] ?? '',
       successImage: a['successImage'],
+      addOns: parsedAddOns,
     );
   }
 
@@ -145,6 +153,18 @@ class BookingConfirmationScreen extends StatelessWidget {
                 title: 'Booking ID',
                 subtitle: _a.bookingId.toString(),
               ),
+              // Add-ons Section
+              if (_a.addOns.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _InfoTile(
+                  iconBg: iconTileBg,
+                  iconAsset: 'assets/icons/star_bold.png',
+                  title: 'Add-ons',
+                  subtitle: _a.addOns
+                      .map((addon) => addon['name'] as String? ?? '')
+                      .join(', '),
+                ),
+              ],
             ],
           ),
         ),

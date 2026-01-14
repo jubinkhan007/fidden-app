@@ -5,10 +5,10 @@ import 'dart:developer';
 class AppUrls {
   AppUrls._();
 
-  static const String _baseUrl = 'https://backend.fidden.io';
+  static const String _baseUrl = 'https://phase1new.fidden.io';
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
-    return 'wss://backend.fidden.io/ws/chat/?token=$accessToken';
+    return 'wss://phase1new.fidden.io/ws/chat/?token=$accessToken';
   }
 
   static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';
@@ -124,13 +124,24 @@ class AppUrls {
   // booking
   static getServiceTime({required String businessId, required String date}) =>
       '$_baseUrl/available-schedule?businessId=$businessId&date=$date';
-  static const String createBooking = '$_baseUrl/booking/create';
+  static const String createBooking =
+      '$_baseUrl/booking/create'; // Legacy or unused?
+  static const String bookings =
+      '$_baseUrl/api/bookings/'; // NEW Rule-based booking creation
   static const String slotBooking = '$_baseUrl/api/slot-booking/';
   static const String createCustomerForm = '$_baseUrl/customer-form/create';
   static String cancelSlotBooking(int bookingId) =>
       '$_baseUrl/api/slot-booking/$bookingId/cancel/';
   static String getSlotsForShop(int shopId) =>
       '/api/shop-details/$shopId/slots/';
+
+  // NEW: Rule-Based Availability endpoint
+  static String availability({
+    required int shopId,
+    required int serviceId,
+    required String date,
+  }) =>
+      '$_baseUrl/api/availability/?shop_id=$shopId&service_id=$serviceId&date=$date';
 
   // subscription
 

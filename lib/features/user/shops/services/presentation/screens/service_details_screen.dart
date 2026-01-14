@@ -1,22 +1,16 @@
-// lib/features/user/shops/services/presentation/screen/service_details_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
-import 'package:fidden/core/services/Auth_service.dart';
-import 'package:fidden/core/services/network_caller.dart';
-import 'package:fidden/core/utils/constants/api_constants.dart';
-import 'package:fidden/features/user/booking/presentation/screens/booking_details_screen.dart';
 import 'package:fidden/features/user/booking/presentation/screens/booking_summary_screen.dart';
 import 'package:fidden/features/user/shops/presentation/screens/shop_details_screen.dart';
 import 'package:fidden/features/user/shops/services/controller/service_details_controller.dart';
+import 'package:fidden/features/user/shops/services/data/time_slots_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:vector_math/vector_math_64.dart' show Matrix4;
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:table_calendar/table_calendar.dart';
-
 import '../../../../../../core/deeplinks/deep_link_service.dart';
 import '../../../../../../routes/app_routes.dart';
 
@@ -486,13 +480,13 @@ class ServiceDetailsScreen extends StatelessWidget {
                                 spacing: 10,
                                 runSpacing: 10,
                                 children: c.slots.map((s) {
-                                  final isSel = c.selectedSlotId.value == s.id;
+                                  final isSel = c.isSlotSelected(s);
                                   final label = c.fmtTimeLocal(s.startTimeUtc);
                                   return TimeChip(
                                     text: label,
                                     selected: isSel,
                                     available: s.available,
-                                    onTap: () => c.selectedSlotId.value = s.id,
+                                    onTap: () => c.selectSlot(s),
                                   );
                                 }).toList(),
                               );
@@ -525,7 +519,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                                         ),
                                       ),
                                       subtitle: Text(
-                                        '${service.duration ?? 0} min • \$${service.discountPrice ?? service.price ?? 0}',
+                                        '${service.duration ?? 0} min • \$${(service.discountPrice ?? service.price ?? 0).toStringAsFixed(2)}',
                                         style: TextStyle(
                                           color: Colors.grey.shade600,
                                         ),
@@ -625,56 +619,85 @@ class ServiceDetailsScreen extends StatelessWidget {
                                         if (_bookingBusy.value) return;
                                         _bookingBusy.value = true;
                                         try {
-                                          final slotId = c.selectedSlotId.value;
-                                          if (slotId == null) {
+                                          SlotItem? slot;
+                                          final id = c.selectedSlotId.value;
+                                          final iso = c.selectedSlotIso.value;
+
+                                          if (id != null && id > 0) {
+                                            slot = c.slots.firstWhereOrNull(
+                                              (s) => s.id == id,
+                                            );
+                                          } else if (iso != null) {
+                                            slot = c.slots.firstWhereOrNull(
+                                              (s) =>
+                                                  (s.startAtUtcIso ??
+                                                      s.startTimeUtc
+                                                          .toIso8601String()) ==
+                                                  iso,
+                                            );
+                                          }
+
+                                          if (slot == null) {
                                             Get.snackbar(
                                               'Select a time',
                                               'Please select a time slot to continue.',
                                               snackPosition:
                                                   SnackPosition.BOTTOM,
                                             );
+                                            _bookingBusy.value = false;
                                             return;
                                           }
 
-                                          // find the selected slot to format the date/time using shop's timezone
-                                          DateTime? slotStartShopTz;
-                                          try {
-                                            final slot = c.slots.firstWhere(
-                                              (s) => s.id == slotId,
-                                            );
-                                            slotStartShopTz = c.toShopTz(
-                                              slot.startTimeUtc,
-                                            ); // Use shop timezone, not device local
-                                          } catch (_) {}
+                                          final slotId = slot
+                                              .id; // Fix for downstream usage
 
-                                          final slotLabel =
-                                              (slotStartShopTz != null)
-                                              ? DateFormat(
-                                                  'MMMM d, yyyy, h.mm a',
-                                                ).format(slotStartShopTz)
-                                              : '—';
+                                          // Format label: Use ISO string directly if available (Rule-Based), else fallback
+                                          // Format label: Always convert UTC to Shop Timezone for display
+                                          // This avoids 'DateTime.parse()' defaulting to device local time
+                                          final shopTz = c.toShopTz(
+                                            slot.startTimeUtc,
+                                          );
+                                          final slotLabel = DateFormat(
+                                            'MMMM d, yyyy, h:mm a',
+                                          ).format(shopTz);
 
                                           String? currentPriceStr;
                                           String? originalPriceStr;
                                           final details = c.details.value;
-                                          if (details != null) {
-                                            final hasDiscount =
-                                                (details.discountPrice !=
-                                                    null &&
-                                                details.discountPrice!
-                                                    .trim()
-                                                    .isNotEmpty);
-                                            currentPriceStr = hasDiscount
-                                                ? details.discountPrice
-                                                : details.price;
-                                            originalPriceStr = details.price;
+                                          if (details == null) {
+                                            AppSnackBar.showError(
+                                              'Service details not loaded',
+                                            );
+                                            _bookingBusy.value = false;
+                                            return;
                                           }
 
+                                          final hasDiscount =
+                                              (details.discountPrice != null &&
+                                              details.discountPrice!
+                                                  .trim()
+                                                  .isNotEmpty);
+                                          currentPriceStr = hasDiscount
+                                              ? details.discountPrice
+                                              : details.price;
+                                          originalPriceStr = details.price;
+
                                           // ✅ No API call here. Just navigate with arguments.
-                                          //    Use the selected slotId as the bookingId to keep the arg name.
                                           final args = {
                                             'bookingId':
-                                                slotId, // ← passing slotId as the bookingId
+                                                slotId, // Legacy: passing slotId as the bookingId key
+                                            'slotId': slotId, // Explicit slotId
+                                            // Rule-Based Scheduling Fields
+                                            'start_at':
+                                                slot.startAtIso ??
+                                                slot.startTimeUtc
+                                                    .toIso8601String(), // Single source of truth
+                                            'start_at_utc':
+                                                slot.startAtUtcIso ??
+                                                slot.startTimeUtc
+                                                    .toIso8601String(),
+                                            'timezone_id': c.shopTimeZone.value,
+
                                             'serviceName': details?.title ?? '',
                                             'shopName': details?.shopName ?? '',
                                             'service_img':
@@ -690,12 +713,31 @@ class ServiceDetailsScreen extends StatelessWidget {
                                                 null, // Already handled in effectivePrice
                                             'add_on_ids': c.selectedAddOns
                                                 .map((s) => s.id)
-                                                .toList(), // Pass add-ons
+                                                .toList(), // Pass add-on IDs
+                                            'add_ons': c.selectedAddOns
+                                                .map(
+                                                  (s) => {
+                                                    'id': s.id,
+                                                    'name': s.title ?? '',
+                                                    'price':
+                                                        s.discountPrice ??
+                                                        s.price ??
+                                                        0,
+                                                    'duration': s.duration ?? 0,
+                                                  },
+                                                )
+                                                .toList(), // Pass add-on details for display
+                                            'serviceId':
+                                                details?.id, // Robust fallback
+                                            'shopId': details
+                                                ?.shopId, // Robust fallback
                                             // keep a reference payload if the summary screen needs context
                                             'booking': {
                                               'slot_id': slotId,
                                               'service_id': details?.id,
                                               'shop_id': details?.shopId,
+                                              'provider_id':
+                                                  null, // Logic for specific provider if added later
                                             },
                                             'preload': {
                                               'selectedDate': c
@@ -714,6 +756,8 @@ class ServiceDetailsScreen extends StatelessWidget {
                                                       'service': s.service,
                                                       'shop': s.shop,
                                                       'capLeft': s.capacityLeft,
+                                                      'start_at': s
+                                                          .startAtIso, // pass through
                                                     },
                                                   )
                                                   .toList(),

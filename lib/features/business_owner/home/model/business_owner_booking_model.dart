@@ -60,13 +60,16 @@ class OwnerBookingItem {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? shopTimezone; // Shop's IANA timezone
-  final String slotTimeIso;   // Original ISO string for timezone-aware formatting
-  
+  final String slotTimeIso; // Original ISO string for timezone-aware formatting
+
   // Checkout/Deposit fields
   final String? depositStatus; // 'held', 'credited', 'forfeited'
   final double? depositAmount;
   final double? servicePrice;
   final double? remainingAmount;
+
+  // Add-on services
+  final List<Map<String, dynamic>> addOns;
 
   OwnerBookingItem({
     required this.id,
@@ -89,6 +92,7 @@ class OwnerBookingItem {
     this.depositAmount,
     this.servicePrice,
     this.remainingAmount,
+    this.addOns = const [],
   });
 
   factory OwnerBookingItem.fromJson(Map<String, dynamic> j) {
@@ -113,8 +117,11 @@ class OwnerBookingItem {
       shop: _toInt(j['shop']),
       shopName: j['shop_name'] ?? '',
       slot: _toInt(j['slot']),
-      slotTime: _dtKeepWall(j['slot_time']), // ← keeps 09:00 if payload had 09:00+06:00
-      slotTimeIso: (j['slot_time'] ?? '').toString(), // Keep original ISO string
+      slotTime: _dtKeepWall(
+        j['slot_time'],
+      ), // ← keeps 09:00 if payload had 09:00+06:00
+      slotTimeIso: (j['slot_time'] ?? '')
+          .toString(), // Keep original ISO string
       serviceTitle: j['service_title'] ?? '',
       serviceDuration: j['service_duration'] ?? '',
       status: (j['status'] ?? '').toString(),
@@ -125,9 +132,20 @@ class OwnerBookingItem {
       depositAmount: _toDouble(j['deposit_amount']),
       servicePrice: _toDouble(j['service_price']),
       remainingAmount: _toDouble(j['remaining_amount']),
+      addOns: _parseAddOns(j['add_ons']),
     );
   }
-  
+
+  static List<Map<String, dynamic>> _parseAddOns(dynamic addOnsJson) {
+    if (addOnsJson == null || addOnsJson is! List) return [];
+    return addOnsJson
+        .map(
+          (e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{},
+        )
+        .where((m) => m.isNotEmpty)
+        .toList();
+  }
+
   static double? _toDouble(dynamic v) {
     if (v == null) return null;
     if (v is num) return v.toDouble();
@@ -188,7 +206,6 @@ class OwnerBookingItem {
       slotTimeIso: slotTimeIso ?? this.slotTimeIso,
     );
   }
-
 }
 
 /// NEW: stats model matching the API payload
@@ -205,12 +222,13 @@ class OwnerBookingStats {
     required this.completed,
   });
 
-  factory OwnerBookingStats.fromJson(Map<String, dynamic> j) => OwnerBookingStats(
-    totalBookings: (j['total_bookings'] as num?)?.toInt() ?? 0,
-    newBookings: (j['new_bookings'] as num?)?.toInt() ?? 0,
-    cancelled: (j['cancelled'] as num?)?.toInt() ?? 0,
-    completed: (j['completed'] as num?)?.toInt() ?? 0,
-  );
+  factory OwnerBookingStats.fromJson(Map<String, dynamic> j) =>
+      OwnerBookingStats(
+        totalBookings: (j['total_bookings'] as num?)?.toInt() ?? 0,
+        newBookings: (j['new_bookings'] as num?)?.toInt() ?? 0,
+        cancelled: (j['cancelled'] as num?)?.toInt() ?? 0,
+        completed: (j['completed'] as num?)?.toInt() ?? 0,
+      );
 
   Map<String, dynamic> toJson() => {
     'total_bookings': totalBookings,

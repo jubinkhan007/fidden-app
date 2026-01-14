@@ -15,12 +15,9 @@ String _capitalize(String s) {
   if (s.isEmpty) return s;
   return s[0].toUpperCase() + s.substring(1);
 }
+
 class CircleNetAvatar extends StatelessWidget {
-  const CircleNetAvatar({
-    super.key,
-    required this.url,
-    this.size = 56,
-  });
+  const CircleNetAvatar({super.key, required this.url, this.size = 56});
 
   final String? url;
   final double size;
@@ -31,12 +28,7 @@ class CircleNetAvatar extends StatelessWidget {
       height: size,
       width: size,
       child: ClipOval(
-        child: NetThumb(
-          url: url,
-          w: size,
-          h: size,
-          borderRadius: size / 2,
-        ),
+        child: NetThumb(url: url, w: size, h: size, borderRadius: size / 2),
       ),
     );
   }
@@ -89,84 +81,108 @@ class BusinessOwnerBookingScreen extends StatelessWidget {
 
         // 3) List with pull-to-refresh + nice cards
         // inside build(...)
-return RefreshIndicator(
-  onRefresh: () async => controller.fetchBusinessOwnerBooking(reset: true), // <-- pass reset:true
-  child: Obx(() {
-    final results = controller.allBusinessOwnerBookingOne.value.results;
-    final hasNext = controller.allBusinessOwnerBookingOne.value.next != null;
+        return RefreshIndicator(
+          onRefresh: () async => controller.fetchBusinessOwnerBooking(
+            reset: true,
+          ), // <-- pass reset:true
+          child: Obx(() {
+            final results = controller.allBusinessOwnerBookingOne.value.results;
+            final hasNext =
+                controller.allBusinessOwnerBookingOne.value.next != null;
 
-    return ListView.separated(
-      padding: EdgeInsets.fromLTRB(getWidth(16), getHeight(12), getWidth(16), getHeight(24)),
-      itemCount: results.length + (hasNext ? 1 : 0), // <-- add footer when there's a next page
-      separatorBuilder: (_, __) => SizedBox(height: getHeight(12)),
-      itemBuilder: (context, index) {
-        // FOOTER ROW
-        if (index >= results.length) {
-          // kick off next page once footer is visible
-          controller.fetchMoreBookings();
+            return ListView.separated(
+              padding: EdgeInsets.fromLTRB(
+                getWidth(16),
+                getHeight(12),
+                getWidth(16),
+                getHeight(24),
+              ),
+              itemCount:
+                  results.length +
+                  (hasNext ? 1 : 0), // <-- add footer when there's a next page
+              separatorBuilder: (_, __) => SizedBox(height: getHeight(12)),
+              itemBuilder: (context, index) {
+                // FOOTER ROW
+                if (index >= results.length) {
+                  // kick off next page once footer is visible
+                  controller.fetchMoreBookings();
 
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: getHeight(12)),
-            child: Center(
-              child: Obx(() => controller.isPaging.value
-                  ? const SizedBox(height: 28, width: 28, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const SizedBox.shrink()),
-            ),
-          );
-        }
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: getHeight(12)),
+                    child: Center(
+                      child: Obx(
+                        () => controller.isPaging.value
+                            ? const SizedBox(
+                                height: 28,
+                                width: 28,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                  );
+                }
 
-        // NORMAL ROW
-        final b = results[index];
-        final displayName = (b.userName?.trim().isNotEmpty == true) ? b.userName!.trim() : b.userEmail;
-        
-        // Use timezone-aware formatting if shop timezone is available
-        final date = b.shopTimezone != null
-            ? formatApiDateInTimezone(b.slotTimeIso, b.shopTimezone!)
-            : DateFormat('EEE, d MMM yyyy').format(b.slotTime);
-        final time = b.shopTimezone != null
-            ? formatApiTimeInTimezone(b.slotTimeIso, b.shopTimezone!)
-            : DateFormat('hh:mm a').format(b.slotTime);
-        final bookingStatus = b.status.isNotEmpty ? b.status : 'Pending';
-        final bookingId = b.id;
+                // NORMAL ROW
+                final b = results[index];
+                final displayName = (b.userName?.trim().isNotEmpty == true)
+                    ? b.userName!.trim()
+                    : b.userEmail;
 
-        return _BookingCard(
-          cs: cs,
-          avatarUrl: b.profileImage,
-          title: displayName,
-          subtitle: b.serviceTitle,
-          dateText: date,
-          timeText: time,
-          status: bookingStatus,
-          onTap: () => showModalBottomSheet(
-            context: context,
-            showDragHandle: true,
-            backgroundColor: Colors.white,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            builder: (_) => _BookingDetailsSheet(
-              cs: cs,
-              bookingId: bookingId,
-              avatarUrl: b.profileImage,
-              name: displayName,
-              service: b.serviceTitle,
-              when: "$time • $date",
-              shop: b.shopName,
-              status: bookingStatus,
-              depositStatus: b.depositStatus,
-              remainingAmount: b.remainingAmount,
-            ),
-          ),
+                // Use timezone-aware formatting if shop timezone is available
+                final date = b.shopTimezone != null
+                    ? formatApiDateInTimezone(b.slotTimeIso, b.shopTimezone!)
+                    : DateFormat('EEE, d MMM yyyy').format(b.slotTime);
+                final time = b.shopTimezone != null
+                    ? formatApiTimeInTimezone(b.slotTimeIso, b.shopTimezone!)
+                    : DateFormat('hh:mm a').format(b.slotTime);
+                final bookingStatus = b.status.isNotEmpty
+                    ? b.status
+                    : 'Pending';
+                final bookingId = b.id;
+
+                return _BookingCard(
+                  cs: cs,
+                  avatarUrl: b.profileImage,
+                  title: displayName,
+                  subtitle: b.serviceTitle,
+                  addOns: b.addOns,
+                  dateText: date,
+                  timeText: time,
+                  status: bookingStatus,
+                  onTap: () => showModalBottomSheet(
+                    context: context,
+                    showDragHandle: true,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                    ),
+                    builder: (_) => _BookingDetailsSheet(
+                      cs: cs,
+                      bookingId: bookingId,
+                      avatarUrl: b.profileImage,
+                      name: displayName,
+                      service: b.serviceTitle,
+                      addOns: b.addOns,
+                      when: "$time • $date",
+                      shop: b.shopName,
+                      status: bookingStatus,
+                      depositStatus: b.depositStatus,
+                      remainingAmount: b.remainingAmount,
+                    ),
+                  ),
+                );
+              },
+            );
+          }),
         );
-      },
-    );
-  }),
-);
-
       }),
     );
   }
-
 }
 
 /// Card UI for each booking item
@@ -178,18 +194,19 @@ class _BookingCard extends StatelessWidget {
     required this.subtitle,
     required this.dateText,
     required this.timeText,
-    required this.status, // ADD this parameter
+    required this.status,
     required this.onTap,
-    // REMOVED: onReminder
+    this.addOns = const [],
   });
 
   final ColorScheme cs;
   final String? avatarUrl;
   final String? title;
   final String? subtitle;
+  final List<Map<String, dynamic>> addOns;
   final String dateText;
   final String timeText;
-  final String status;   // ADDED
+  final String status;
   final VoidCallback onTap;
 
   @override
@@ -242,14 +259,21 @@ class _BookingCard extends StatelessWidget {
                     SizedBox(height: getHeight(4)),
                     Row(
                       children: [
-                        const Icon(Icons.design_services, size: 16, color: Color(0xff898989)),
+                        const Icon(
+                          Icons.design_services,
+                          size: 16,
+                          color: Color(0xff898989),
+                        ),
                         SizedBox(width: getWidth(6)),
                         Expanded(
                           child: Text(
-                            subtitle ?? 'Service',
-                            maxLines: 1,
+                            _buildServiceText(),
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: getWidth(14), color: const Color(0xff898989)),
+                            style: TextStyle(
+                              fontSize: getWidth(14),
+                              color: const Color(0xff898989),
+                            ),
                           ),
                         ),
                       ],
@@ -259,7 +283,11 @@ class _BookingCard extends StatelessWidget {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _chip(icon: Icons.calendar_month, text: dateText, cs: cs),
+                          _chip(
+                            icon: Icons.calendar_month,
+                            text: dateText,
+                            cs: cs,
+                          ),
                           const SizedBox(width: 8),
                           _chip(icon: Icons.schedule, text: timeText, cs: cs),
                         ],
@@ -275,7 +303,22 @@ class _BookingCard extends StatelessWidget {
     );
   }
 
-  Widget _chip({required IconData icon, required String text, required ColorScheme cs}) {
+  String _buildServiceText() {
+    final service = subtitle ?? 'Service';
+    if (addOns.isEmpty) return service;
+    final addOnNames = addOns
+        .map((a) => a['title'] ?? a['name'] ?? '')
+        .where((n) => n.toString().isNotEmpty)
+        .join(', ');
+    if (addOnNames.isEmpty) return service;
+    return '$service + $addOnNames';
+  }
+
+  Widget _chip({
+    required IconData icon,
+    required String text,
+    required ColorScheme cs,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -308,6 +351,7 @@ class _BookingDetailsSheet extends StatelessWidget {
     required this.status,
     this.depositStatus,
     this.remainingAmount,
+    this.addOns = const [],
   });
 
   final ColorScheme cs;
@@ -320,6 +364,7 @@ class _BookingDetailsSheet extends StatelessWidget {
   final String status;
   final String? depositStatus;
   final double? remainingAmount;
+  final List<Map<String, dynamic>> addOns;
 
   @override
   Widget build(BuildContext context) {
@@ -327,9 +372,9 @@ class _BookingDetailsSheet extends StatelessWidget {
     final c = Get.find<BusinessOwnerController>();
     final st = status.toLowerCase();
 
-    final canNoShow  = st == 'active' || st == 'confirmed';
-    final canCancel  = st == 'active' || st == 'confirmed';
-    final isBusy     = c.isBusy(bookingId);
+    final canNoShow = st == 'active' || st == 'confirmed';
+    final canCancel = st == 'active' || st == 'confirmed';
+    final isBusy = c.isBusy(bookingId);
 
     Widget actionBtn({
       required String label,
@@ -350,14 +395,34 @@ class _BookingDetailsSheet extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600))),
-          Expanded(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700))),
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(getWidth(16), getHeight(8), getWidth(16), getHeight(20)),
+      padding: EdgeInsets.fromLTRB(
+        getWidth(16),
+        getHeight(8),
+        getWidth(16),
+        getHeight(20),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -366,7 +431,13 @@ class _BookingDetailsSheet extends StatelessWidget {
               CircleNetAvatar(url: avatarUrl, size: 48),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(name ?? 'Customer', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                child: Text(
+                  name ?? 'Customer',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ],
           ),
@@ -375,6 +446,14 @@ class _BookingDetailsSheet extends StatelessWidget {
           const SizedBox(height: 12),
 
           row('Service', service ?? '—'),
+          if (addOns.isNotEmpty)
+            row(
+              'Add-ons',
+              addOns
+                  .map((a) => a['title'] ?? a['name'] ?? '')
+                  .where((n) => n.toString().isNotEmpty)
+                  .join(', '),
+            ),
           row('When', when),
           row('Shop', shop ?? '—'),
           row('Status', _capitalize(status)),
@@ -382,65 +461,72 @@ class _BookingDetailsSheet extends StatelessWidget {
           const SizedBox(height: 16),
 
           // --- Checkout button (only when there's remaining balance to pay) ---
-          if (depositStatus?.toLowerCase() == 'held' && 
+          if (depositStatus?.toLowerCase() == 'held' &&
               (remainingAmount ?? 0) > 0 &&
               (st == 'active' || st == 'confirmed' || st == 'completed')) ...[
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: isBusy ? null : () async {
-                  // Show payment method options
-                  final result = await showDialog<String>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Checkout Payment Method'),
-                      content: const Text('How will the customer pay the remaining balance?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, 'cash'),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.money, color: Color(0xFF10B981)),
-                              SizedBox(width: 8),
-                              Text('Cash Payment'),
+                onPressed: isBusy
+                    ? null
+                    : () async {
+                        // Show payment method options
+                        final result = await showDialog<String>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Checkout Payment Method'),
+                            content: const Text(
+                              'How will the customer pay the remaining balance?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, 'cash'),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.money, color: Color(0xFF10B981)),
+                                    SizedBox(width: 8),
+                                    Text('Cash Payment'),
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(ctx, 'app'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xff7A49A5),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.credit_card),
+                                    SizedBox(width: 8),
+                                    Text('Pay via App'),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx, 'app'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xff7A49A5),
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.credit_card),
-                              SizedBox(width: 8),
-                              Text('Pay via App'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                  
-                  if (result == null) return; // User cancelled
-                  
-                  Get.back(); // Close bottom sheet
-                  
-                  final checkoutController = Get.put(CheckoutController());
-                  final success = await checkoutController.initiateCheckout(
-                    bookingId,
-                    paymentMethod: result, // 'cash' or 'app'
-                  );
-                  
-                  // Refresh bookings list to update button visibility
-                  if (success) {
-                    c.fetchBusinessOwnerBooking();
-                  }
-                },
+                        );
+
+                        if (result == null) return; // User cancelled
+
+                        Get.back(); // Close bottom sheet
+
+                        final checkoutController = Get.put(
+                          CheckoutController(),
+                        );
+                        final success = await checkoutController
+                            .initiateCheckout(
+                              bookingId,
+                              paymentMethod: result, // 'cash' or 'app'
+                            );
+
+                        // Refresh bookings list to update button visibility
+                        if (success) {
+                          c.fetchBusinessOwnerBooking();
+                        }
+                      },
                 icon: const Icon(Icons.payment),
                 label: const Text('Checkout Customer'),
                 style: FilledButton.styleFrom(
@@ -486,9 +572,15 @@ class _EmptyBookings extends StatelessWidget {
       children: [
         Icon(Icons.event_busy, size: 56, color: cs.onSurfaceVariant),
         const SizedBox(height: 12),
-        const Text('No bookings found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        const Text(
+          'No bookings found',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
         const SizedBox(height: 6),
-        Text('Pull down to refresh.', style: TextStyle(color: cs.onSurfaceVariant)),
+        Text(
+          'Pull down to refresh.',
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -514,10 +606,13 @@ class _BookingSkeletonList extends StatelessWidget {
     final highlight = Colors.grey.shade100;
 
     Widget bar({double h = 14, double w = 120, double r = 8}) => Container(
-          height: h,
-          width: w,
-          decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(r)),
-        );
+      height: h,
+      width: w,
+      decoration: BoxDecoration(
+        color: base,
+        borderRadius: BorderRadius.circular(r),
+      ),
+    );
 
     return Padding(
       padding: EdgeInsets.only(top: topPadding),
@@ -538,7 +633,14 @@ class _BookingSkeletonList extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(height: 56, width: 56, decoration: BoxDecoration(color: highlight, shape: BoxShape.circle)),
+                Container(
+                  height: 56,
+                  width: 56,
+                  decoration: BoxDecoration(
+                    color: highlight,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -553,7 +655,14 @@ class _BookingSkeletonList extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Container(height: 32, width: 90, decoration: BoxDecoration(color: highlight, borderRadius: BorderRadius.circular(8))),
+                Container(
+                  height: 32,
+                  width: 90,
+                  decoration: BoxDecoration(
+                    color: highlight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ],
             ),
           );
@@ -577,8 +686,8 @@ class _StatusPill extends StatelessWidget {
 
     // Use .toLowerCase() for case-insensitive matching from the API
     switch (status.toLowerCase()) {
-    // --- STYLE SWAPPED ---
-    // 'completed' and 'confirmed' now use the green checkmark
+      // --- STYLE SWAPPED ---
+      // 'completed' and 'confirmed' now use the green checkmark
       case 'completed':
       case 'confirmed':
         backgroundColor = const Color(0xFFE6F4EA); // Light Green
@@ -586,8 +695,8 @@ class _StatusPill extends StatelessWidget {
         iconData = Icons.check_circle;
         break;
 
-    // --- STYLE SWAPPED ---
-    // 'active' now has its own distinct "in-progress" style
+      // --- STYLE SWAPPED ---
+      // 'active' now has its own distinct "in-progress" style
       case 'active':
         backgroundColor = const Color(0xFFE3F2FD); // Light Blue
         foregroundColor = const Color(0xFF1565C0); // Dark Blue
