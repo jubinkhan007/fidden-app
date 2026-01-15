@@ -288,7 +288,7 @@ class ServiceDetailsScreen extends StatelessWidget {
                             const SizedBox(height: 22),
 
                             // NEW: Provider Selection
-                            const ProviderSelectorWidget(),
+                            ProviderSelectorWidget(tag: tag),
                             const SizedBox(height: 16),
 
                             // Select a date

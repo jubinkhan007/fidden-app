@@ -79,41 +79,78 @@ class ServiceDetailsController extends GetxController {
     if (isLoadingProviders.value) return;
     isLoadingProviders.value = true;
     try {
-      final url = AppUrls.shopProviders(shopId, serviceId: serviceId);
+      // FIX: Backend filter `?service_id=` is unreliable/broken.
+      // Fetch ALL providers and filter client-side.
+      final url = AppUrls.shopProviders(shopId);
+
       final res = await NetworkCaller().getRequest(
         url,
         token: AuthService.accessToken,
       );
 
       if (res.isSuccess) {
+        List<Provider> loadedList = [];
+
         // Handle List response (Legacy or simple view)
         if (res.responseData is List) {
-          final list = (res.responseData as List)
+          loadedList = (res.responseData as List)
               .map((e) => Provider.fromJson(e as Map<String, dynamic>))
               .toList();
-          providers.assignAll(list);
-          allowAnyProviderBooking.value = true; // Default for list
         }
         // Handle Map response (Wrapped with meta-data)
         else if (res.responseData is Map<String, dynamic>) {
           final data = res.responseData as Map<String, dynamic>;
-          // Check for keys like 'providers', 'data', or 'results'
           final listData =
               data['providers'] ?? data['data'] ?? data['results'] ?? [];
           if (listData is List) {
-            final list = listData
+            loadedList = listData
                 .map((e) => Provider.fromJson(e as Map<String, dynamic>))
                 .toList();
-            providers.assignAll(list);
           }
 
-          // Check flag
           if (data.containsKey('allow_any_provider_booking')) {
             allowAnyProviderBooking.value =
                 data['allow_any_provider_booking'] == true;
           } else {
             allowAnyProviderBooking.value = true;
           }
+        }
+
+        // Client-side filtering
+        // only keep providers who have this serviceId in their list
+        final filtered = loadedList.where((p) {
+          // If serviceIds is null/empty, we can't filter safely.
+          // Assume they might be valid if the API is legacy and doesn't return services.
+          // BUT if ANY provider has services list, we assume the API is correct and filter strictly.
+          if (p.serviceIds != null && p.serviceIds!.isNotEmpty) {
+            return p.serviceIds!.contains(serviceId);
+          }
+          // If provider has explicit empty list [], they do NO services.
+          if (p.serviceIds != null && p.serviceIds!.isEmpty) {
+            return false;
+          }
+          // If null, we're unsure. Let's keep them to be safe (fallback).
+          return true;
+        }).toList();
+
+        // Fallback: If filtering removed everyone but we had providers,
+        // and it seems like serviceIds data might be missing...
+        if (filtered.isEmpty && loadedList.isNotEmpty) {
+          // check if data was missing
+          bool allMissingServices = loadedList.every(
+            (p) => p.serviceIds == null,
+          );
+          if (allMissingServices) {
+            providers.assignAll(loadedList);
+          } else {
+            providers.clear();
+          }
+        } else {
+          providers.assignAll(filtered);
+        }
+
+        if (res.responseData is List) {
+          allowAnyProviderBooking.value = true;
         }
       } else {
         providers.clear();
@@ -130,9 +167,17 @@ class ServiceDetailsController extends GetxController {
   void selectProvider(int? providerId) {
     if (selectedProviderId.value == providerId) return;
     selectedProviderId.value = providerId;
+
     // Clear cache and refetch slots for selected provider
     _slotsCache.clear();
+    // Reset loaded once flag so spinner shows if needed
+    didLoadSlotsOnce.value = false;
+
+    // Fetch today's slots immediately
     fetchSlotsForDate(selectedDate.value, force: true);
+
+    // Warm up cache for other days for this provider
+    prefetchNext7Days();
   }
 
   void toggleAddOn(Service service) {

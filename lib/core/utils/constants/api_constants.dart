@@ -139,6 +139,14 @@ class AppUrls {
   static String shopProviders(int shopId, {int? serviceId}) =>
       '$_baseUrl/api/shop/$shopId/providers/${serviceId != null ? '?service_id=$serviceId' : ''}';
 
+  // NEW: Provider Management
+  static String createProvider(int shopId) =>
+      '$_baseUrl/api/shop/$shopId/providers/';
+  static String updateProvider(int providerId) =>
+      '$_baseUrl/api/providers/$providerId/';
+  static String deleteProvider(int providerId) =>
+      '$_baseUrl/api/providers/$providerId/';
+
   // NEW: Rule-Based Availability endpoint
   static String availability({
     required int shopId,

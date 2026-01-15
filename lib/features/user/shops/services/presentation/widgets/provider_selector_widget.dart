@@ -8,13 +8,18 @@ import '../../controller/service_details_controller.dart';
 
 /// Horizontal scrollable provider selector with "Any Available" option
 class ProviderSelectorWidget extends StatelessWidget {
-  const ProviderSelectorWidget({super.key});
+  final String? tag; // NEW: optional tag to find controller
+
+  const ProviderSelectorWidget({super.key, this.tag});
 
   @override
   Widget build(BuildContext context) {
-    final c = Get.find<ServiceDetailsController>();
+    final c = Get.find<ServiceDetailsController>(tag: tag);
 
     return Obx(() {
+      // Force dependency tracking by accessing value synchronously in the build phase
+      final selectedId = c.selectedProviderId.value;
+
       // Hide if no providers or still loading
       if (c.isLoadingProviders.value) {
         return const SizedBox(
@@ -60,9 +65,11 @@ class ProviderSelectorWidget extends StatelessWidget {
                   return _ProviderChip(
                     name: 'Any',
                     imageUrl: null,
-                    isSelected: c.selectedProviderId.value == null,
+                    isSelected: selectedId == null,
                     isAny: true,
-                    onTap: () => c.selectProvider(null),
+                    onTap: () {
+                      c.selectProvider(null);
+                    },
                   );
                 }
 
@@ -70,9 +77,11 @@ class ProviderSelectorWidget extends StatelessWidget {
                 return _ProviderChip(
                   name: provider.name,
                   imageUrl: provider.profileImage,
-                  isSelected: c.selectedProviderId.value == provider.id,
+                  isSelected: selectedId == provider.id,
                   isAny: false,
-                  onTap: () => c.selectProvider(provider.id),
+                  onTap: () {
+                    c.selectProvider(provider.id);
+                  },
                 );
               },
             ),
@@ -118,7 +127,7 @@ class _ProviderChip extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isSelected ? primaryColor : Colors.grey.shade300,
-                  width: isSelected ? 2.5 : 1.5,
+                  width: isSelected ? 3.0 : 1.0, // Thicker border for selected
                 ),
               ),
               child: ClipOval(
