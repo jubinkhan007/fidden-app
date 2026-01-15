@@ -5,6 +5,7 @@ import 'package:fidden/features/user/booking/presentation/screens/booking_summar
 import 'package:fidden/features/user/shops/presentation/screens/shop_details_screen.dart';
 import 'package:fidden/features/user/shops/services/controller/service_details_controller.dart';
 import 'package:fidden/features/user/shops/services/data/time_slots_model.dart';
+import 'package:fidden/features/user/shops/services/presentation/widgets/provider_selector_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
@@ -285,6 +286,10 @@ class ServiceDetailsScreen extends StatelessWidget {
                             ),
 
                             const SizedBox(height: 22),
+
+                            // NEW: Provider Selection
+                            const ProviderSelectorWidget(),
+                            const SizedBox(height: 16),
 
                             // Select a date
                             CustomText(
@@ -736,8 +741,9 @@ class ServiceDetailsScreen extends StatelessWidget {
                                               'slot_id': slotId,
                                               'service_id': details?.id,
                                               'shop_id': details?.shopId,
-                                              'provider_id':
-                                                  null, // Logic for specific provider if added later
+                                              'provider_id': c
+                                                  .selectedProviderId
+                                                  .value, // NEW: Pass selected provider
                                             },
                                             'preload': {
                                               'selectedDate': c

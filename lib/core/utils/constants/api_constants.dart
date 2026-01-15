@@ -135,13 +135,22 @@ class AppUrls {
   static String getSlotsForShop(int shopId) =>
       '/api/shop-details/$shopId/slots/';
 
+  // NEW: Shop Providers endpoint
+  static String shopProviders(int shopId, {int? serviceId}) =>
+      '$_baseUrl/api/shop/$shopId/providers/${serviceId != null ? '?service_id=$serviceId' : ''}';
+
   // NEW: Rule-Based Availability endpoint
   static String availability({
     required int shopId,
     required int serviceId,
     required String date,
-  }) =>
-      '$_baseUrl/api/availability/?shop_id=$shopId&service_id=$serviceId&date=$date';
+    int? providerId,
+  }) {
+    var url =
+        '$_baseUrl/api/availability/?shop_id=$shopId&service_id=$serviceId&date=$date';
+    if (providerId != null) url += '&provider_id=$providerId';
+    return url;
+  }
 
   // subscription
 

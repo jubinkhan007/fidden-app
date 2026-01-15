@@ -4,6 +4,7 @@ import 'package:fidden/core/services/Auth_service.dart';
 import 'package:fidden/core/services/network_caller.dart';
 import 'package:fidden/core/utils/constants/api_constants.dart';
 import 'package:fidden/core/utils/timezone_helper.dart';
+import 'package:fidden/features/user/shops/data/provider_model.dart';
 import 'package:fidden/features/user/shops/data/shop_details_model.dart';
 import 'package:fidden/features/user/shops/services/data/service_details_model.dart';
 import 'package:fidden/features/user/shops/services/data/time_slots_model.dart';
@@ -65,6 +66,74 @@ class ServiceDetailsController extends GetxController {
 
   // Shop's timezone for displaying slot times
   final shopTimeZone = 'America/New_York'.obs;
+
+  // ───────── NEW: Multi-Provider Support
+  final providers = <Provider>[].obs;
+  final selectedProviderId = RxnInt(); // null = "Any Available"
+  // If backend says we can't book "Any", we might force selection or hide the option
+  final allowAnyProviderBooking = true.obs;
+  final isLoadingProviders = false.obs;
+
+  /// Fetch providers for the current shop/service
+  Future<void> fetchProviders(int shopId) async {
+    if (isLoadingProviders.value) return;
+    isLoadingProviders.value = true;
+    try {
+      final url = AppUrls.shopProviders(shopId, serviceId: serviceId);
+      final res = await NetworkCaller().getRequest(
+        url,
+        token: AuthService.accessToken,
+      );
+
+      if (res.isSuccess) {
+        // Handle List response (Legacy or simple view)
+        if (res.responseData is List) {
+          final list = (res.responseData as List)
+              .map((e) => Provider.fromJson(e as Map<String, dynamic>))
+              .toList();
+          providers.assignAll(list);
+          allowAnyProviderBooking.value = true; // Default for list
+        }
+        // Handle Map response (Wrapped with meta-data)
+        else if (res.responseData is Map<String, dynamic>) {
+          final data = res.responseData as Map<String, dynamic>;
+          // Check for keys like 'providers', 'data', or 'results'
+          final listData =
+              data['providers'] ?? data['data'] ?? data['results'] ?? [];
+          if (listData is List) {
+            final list = listData
+                .map((e) => Provider.fromJson(e as Map<String, dynamic>))
+                .toList();
+            providers.assignAll(list);
+          }
+
+          // Check flag
+          if (data.containsKey('allow_any_provider_booking')) {
+            allowAnyProviderBooking.value =
+                data['allow_any_provider_booking'] == true;
+          } else {
+            allowAnyProviderBooking.value = true;
+          }
+        }
+      } else {
+        providers.clear();
+      }
+    } catch (e) {
+      debugPrint('Error fetching providers: $e');
+      providers.clear();
+    } finally {
+      isLoadingProviders.value = false;
+    }
+  }
+
+  /// Select a provider and refresh slots
+  void selectProvider(int? providerId) {
+    if (selectedProviderId.value == providerId) return;
+    selectedProviderId.value = providerId;
+    // Clear cache and refetch slots for selected provider
+    _slotsCache.clear();
+    fetchSlotsForDate(selectedDate.value, force: true);
+  }
 
   void toggleAddOn(Service service) {
     if (selectedAddOns.contains(service)) {
@@ -194,6 +263,12 @@ class ServiceDetailsController extends GetxController {
               shop.services!.where((s) => s.id != serviceId).toList(),
             );
           }
+
+          // NEW: Fetch providers for this shop/service
+          final shopId = svc.shopId;
+          if (shopId != null) {
+            fetchProviders(shopId);
+          }
         }
 
         _snapSelectedToNextOpenInWindow();
@@ -252,6 +327,7 @@ class ServiceDetailsController extends GetxController {
         shopId: d.shopId ?? 0,
         serviceId: serviceId,
         date: key,
+        providerId: selectedProviderId.value, // NEW: pass provider filter
       );
 
       final res = await NetworkCaller().getRequest(
