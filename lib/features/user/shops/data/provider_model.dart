@@ -13,6 +13,9 @@ class Provider {
   /// If null, provider inherits shop hours.
   final Map<String, List<TimeRange>>? schedule;
 
+  /// Concurrency Control: Maximum simultaneous "processing" tasks
+  final int maxConcurrentProcessingJobs;
+
   Provider({
     required this.id,
     required this.name,
@@ -20,6 +23,7 @@ class Provider {
     this.bio,
     this.serviceIds,
     this.schedule,
+    this.maxConcurrentProcessingJobs = 1,
   });
 
   factory Provider.fromJson(Map<String, dynamic> json) {
@@ -48,6 +52,8 @@ class Provider {
       bio: json['bio'] as String?,
       serviceIds: (json['services'] as List?)?.map((e) => e as int).toList(),
       schedule: scheduleMap,
+      maxConcurrentProcessingJobs:
+          json['max_concurrent_processing_jobs'] as int? ?? 1,
     );
   }
 
@@ -64,6 +70,7 @@ class Provider {
       'bio': bio,
       'services': serviceIds,
       'working_hours': workingHours,
+      'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
     };
   }
 

@@ -26,6 +26,7 @@ class _AddEditProviderScreenState extends State<AddEditProviderScreen> {
 
   final _nameCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
+  final _maxConcurrentCtrl = TextEditingController(text: '1');
   final _selectedServices = <int>[].obs;
   Map<String, List<TimeRange>> _schedule = {}; // NEW: Local schedule state
 
@@ -46,6 +47,7 @@ class _AddEditProviderScreenState extends State<AddEditProviderScreen> {
       if (p.schedule != null) {
         _schedule = Map.from(p.schedule!);
       }
+      _maxConcurrentCtrl.text = p.maxConcurrentProcessingJobs.toString();
     }
   }
 
@@ -53,6 +55,7 @@ class _AddEditProviderScreenState extends State<AddEditProviderScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _bioCtrl.dispose();
+    _maxConcurrentCtrl.dispose();
     super.dispose();
   }
 
@@ -183,6 +186,29 @@ class _AddEditProviderScreenState extends State<AddEditProviderScreen> {
               );
             }),
 
+            SizedBox(height: getHeight(24)),
+
+            // Max Concurrent Jobs
+            _buildLabel('Max Concurrent Processing Jobs'),
+            CustomTexFormField(
+              hintText: 'Default: 1',
+              controller: _maxConcurrentCtrl,
+              isPhoneField: true,
+              validator: (val) {
+                if (val == null || val.trim().isEmpty)
+                  return null; // Fallback to 1
+                final v = int.tryParse(val.trim());
+                if (v == null) return 'Invalid number';
+                if (v < 1) return 'Must be 1 or more';
+                return null;
+              },
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'How many simultaneous tasks can this member handle during processing?',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+
             SizedBox(height: getHeight(32)),
 
             // Schedule Editor
@@ -219,6 +245,9 @@ class _AddEditProviderScreenState extends State<AddEditProviderScreen> {
                     return;
                   }
 
+                  final maxJobs =
+                      int.tryParse(_maxConcurrentCtrl.text.trim()) ?? 1;
+
                   bool success;
                   if (widget.provider != null) {
                     success = await controller.updateProvider(
@@ -227,6 +256,7 @@ class _AddEditProviderScreenState extends State<AddEditProviderScreen> {
                       bio: _bioCtrl.text.trim(),
                       serviceIds: _selectedServices,
                       schedule: _schedule.isNotEmpty ? _schedule : null, // NEW
+                      maxConcurrentProcessingJobs: maxJobs,
                     );
                   } else {
                     success = await controller.addProvider(
@@ -234,6 +264,7 @@ class _AddEditProviderScreenState extends State<AddEditProviderScreen> {
                       bio: _bioCtrl.text.trim(),
                       serviceIds: _selectedServices,
                       schedule: _schedule.isNotEmpty ? _schedule : null, // NEW
+                      maxConcurrentProcessingJobs: maxJobs,
                     );
                   }
 

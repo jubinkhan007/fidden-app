@@ -46,9 +46,16 @@ class BookingSummaryController extends GetxController {
   final RxInt defaultDepositPercentage = 0.obs;
 
   double getDepositAmount(double totalAmount) {
-    if (!isDepositRequired.value || defaultDepositPercentage.value <= 0)
+    debugPrint(
+      '💰 getDepositAmount: total=$totalAmount, required=${isDepositRequired.value}, pct=${defaultDepositPercentage.value}',
+    );
+    if (!isDepositRequired.value || defaultDepositPercentage.value <= 0) {
+      debugPrint('💰 getDepositAmount: Returning 0 (not required or 0%)');
       return 0;
-    return (totalAmount * defaultDepositPercentage.value) / 100;
+    }
+    final d = (totalAmount * defaultDepositPercentage.value) / 100;
+    debugPrint('💰 getDepositAmount: Calculated=$d');
+    return d;
   }
 
   Future<void> processPayment({
@@ -133,11 +140,20 @@ class BookingSummaryController extends GetxController {
       if (note != null) 'note': note,
     };
 
+    // DEBUG: Log the booking request payload
+    debugPrint('📅 _createBooking: Sending payload = $body');
+
     final res = await NetworkCaller().postRequest(
       AppUrls.bookings,
       token: AuthService.accessToken,
       body: body,
     );
+
+    // DEBUG: Log API response
+    debugPrint(
+      '📅 _createBooking: Status=${res.statusCode}, Success=${res.isSuccess}',
+    );
+    debugPrint('📅 _createBooking: Response=${res.responseData}');
 
     if (res.isSuccess && res.responseData is Map<String, dynamic>) {
       final rawBookingId = res.responseData['booking_id'];
@@ -150,6 +166,7 @@ class BookingSummaryController extends GetxController {
     } else {
       // Handle Specific Errors
       if (res.statusCode == 409) {
+        debugPrint('📅 _createBooking: 409 Conflict - Slot unavailable');
         Get.snackbar(
           'Slot Unavailable',
           'This slot is no longer available. Please choose another time.',
@@ -158,7 +175,7 @@ class BookingSummaryController extends GetxController {
           res.errorMessage?.contains('INVALID_TIME') == true) {
         Get.snackbar(
           'Invalid Time',
-          'That time isn’t available due to daylight savings time. Please pick another time.',
+          "That time is not available due to daylight savings. Please pick another time.",
         );
       } else {
         Get.snackbar(
@@ -171,15 +188,30 @@ class BookingSummaryController extends GetxController {
   }
 
   Future<void> fetchPolicy(int shopId) async {
-    if (shopId <= 0) return;
+    if (shopId <= 0) {
+      debugPrint('💰 fetchPolicy: Invalid shopId=$shopId, skipping.');
+      return;
+    }
     try {
+      debugPrint('💰 fetchPolicy: Fetching policy for shopId=$shopId');
       final res = await NetworkCaller().getRequest(
         AppUrls.shopDetails(shopId.toString()),
         token: AuthService.accessToken,
       );
-      if (!res.isSuccess || res.responseData is! Map<String, dynamic>) return;
+      if (!res.isSuccess || res.responseData is! Map<String, dynamic>) {
+        debugPrint('💰 fetchPolicy: API failed or returned non-Map data');
+        return;
+      }
 
       final m = res.responseData as Map<String, dynamic>;
+
+      // DEBUG: Log raw deposit fields from API
+      debugPrint(
+        '💰 fetchPolicy: Raw is_deposit_required = ${m['is_deposit_required']}',
+      );
+      debugPrint(
+        '💰 fetchPolicy: Raw default_deposit_percentage = ${m['default_deposit_percentage']}',
+      );
 
       // keys must be present in your ShopDetailSerializer (backend):
       // free_cancellation_hours, cancellation_fee_percentage, no_refund_hours
@@ -199,8 +231,15 @@ class BookingSummaryController extends GetxController {
           m['is_deposit_required'] == 'true';
       defaultDepositPercentage.value =
           (m['default_deposit_percentage'] as num?)?.toInt() ?? 0;
-    } catch (_) {
-      // swallow or log
+
+      debugPrint(
+        '💰 fetchPolicy: Parsed isDepositRequired=${isDepositRequired.value}',
+      );
+      debugPrint(
+        '💰 fetchPolicy: Parsed defaultDepositPercentage=${defaultDepositPercentage.value}',
+      );
+    } catch (e) {
+      debugPrint('💰 fetchPolicy: Error = $e');
     }
   }
 

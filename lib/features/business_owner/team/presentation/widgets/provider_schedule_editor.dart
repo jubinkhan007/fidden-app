@@ -35,8 +35,22 @@ class _ProviderScheduleEditorState extends State<ProviderScheduleEditor> {
     _schedule = {};
     for (var d in _days) {
       final key = d.toLowerCase();
+      // Handle both lowercase ("monday") and Titlecase ("Monday") keys from backend
+      List<TimeRange>? existing;
       if (widget.initialSchedule.containsKey(key)) {
-        _schedule[key] = List.from(widget.initialSchedule[key]!);
+        existing = widget.initialSchedule[key];
+      } else if (widget.initialSchedule.containsKey(d)) {
+        existing = widget.initialSchedule[d];
+      } else {
+        // Check for 3-letter abbreviation (mon, tue, wed...)
+        final short = key.substring(0, 3);
+        if (widget.initialSchedule.containsKey(short)) {
+          existing = widget.initialSchedule[short];
+        }
+      }
+
+      if (existing != null) {
+        _schedule[key] = List.from(existing);
       } else {
         _schedule[key] = [];
       }

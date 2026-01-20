@@ -103,6 +103,7 @@ class TeamController extends GetxController {
     required String bio,
     required List<int> serviceIds,
     Map<String, List<TimeRange>>? schedule,
+    int maxConcurrentProcessingJobs = 1,
   }) async {
     isSaving.value = true;
     try {
@@ -112,8 +113,13 @@ class TeamController extends GetxController {
       Map<String, dynamic>? workingHours;
       if (schedule != null && schedule.isNotEmpty) {
         workingHours = {};
+        workingHours = {};
         schedule.forEach((k, v) {
-          workingHours![k] = v.map((r) => [r.start, r.end]).toList();
+          // Convert full day name (monday) to 3-letter (mon)
+          final shortKey = k.length > 3
+              ? k.substring(0, 3).toLowerCase()
+              : k.toLowerCase();
+          workingHours![shortKey] = v.map((r) => [r.start, r.end]).toList();
         });
       }
 
@@ -121,6 +127,7 @@ class TeamController extends GetxController {
         'name': name,
         'bio': bio,
         'services': serviceIds,
+        'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
         if (workingHours != null) 'working_hours': workingHours,
       };
 
@@ -158,6 +165,7 @@ class TeamController extends GetxController {
     required String bio,
     required List<int> serviceIds,
     Map<String, List<TimeRange>>? schedule, // CHANGED to TimeRange
+    int maxConcurrentProcessingJobs = 1,
   }) async {
     final profileC = Get.find<BusinessOwnerProfileController>();
     final shopId = profileC.profileDetails.value.data?.id;
@@ -172,7 +180,11 @@ class TeamController extends GetxController {
       if (schedule != null && schedule.isNotEmpty) {
         workingHours = {};
         schedule.forEach((k, v) {
-          workingHours![k] = v.map((r) => [r.start, r.end]).toList();
+          // Convert full day name (monday) to 3-letter (mon)
+          final shortKey = k.length > 3
+              ? k.substring(0, 3).toLowerCase()
+              : k.toLowerCase();
+          workingHours![shortKey] = v.map((r) => [r.start, r.end]).toList();
         });
       }
 
@@ -180,6 +192,7 @@ class TeamController extends GetxController {
         'name': name,
         'bio': bio,
         'services': serviceIds,
+        'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
         if (workingHours != null) 'working_hours': workingHours,
       };
 

@@ -230,8 +230,9 @@ class ServiceDetailsController extends GetxController {
   String _fmtDate(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
   /// Format slot time in shop's timezone
-  String fmtTimeLocal(DateTime utc) =>
-      TimezoneHelper.formatInTimezone(utc, shopTimeZone.value);
+  String fmtTimeLocal(DateTime utc) {
+    return TimezoneHelper.formatInTimezone(utc, shopTimeZone.value);
+  }
 
   /// Format directly from ISO string (e.g. 2026-03-09T09:00:00-05:00)
   /// This ensures we show exactly what the backend sent (09:00) without double conversion
@@ -247,8 +248,9 @@ class ServiceDetailsController extends GetxController {
   }
 
   /// Convert UTC DateTime to shop's timezone DateTime
-  DateTime toShopTz(DateTime utc) =>
-      TimezoneHelper.toTimezone(utc, shopTimeZone.value);
+  DateTime toShopTz(DateTime utc) {
+    return TimezoneHelper.toTimezone(utc, shopTimeZone.value);
+  }
 
   // Helper to check if two dates are the same day
   bool _isSameDay(DateTime a, DateTime b) =>
@@ -273,6 +275,7 @@ class ServiceDetailsController extends GetxController {
       );
 
       if (res.isSuccess && res.responseData is Map<String, dynamic>) {
+        debugPrint('🎰 Service Details JSON: ${res.responseData}');
         final svc = ServiceDetailsModel.fromJson(res.responseData);
         details.value = svc;
 
@@ -367,7 +370,11 @@ class ServiceDetailsController extends GetxController {
 
     isLoadingSlots.value = true;
     try {
-      // Fetch current date's slots using NEW Rule-Based Availability API
+      // DEBUG: Log parameters
+      debugPrint(
+        '🎰 Fetching availability for Provider: ${selectedProviderId.value}',
+      );
+
       final uri = AppUrls.availability(
         shopId: d.shopId ?? 0,
         serviceId: serviceId,
@@ -392,16 +399,17 @@ class ServiceDetailsController extends GetxController {
           shopTimeZone.value = parsed.timezoneId!;
         }
 
-        // Debug: Log first 3 slots
-        for (var i = 0; i < parsed.slots.length && i < 3; i++) {
-          final s = parsed.slots[i];
-          final displayTime = s.startAtIso != null
-              ? fmtTimeLocalFromIso(s.startAtIso!) // Use ISO string directly
-              : fmtTimeLocal(s.startTimeUtc); // Fallback
+        // DEBUG: Print all slots from backend to verify if 10:20 exists
+        debugPrint(
+          '🎰 --- RAW SLOTS FROM BACKEND (${parsed.slots.length}) ---',
+        );
+        for (final s in parsed.slots) {
+          final local = fmtTimeLocal(s.startTimeUtc);
           debugPrint(
-            '🎰 Slot[${s.id}]: UTC=${s.startTimeUtc} → ShopTz=$displayTime',
+            'Slot ID: ${s.id} | UTC: ${s.startTimeUtc} | Local: $local | Avail: ${s.available}',
           );
         }
+        debugPrint('🎰 ------------------------------------------------');
       }
 
       // Also fetch next UTC day to capture slots that span timezone boundary

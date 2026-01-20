@@ -23,6 +23,10 @@ class GetMyServiceModel {
   /// NEW: Age restriction toggle (defaults to false if missing)
   final bool requiresAge18Plus;
 
+  /// Concurrency Control
+  final bool allowProcessingOverlap;
+  final int? providerBlockMinutes;
+
   GetMyServiceModel({
     this.id,
     this.title,
@@ -35,6 +39,8 @@ class GetMyServiceModel {
     this.capacity,
     this.isActive,
     this.requiresAge18Plus = false,
+    this.allowProcessingOverlap = false,
+    this.providerBlockMinutes,
   });
 
   /// Make it static so it can be used from the factory
@@ -58,7 +64,17 @@ class GetMyServiceModel {
         capacity: json["capacity"],
         isActive: json["is_active"],
         requiresAge18Plus: _asBool(json['requires_age_18_plus']),
+        allowProcessingOverlap: _asBool(json['allow_processing_overlap']),
+        providerBlockMinutes: _asInt(json['provider_block_minutes']),
       );
+
+  static int? _asInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
     "id": id,
@@ -71,7 +87,8 @@ class GetMyServiceModel {
     "duration": duration,
     "capacity": capacity,
     "is_active": isActive,
-    // NEW: include in payload
     "requires_age_18_plus": requiresAge18Plus,
+    "allow_processing_overlap": allowProcessingOverlap,
+    "provider_block_minutes": providerBlockMinutes,
   };
 }

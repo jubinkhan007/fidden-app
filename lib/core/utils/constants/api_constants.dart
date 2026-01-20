@@ -5,10 +5,18 @@ import 'dart:developer';
 class AppUrls {
   AppUrls._();
 
+  // REMOTE (Phase 1)
   static const String _baseUrl = 'https://phase1new.fidden.io';
+
+  // LOCAL (For testing fixes)
+  // Use http://10.0.2.2:8000 for Android Emulator
+  // Use http://127.0.0.1:8000 for iOS Simulator
+  // static const String _baseUrl = 'http://127.0.0.1:8000';
+
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
     return 'wss://phase1new.fidden.io/ws/chat/?token=$accessToken';
+    // return 'ws://127.0.0.1:8000/ws/chat/?token=$accessToken';
   }
 
   static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';
@@ -251,6 +259,19 @@ class AppUrls {
 
   static String ownerCancelBooking(int bookingId) =>
       '${_baseUrl}/payments/bookings/cancel/$bookingId/';
+
+  // Unified Calendar Endpoint
+  static String calendar({
+    required int shopId,
+    required String startDate,
+    required String endDate,
+    int? providerId,
+  }) {
+    var url =
+        '$_baseUrl/api/calendar/?shop_id=$shopId&start_date=$startDate&end_date=$endDate';
+    if (providerId != null) url += '&provider_id=$providerId';
+    return url;
+  }
 
   // PayPal Endpoints
   static String createPayPalOrder(String slotId) =>

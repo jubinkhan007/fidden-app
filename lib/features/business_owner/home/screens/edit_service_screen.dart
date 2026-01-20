@@ -73,7 +73,6 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
             _slotsTag = tag;
           });
         }
-
       });
     });
   }
@@ -140,8 +139,9 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                     _buildTextField(
                       controller.titleTEController,
                       hint: "Type title",
-                      validator: (val) =>
-                      val == null || val.isEmpty ? 'Title is required' : null,
+                      validator: (val) => val == null || val.isEmpty
+                          ? 'Title is required'
+                          : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Price"),
@@ -149,8 +149,9 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                       controller.priceTEController,
                       hint: "Type Price",
                       isPhone: true,
-                      validator: (val) =>
-                      val == null || val.isEmpty ? 'Price is required' : null,
+                      validator: (val) => val == null || val.isEmpty
+                          ? 'Price is required'
+                          : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Discounted Price"),
@@ -165,8 +166,9 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                       controller.durationTEController,
                       hint: "e.g., 30",
                       isPhone: true,
-                      validator: (val) =>
-                      val == null || val.isEmpty ? 'Duration is required' : null,
+                      validator: (val) => val == null || val.isEmpty
+                          ? 'Duration is required'
+                          : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Capacity"),
@@ -174,8 +176,9 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                       controller.capacityTEController,
                       hint: "e.g., 1",
                       isPhone: true,
-                      validator: (val) =>
-                      val == null || val.isEmpty ? 'Capacity is required' : null,
+                      validator: (val) => val == null || val.isEmpty
+                          ? 'Capacity is required'
+                          : null,
                     ),
                     VerticalSpace(height: getHeight(20)),
                     _buildLabel("Description"),
@@ -189,13 +192,86 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                     ),
                     SizedBox(height: getHeight(10)),
                     // 18+ Toggle
-                    Obx(() => SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Requires age 18+'),
-                      value: controller.requiresAge18Plus.value,
-                      onChanged: (v) => controller.requiresAge18Plus.value = v,
-                    )),
-                    VerticalSpace(height: getHeight(20)),
+                    Obx(
+                      () => SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Requires age 18+'),
+                        value: controller.requiresAge18Plus.value,
+                        onChanged: (v) =>
+                            controller.requiresAge18Plus.value = v,
+                      ),
+                    ),
+
+                    // Concurrency Control
+                    Obx(
+                      () => SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Enable Processing Overlap'),
+                        subtitle: const Text(
+                          'Allow bookings during processing time',
+                        ),
+                        value: controller.allowProcessingOverlap.value,
+                        onChanged: (v) =>
+                            controller.allowProcessingOverlap.value = v,
+                      ),
+                    ),
+                    Obx(() {
+                      if (!controller.allowProcessingOverlap.value)
+                        return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLabel("Provider Active Time (mins)"),
+                          _buildTextField(
+                            controller.providerBlockMinutesTEController,
+                            hint: "e.g., 20",
+                            isPhone: true,
+                            validator: (val) {
+                              if (!controller.allowProcessingOverlap.value)
+                                return null;
+                              if (val == null || val.isEmpty) return 'Required';
+                              final block = int.tryParse(val);
+                              final duration = int.tryParse(
+                                controller.durationTEController.text,
+                              );
+                              if (block == null) return 'Invalid number';
+                              if (block < 0) return 'Must be 0 or more';
+                              if (duration != null && block > duration)
+                                return 'Cannot exceed duration';
+                              return null;
+                            },
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0, left: 4),
+                            child: ListenableBuilder(
+                              listenable:
+                                  controller.providerBlockMinutesTEController,
+                              builder: (ctx, _) {
+                                final blockText = controller
+                                    .providerBlockMinutesTEController
+                                    .text;
+                                final durationText =
+                                    controller.durationTEController.text;
+                                final block = int.tryParse(blockText) ?? 0;
+                                final duration =
+                                    int.tryParse(durationText) ?? 0;
+                                final processing = duration - block;
+                                return Text(
+                                  'Processing Time: ${processing > 0 ? processing : 0} mins',
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          VerticalSpace(height: getHeight(20)),
+                        ],
+                      );
+                    }),
+                    VerticalSpace(height: getHeight(10)),
                     _buildLabel("Upload image"),
                     SizedBox(height: getHeight(10)),
                     Obx(() {
@@ -215,40 +291,48 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                     const SizedBox(height: 8),
                     if (_slotsTag == null)
                       const SizedBox.shrink()
-                    else if (!Get.isRegistered<OwnerServiceSlotsController>(tag: _slotsTag))
+                    else if (!Get.isRegistered<OwnerServiceSlotsController>(
+                      tag: _slotsTag,
+                    ))
                       const SizedBox.shrink()
                     else
                       Builder(
-                        builder: (_) =>
-                            ManageSlotsCard(ctrl: Get.find<OwnerServiceSlotsController>(tag: _slotsTag!)),
-                      ),
-                    SizedBox(height: getHeight(12)),
-                    Obx(() => controller.inProgress.value
-                        ? SpinKitWave(
-                        color: AppColors.primaryColor, size: 30.0)
-                        : Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: CustomButton(
-                        onPressed: () {
-                          if (addServiceForm.currentState?.validate() ?? false) {
-                            controller.updateService(id: widget.id);
-                          }
-                        },
-
-                        child: Text(
-                          "Update service",
-                          style: getTextStyleMsrt(
-                            fontSize: getWidth(18),
-                            fontWeight: FontWeight.w700,
+                        builder: (_) => ManageSlotsCard(
+                          ctrl: Get.find<OwnerServiceSlotsController>(
+                            tag: _slotsTag!,
                           ),
                         ),
                       ),
-                    )),
+                    SizedBox(height: getHeight(12)),
+                    Obx(
+                      () => controller.inProgress.value
+                          ? SpinKitWave(
+                              color: AppColors.primaryColor,
+                              size: 30.0,
+                            )
+                          : Padding(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: CustomButton(
+                                onPressed: () {
+                                  if (addServiceForm.currentState?.validate() ??
+                                      false) {
+                                    controller.updateService(id: widget.id);
+                                  }
+                                },
+
+                                child: Text(
+                                  "Update service",
+                                  style: getTextStyleMsrt(
+                                    fontSize: getWidth(18),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
                   ],
                 ),
               ),
-
-
             ],
           ),
         ),
@@ -277,12 +361,12 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
   );
 
   Widget _buildTextField(
-      TextEditingController controller, {
-        required String hint,
-        String? Function(String?)? validator,
-        bool isPhone = false,
-        int maxLines = 1,
-      }) {
+    TextEditingController controller, {
+    required String hint,
+    String? Function(String?)? validator,
+    bool isPhone = false,
+    int maxLines = 1,
+  }) {
     return Column(
       children: [
         SizedBox(height: getHeight(10)),
@@ -335,8 +419,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey),
           borderRadius: BorderRadius.circular(10),
-          image:
-          DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
+          image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
         ),
       ),
     );

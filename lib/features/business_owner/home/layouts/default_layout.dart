@@ -18,6 +18,7 @@ import '../../../../core/utils/constants/app_sizes.dart';
 import '../../../../core/utils/constants/image_path.dart';
 import '../../../user/booking/presentation/api_time_format.dart';
 import 'package:intl/intl.dart';
+import '../../calendar/presentation/calendar_screen.dart';
 
 class DefaultLayout implements NicheLayoutStrategy {
   @override
@@ -28,6 +29,11 @@ class DefaultLayout implements NicheLayoutStrategy {
     return [
       // 1. My Services Section
       _buildServicesSection(controller),
+
+      const SizedBox(height: 24),
+
+      // NEW: Calendar Section
+      _buildCalendarSection(context),
 
       const SizedBox(height: 24),
 
@@ -112,6 +118,80 @@ class DefaultLayout implements NicheLayoutStrategy {
       const SizedBox(height: 16),
       _buildRecentBookings(controller),
     ];
+  }
+
+  Widget _buildCalendarSection(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.blueAccent, Colors.purpleAccent],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.calendar_month, color: Colors.white, size: 28),
+              SizedBox(width: 12),
+              Text(
+                "Unified Calendar",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Manage bookings, blocked times, and provider shedules.",
+            style: TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                if (myShopId.value != null && myShopId.value! > 0) {
+                  Get.to(() => CalendarScreen(shopId: myShopId.value!));
+                } else {
+                  Get.snackbar(
+                    "Error",
+                    "Shop ID not found. Please ensure you have a shop created.",
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blueAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                "Open Calendar",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildServicesSection(BusinessOwnerController controller) {

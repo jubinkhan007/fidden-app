@@ -73,7 +73,8 @@ class AddServiceScreen extends StatelessWidget {
                   hintText: "Type Price",
                   isPhoneField: true,
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Price is required';
+                    if (value == null || value.trim().isEmpty)
+                      return 'Price is required';
                     final v = double.tryParse(value.trim());
                     if (v == null) return 'Enter a valid number';
                     if (v <= 0) return 'Price must be greater than 0';
@@ -142,10 +143,12 @@ class AddServiceScreen extends StatelessWidget {
                   hintText: "e.g., 30",
                   isPhoneField: true,
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Duration is required';
+                    if (value == null || value.trim().isEmpty)
+                      return 'Duration is required';
                     final v = int.tryParse(value.trim());
                     if (v == null) return 'Enter a valid integer';
-                    if (v < 15) return 'Duration must be greater than or equal to 15';
+                    if (v < 15)
+                      return 'Duration must be greater than or equal to 15';
                     return null;
                   },
                 ),
@@ -163,7 +166,8 @@ class AddServiceScreen extends StatelessWidget {
                   hintText: "e.g., 1",
                   isPhoneField: true,
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) return 'Capacity is required';
+                    if (value == null || value.trim().isEmpty)
+                      return 'Capacity is required';
                     final v = int.tryParse(value.trim());
                     if (v == null) return 'Enter a valid integer';
                     if (v <= 0) return 'Capacity must be greater than 0';
@@ -190,13 +194,91 @@ class AddServiceScreen extends StatelessWidget {
                 ),
                 SizedBox(height: getHeight(10)),
                 // 18+ Toggle
-                Obx(() => SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Requires age 18+'),
-                  value: controller.requiresAge18Plus.value,
-                  onChanged: (v) => controller.requiresAge18Plus.value = v,
-                )),
-                VerticalSpace(height: getHeight(20)),
+                Obx(
+                  () => SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Requires age 18+'),
+                    value: controller.requiresAge18Plus.value,
+                    onChanged: (v) => controller.requiresAge18Plus.value = v,
+                  ),
+                ),
+
+                // Concurrency Control
+                Obx(
+                  () => SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Enable Processing Overlap'),
+                    subtitle: const Text(
+                      'Allow bookings during processing time',
+                    ),
+                    value: controller.allowProcessingOverlap.value,
+                    onChanged: (v) =>
+                        controller.allowProcessingOverlap.value = v,
+                  ),
+                ),
+                Obx(() {
+                  if (!controller.allowProcessingOverlap.value)
+                    return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        text: "Provider Active Time (mins)",
+                        color: Color(0xff141414),
+                        fontSize: getWidth(15),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      SizedBox(height: getHeight(10)),
+                      CustomTexFormField(
+                        controller: controller.providerBlockMinutesTEController,
+                        hintText: "e.g., 20",
+                        isPhoneField: true,
+                        validator: (value) {
+                          if (!controller.allowProcessingOverlap.value)
+                            return null;
+                          if (value == null || value.trim().isEmpty)
+                            return 'Required';
+                          final v = int.tryParse(value.trim());
+                          final d = int.tryParse(
+                            controller.durationTEController.text.trim(),
+                          );
+                          if (v == null) return 'Invalid number';
+                          if (v < 0) return 'Must be 0 or more';
+                          if (d != null && v > d)
+                            return 'Cannot exceed duration';
+                          return null;
+                        },
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0, left: 4),
+                        child: ListenableBuilder(
+                          listenable:
+                              controller.providerBlockMinutesTEController,
+                          builder: (ctx, _) {
+                            final blockText = controller
+                                .providerBlockMinutesTEController
+                                .text;
+                            final durationText =
+                                controller.durationTEController.text;
+                            final block = int.tryParse(blockText) ?? 0;
+                            final duration = int.tryParse(durationText) ?? 0;
+                            final processing = duration - block;
+                            return Text(
+                              'Processing Time: ${processing > 0 ? processing : 0} mins',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      VerticalSpace(height: getHeight(20)),
+                    ],
+                  );
+                }),
+                VerticalSpace(height: getHeight(10)),
                 CustomText(
                   text: "Upload image",
                   color: Color(0xff141414),

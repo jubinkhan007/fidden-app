@@ -33,6 +33,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   late final double servicePrice;
   late final double? discountPrice;
   late int bookingId; // <-- Will hold the booking ID
+  late String currentStartAt; // NEW: Track the current start time
   final _openingSheet = false.obs;
 
   final controller = Get.put(BookingSummaryController());
@@ -108,6 +109,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
     if (bookingId == 0 && startAt.isNotEmpty) {
       controller.selectedSlotIso.value = startAt;
     }
+    currentStartAt = startAt; // Initialize with argument
 
     // Log an error if the bookingId is missing, for easier debugging
     if (bookingId == 0) {
@@ -490,7 +492,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                             : <int>[];
 
                         // RULE-BASED: Pass extra parameters
-                        final startAt = (Get.arguments as Map?)?['start_at'];
+                        // final startAt = (Get.arguments as Map?)?['start_at']; // Removed: using currentStartAt state
                         final serviceId =
                             (Get.arguments as Map?)?['service_id'] ??
                             (Get.arguments as Map?)?['serviceId'];
@@ -502,7 +504,8 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
 
                         controller.processPayment(
                           slotId: bookingId,
-                          startAt: startAt,
+                          startAt:
+                              currentStartAt, // DONE: Use mutable state variable
                           serviceId: serviceId,
                           shopId: shopId,
                           providerId: providerId,
@@ -835,6 +838,9 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                                 setState(() {
                                   bookingId = sel.id;
                                   selectedSlot = _slotFmt.format(localStart);
+                                  // Send the UTC ISO time to backend for the new slot
+                                  currentStartAt = sel.startTimeUtc
+                                      .toIso8601String();
                                 });
                                 Navigator.of(context).pop();
                               }
