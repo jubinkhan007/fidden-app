@@ -2,7 +2,6 @@
 
 import 'package:fidden/core/commom/widgets/custom_button.dart';
 
-
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/core/commom/widgets/custom_text_form_field.dart';
 import 'package:fidden/features/business_owner/profile/screens/widgets/cancellationPolicy_card.dart';
@@ -22,6 +21,7 @@ import '../controller/busines_owner_profile_controller.dart';
 import '../data/business_profile_model.dart';
 import '../widgets/per_day_hours_card.dart';
 import 'map_screen.dart';
+import 'package:fidden/features/business_owner/team/presentation/screens/manage_team_screen.dart'; // NEW
 import 'package:fidden/core/services/location_service.dart';
 import '../../../../core/utils/timezone_helper.dart';
 
@@ -41,15 +41,13 @@ class _EditBusinessOwnerProfileScreenState
   final aboutUsTEController = TextEditingController();
   final capacityTEController = TextEditingController();
   final locationTEController = TextEditingController();
-    final _freeHCtrl = TextEditingController();
+  final _freeHCtrl = TextEditingController();
   final _feePctCtrl = TextEditingController();
   final _noRefHCtrl = TextEditingController();
   final _depositPercentageCtrl = TextEditingController();
   final _depositError = ''.obs;
 
   late final Worker _profileSub;
-
-
 
   @override
   void initState() {
@@ -61,19 +59,22 @@ class _EditBusinessOwnerProfileScreenState
       locationTEController.text = profileData.businessAddress ?? '';
       capacityTEController.text = profileData.capacity?.toString() ?? '';
       aboutUsTEController.text = profileData.details ?? '';
-          _freeHCtrl.text  = (profileData?.freeCancellationHours ?? 24).toString();
-    _feePctCtrl.text = (profileData?.cancellationFeePercentage ?? 0).toString();
-    _noRefHCtrl.text = (profileData?.noRefundHours ?? 0).toString();
-      _depositPercentageCtrl.text = profileData.defaultDepositPercentage?.toString() ?? '0';
+      _freeHCtrl.text = (profileData?.freeCancellationHours ?? 24).toString();
+      _feePctCtrl.text = (profileData?.cancellationFeePercentage ?? 0)
+          .toString();
+      _noRefHCtrl.text = (profileData?.noRefundHours ?? 0).toString();
+      _depositPercentageCtrl.text =
+          profileData.defaultDepositPercentage?.toString() ?? '0';
       controller1.defaultDepositPercentage.value = _depositPercentageCtrl.text;
 
-      controller1.isDepositRequired.value = profileData?.isDepositRequired ?? false;
-      
+      controller1.isDepositRequired.value =
+          profileData?.isDepositRequired ?? false;
+
       // Load timezone from profile
       if (profileData.timeZone != null && profileData.timeZone!.isNotEmpty) {
         controller1.timeZone.value = profileData.timeZone!;
       }
-      
+
       controller1.ensureBusinessHoursForOpenDays();
     }
     // <-- ADD THIS SUBSCRIPTION
@@ -89,7 +90,7 @@ class _EditBusinessOwnerProfileScreenState
         }
       }
 
-      putInt(_freeHCtrl,  d.freeCancellationHours);
+      putInt(_freeHCtrl, d.freeCancellationHours);
       putInt(_feePctCtrl, d.cancellationFeePercentage);
       putInt(_noRefHCtrl, d.noRefundHours);
 
@@ -97,11 +98,13 @@ class _EditBusinessOwnerProfileScreenState
       final dep = d.defaultDepositPercentage?.toString() ?? '0';
       if (_depositPercentageCtrl.text != dep) {
         _depositPercentageCtrl.text = dep;
-        _depositPercentageCtrl.selection = TextSelection.collapsed(offset: dep.length);
+        _depositPercentageCtrl.selection = TextSelection.collapsed(
+          offset: dep.length,
+        );
       }
       controller1.isDepositRequired.value = d.isDepositRequired ?? false;
       controller1.defaultDepositPercentage.value = dep;
-      
+
       // Load timezone from profile
       if (d.timeZone != null && d.timeZone!.isNotEmpty) {
         controller1.timeZone.value = d.timeZone!;
@@ -109,7 +112,6 @@ class _EditBusinessOwnerProfileScreenState
 
       setState(() {});
     });
-
   }
 
   @override
@@ -120,38 +122,44 @@ class _EditBusinessOwnerProfileScreenState
     capacityTEController.dispose();
     _depositPercentageCtrl.dispose();
     locationTEController.dispose();
-      _freeHCtrl.dispose();
-  _feePctCtrl.dispose();
-  _noRefHCtrl.dispose();
+    _freeHCtrl.dispose();
+    _feePctCtrl.dispose();
+    _noRefHCtrl.dispose();
     super.dispose();
   }
 
   void _showDeleteConfirmationDialog() {
-  Get.defaultDialog(
-    title: "Delete Profile",
-    middleText: "Are you sure you want to delete your business profile? This action cannot be undone.",
-    content: Obx(() => controller1.isDeleting.value
-        ? const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())
-        : const SizedBox.shrink()),
-    textConfirm: "Delete",
-    confirmTextColor: Colors.white,
-    textCancel: "Cancel",
-    onConfirm: controller1.isDeleting.value ? null : () async {
-      if (widget.id == null) return;
-      final ok = await controller1.deleteBusinessProfile(widget.id!);
+    Get.defaultDialog(
+      title: "Delete Profile",
+      middleText:
+          "Are you sure you want to delete your business profile? This action cannot be undone.",
+      content: Obx(
+        () => controller1.isDeleting.value
+            ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(),
+              )
+            : const SizedBox.shrink(),
+      ),
+      textConfirm: "Delete",
+      confirmTextColor: Colors.white,
+      textCancel: "Cancel",
+      onConfirm: controller1.isDeleting.value
+          ? null
+          : () async {
+              if (widget.id == null) return;
+              final ok = await controller1.deleteBusinessProfile(widget.id!);
 
-      // 1) close the confirm dialog
-      if (Get.isDialogOpen ?? false) Get.back();
+              // 1) close the confirm dialog
+              if (Get.isDialogOpen ?? false) Get.back();
 
-      if (ok) {
-        // 2) pop the EDIT screen and send result back to caller
-        if (mounted) Navigator.of(context).pop(true);
-      }
-    },
-  );
-}
-
-
+              if (ok) {
+                // 2) pop the EDIT screen and send result back to caller
+                if (mounted) Navigator.of(context).pop(true);
+              }
+            },
+    );
+  }
 
   // ---------- UI Helpers ----------
 
@@ -171,9 +179,7 @@ class _EditBusinessOwnerProfileScreenState
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon, size: 20),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
@@ -182,7 +188,10 @@ class _EditBusinessOwnerProfileScreenState
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Theme.of(context).primaryColor),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
       ),
       onChanged: onChanged,
     );
@@ -584,64 +593,63 @@ class _EditBusinessOwnerProfileScreenState
 
   // inside _EditBusinessOwnerProfileScreenState
 
-ButtonStyle _deleteBtnStyle() {
-  return ButtonStyle(
-    shape: MaterialStateProperty.all(const StadiumBorder()),
-    // outline color changes when disabled
-    side: MaterialStateProperty.resolveWith((states) {
-      final c = states.contains(MaterialState.disabled)
-          ? Colors.red.shade200
-          : Colors.red.shade400;
-      return BorderSide(color: c, width: 1.5);
-    }),
-    // text/icon color
-    foregroundColor: MaterialStateProperty.resolveWith((states) {
-      return states.contains(MaterialState.disabled)
-          ? Colors.red.shade300
-          : Colors.red.shade700;
-    }),
-    // subtle fill when disabled so it looks “off”
-    backgroundColor: MaterialStateProperty.resolveWith((states) {
-      return states.contains(MaterialState.disabled)
-          ? Colors.red.shade50
-          : Colors.transparent;
-    }),
-    overlayColor: MaterialStateProperty.resolveWith((states) {
-      if (states.contains(MaterialState.pressed)) {
-        return Colors.red.shade100.withOpacity(.20);
-      }
-      return null;
-    }),
-  );
-}
+  ButtonStyle _deleteBtnStyle() {
+    return ButtonStyle(
+      shape: MaterialStateProperty.all(const StadiumBorder()),
+      // outline color changes when disabled
+      side: MaterialStateProperty.resolveWith((states) {
+        final c = states.contains(MaterialState.disabled)
+            ? Colors.red.shade200
+            : Colors.red.shade400;
+        return BorderSide(color: c, width: 1.5);
+      }),
+      // text/icon color
+      foregroundColor: MaterialStateProperty.resolveWith((states) {
+        return states.contains(MaterialState.disabled)
+            ? Colors.red.shade300
+            : Colors.red.shade700;
+      }),
+      // subtle fill when disabled so it looks “off”
+      backgroundColor: MaterialStateProperty.resolveWith((states) {
+        return states.contains(MaterialState.disabled)
+            ? Colors.red.shade50
+            : Colors.transparent;
+      }),
+      overlayColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.pressed)) {
+          return Colors.red.shade100.withOpacity(.20);
+        }
+        return null;
+      }),
+    );
+  }
 
-ButtonStyle _saveBtnStyle() {
-  return ButtonStyle(
-    shape: MaterialStateProperty.all(const StadiumBorder()),
-    // label color
-    foregroundColor: MaterialStateProperty.resolveWith((states) {
-      return states.contains(MaterialState.disabled)
-          ? Colors.grey.shade600
-          : Colors.white;
-    }),
-    // background color
-    backgroundColor: MaterialStateProperty.resolveWith((states) {
-      return states.contains(MaterialState.disabled)
-          ? Colors.grey.shade300
-          : AppColors.primaryColor;
-    }),
-    elevation: MaterialStateProperty.resolveWith((states) {
-      return states.contains(MaterialState.disabled) ? 0 : 1;
-    }),
-    overlayColor: MaterialStateProperty.resolveWith((states) {
-      if (states.contains(MaterialState.pressed)) {
-        return Colors.white.withOpacity(.08);
-      }
-      return null;
-    }),
-  );
-}
-
+  ButtonStyle _saveBtnStyle() {
+    return ButtonStyle(
+      shape: MaterialStateProperty.all(const StadiumBorder()),
+      // label color
+      foregroundColor: MaterialStateProperty.resolveWith((states) {
+        return states.contains(MaterialState.disabled)
+            ? Colors.grey.shade600
+            : Colors.white;
+      }),
+      // background color
+      backgroundColor: MaterialStateProperty.resolveWith((states) {
+        return states.contains(MaterialState.disabled)
+            ? Colors.grey.shade300
+            : AppColors.primaryColor;
+      }),
+      elevation: MaterialStateProperty.resolveWith((states) {
+        return states.contains(MaterialState.disabled) ? 0 : 1;
+      }),
+      overlayColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.pressed)) {
+          return Colors.white.withOpacity(.08);
+        }
+        return null;
+      }),
+    );
+  }
 
   // ---------- Build ----------
 
@@ -657,8 +665,7 @@ ButtonStyle _saveBtnStyle() {
       'Sunday',
     ];
     final canEditDeposit = controller1.canEditDeposit; // Momentum or Icon
-    final canEditPolicy  = controller1.canEditPolicy;  // Icon only
-
+    final canEditPolicy = controller1.canEditPolicy; // Icon only
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -687,75 +694,90 @@ ButtonStyle _saveBtnStyle() {
       ),
       // Sticky bottom actions
       bottomNavigationBar: Obx(() {
-  final isPending = controller1.profileDetails.value.data?.status == 'pending';
+        final isPending =
+            controller1.profileDetails.value.data?.status == 'pending';
 
-  return SafeArea(
-    top: false,
-    child: Container(
-      height: 76,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
-        children: [
-          // DELETE
-          Expanded(
-            child: SizedBox(
-              height: 48,
-              child: OutlinedButton(
-                style: _deleteBtnStyle(),
-                onPressed: isPending ? null : _showDeleteConfirmationDialog,
-                child: const Text('Delete'),
-              ),
+        return SafeArea(
+          top: false,
+          child: Container(
+            height: 76,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: Row(
+              children: [
+                // DELETE
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      style: _deleteBtnStyle(),
+                      onPressed: isPending
+                          ? null
+                          : _showDeleteConfirmationDialog,
+                      child: const Text('Delete'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // SAVE & CONTINUE
+                Expanded(
+                  flex: 2,
+                  child: SizedBox(
+                    height: 48,
+                    // If you must keep CustomButton, see NOTE below
+                    child: FilledButton(
+                      style: _saveBtnStyle(),
+                      onPressed: isPending
+                          ? null
+                          : () {
+                              controller1.freeCancellationHours.value =
+                                  _freeHCtrl.text.trim();
+                              controller1.cancellationFeePercentage.value =
+                                  _feePctCtrl.text.trim();
+                              controller1.noRefundHours.value = _noRefHCtrl.text
+                                  .trim();
+
+                              // Deposit: parse as INT and validate 1–100
+                              final p =
+                                  int.tryParse(
+                                    _depositPercentageCtrl.text.trim(),
+                                  ) ??
+                                  0;
+                              if (p < 1 || p > 100) {
+                                Get.snackbar(
+                                  'Invalid deposit',
+                                  'Deposit % must be between 1 and 100',
+                                );
+                                return;
+                              }
+                              controller1.defaultDepositPercentage.value = p
+                                  .toString(); // "68", not "68.0"
+                              controller1.syncOpenDaysFromBH();
+                              controller1.updateBusinessProfile(
+                                businessName: nameTEController.text,
+                                businessAddress: locationTEController.text,
+                                aboutUs: aboutUsTEController.text,
+                                capacity: capacityTEController.text,
+                                id: widget.id.toString(),
+                                openDays: controller1.openDays.toList(),
+                                closeDays: const [],
+                                startAt: controller1.startTime.value,
+                                closeAt: controller1.endTime.value,
+                              );
+                            },
+                      child: const Text('Save & Continue'),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-
-          // SAVE & CONTINUE
-          Expanded(
-            flex: 2,
-            child: SizedBox(
-              height: 48,
-              // If you must keep CustomButton, see NOTE below
-              child: FilledButton(
-                style: _saveBtnStyle(),
-                onPressed: isPending ? null : () {
-  controller1.freeCancellationHours.value     = _freeHCtrl.text.trim();
-  controller1.cancellationFeePercentage.value = _feePctCtrl.text.trim();
-  controller1.noRefundHours.value             = _noRefHCtrl.text.trim();
-
-  // Deposit: parse as INT and validate 1–100
-  final p = int.tryParse(_depositPercentageCtrl.text.trim()) ?? 0;
-  if (p < 1 || p > 100) {
-    Get.snackbar('Invalid deposit', 'Deposit % must be between 1 and 100');
-    return;
-  }
-  controller1.defaultDepositPercentage.value = p.toString(); // "68", not "68.0"
-  controller1.syncOpenDaysFromBH();
-  controller1.updateBusinessProfile(
-    businessName: nameTEController.text,
-    businessAddress: locationTEController.text,
-    aboutUs: aboutUsTEController.text,
-    capacity: capacityTEController.text,
-    id: widget.id.toString(),
-    openDays: controller1.openDays.toList(),
-    closeDays: const [],
-    startAt: controller1.startTime.value,
-    closeAt: controller1.endTime.value,
-  );
-},
-                child: const Text('Save & Continue'),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}),
-
+        );
+      }),
 
       body: Obx(() {
         final profileData = controller1.profileDetails.value.data;
@@ -876,6 +898,35 @@ ButtonStyle _saveBtnStyle() {
                   ],
                 ),
                 _sectionCard(
+                  title: 'Establishment Team',
+                  subtitle: 'Manage your staff members and providers',
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.people_outline,
+                          color: AppColors.primaryColor,
+                        ),
+                      ),
+                      title: const Text(
+                        "Manage Team Members",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: const Text(
+                        "Add, remove, or edit staff details",
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () => Get.to(() => const ManageTeamScreen()),
+                    ),
+                  ],
+                ),
+                _sectionCard(
                   title: 'Location',
                   subtitle: 'Choose from map or use your current location.',
                   children: [_addressPicker(disabled: isPending)],
@@ -941,10 +992,12 @@ ButtonStyle _saveBtnStyle() {
                                       ),
                                     );
                                     if (t != null) {
-                                      controller1.onDefaultTimeChanged(isStart: true, value: t.format(context));
+                                      controller1.onDefaultTimeChanged(
+                                        isStart: true,
+                                        value: t.format(context),
+                                      );
                                     }
-
-                            },
+                                  },
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -976,7 +1029,10 @@ ButtonStyle _saveBtnStyle() {
                                       ),
                                     );
                                     if (t != null) {
-                                      controller1.onDefaultTimeChanged(isStart: false, value: t.format(context));
+                                      controller1.onDefaultTimeChanged(
+                                        isStart: false,
+                                        value: t.format(context),
+                                      );
                                     }
                                   },
                           ),
@@ -987,35 +1043,49 @@ ButtonStyle _saveBtnStyle() {
 
                     // Timezone dropdown
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         border: Border.all(color: const Color(0xFFE0E0E0)),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Obx(() => DropdownButtonFormField<String>(
-                        value: TimezoneHelper.isSupported(controller1.timeZone.value)
-                            ? controller1.timeZone.value
-                            : 'America/New_York',
-                        decoration: const InputDecoration(
-                          labelText: 'Shop Timezone',
-                          border: InputBorder.none,
-                          helperText: 'Timezone for slot generation',
-                          helperMaxLines: 2,
+                      child: Obx(
+                        () => DropdownButtonFormField<String>(
+                          value:
+                              TimezoneHelper.isSupported(
+                                controller1.timeZone.value,
+                              )
+                              ? controller1.timeZone.value
+                              : 'America/New_York',
+                          decoration: const InputDecoration(
+                            labelText: 'Shop Timezone',
+                            border: InputBorder.none,
+                            helperText: 'Timezone for slot generation',
+                            helperMaxLines: 2,
+                          ),
+                          items: TimezoneHelper.usTimezones
+                              .map(
+                                (tz) => DropdownMenuItem(
+                                  value: tz['value'],
+                                  child: Text(tz['label']!),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: isPending
+                              ? null
+                              : (value) {
+                                  if (value != null) {
+                                    controller1.timeZone.value = value;
+                                  }
+                                },
                         ),
-                        items: TimezoneHelper.usTimezones.map((tz) => DropdownMenuItem(
-                          value: tz['value'],
-                          child: Text(tz['label']!),
-                        )).toList(),
-                        onChanged: isPending ? null : (value) {
-                          if (value != null) {
-                            controller1.timeZone.value = value;
-                          }
-                        },
-                      )),
+                      ),
                     ),
 
                     const SizedBox(height: 24),
-                    
+
                     // ========== Social Links Section ==========
                     CustomText(
                       text: "Social Links",
@@ -1030,47 +1100,55 @@ ButtonStyle _saveBtnStyle() {
                       fontSize: getWidth(13),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Instagram
                     _socialLinkField(
                       label: "Instagram URL",
                       hint: "https://instagram.com/yourhandle",
                       icon: Icons.camera_alt_outlined,
                       value: controller1.instagramUrl.value,
-                      onChanged: isPending ? null : (v) => controller1.instagramUrl.value = v,
+                      onChanged: isPending
+                          ? null
+                          : (v) => controller1.instagramUrl.value = v,
                       enabled: !isPending,
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // TikTok
                     _socialLinkField(
                       label: "TikTok URL",
                       hint: "https://tiktok.com/@yourhandle",
                       icon: Icons.music_note_outlined,
                       value: controller1.tiktokUrl.value,
-                      onChanged: isPending ? null : (v) => controller1.tiktokUrl.value = v,
+                      onChanged: isPending
+                          ? null
+                          : (v) => controller1.tiktokUrl.value = v,
                       enabled: !isPending,
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // YouTube
                     _socialLinkField(
                       label: "YouTube URL",
                       hint: "https://youtube.com/@yourchannel",
                       icon: Icons.play_circle_outline,
                       value: controller1.youtubeUrl.value,
-                      onChanged: isPending ? null : (v) => controller1.youtubeUrl.value = v,
+                      onChanged: isPending
+                          ? null
+                          : (v) => controller1.youtubeUrl.value = v,
                       enabled: !isPending,
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Website
                     _socialLinkField(
                       label: "Website URL",
                       hint: "https://yourwebsite.com",
                       icon: Icons.language,
                       value: controller1.websiteUrl.value,
-                      onChanged: isPending ? null : (v) => controller1.websiteUrl.value = v,
+                      onChanged: isPending
+                          ? null
+                          : (v) => controller1.websiteUrl.value = v,
                       enabled: !isPending,
                     ),
 
@@ -1149,7 +1227,10 @@ ButtonStyle _saveBtnStyle() {
                         padding: const EdgeInsets.only(top: 6.0),
                         child: Text(
                           'Upgrade to Icon to edit cancellation policy.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ),
                   ],
@@ -1176,25 +1257,32 @@ ButtonStyle _saveBtnStyle() {
                               // ),
                               const SizedBox(height: 8),
                               TextFormField(
-  controller: _depositPercentageCtrl,
-  keyboardType: TextInputType.number,
-  inputFormatters: [
-    FilteringTextInputFormatter.digitsOnly,
-    LengthLimitingTextInputFormatter(3),
-  ],
-  decoration: InputDecoration(
-    labelText: 'Deposit %',
-    hintText: 'e.g., 20',
-    border: const OutlineInputBorder(),
-    helperText: _depositError.value.isEmpty ? 'Enter 1-100 (%)' : null,
-    errorText: _depositError.value.isEmpty ? null : _depositError.value,
-  ),
-  onChanged: (v) {
-    controller1.defaultDepositPercentage.value = v;
-    final p = int.tryParse(v) ?? 0;
-    _depositError.value = (p < 1 || p > 100) ? 'Deposit % must be 1-100' : '';
-  },
-),
+                                controller: _depositPercentageCtrl,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(3),
+                                ],
+                                decoration: InputDecoration(
+                                  labelText: 'Deposit %',
+                                  hintText: 'e.g., 20',
+                                  border: const OutlineInputBorder(),
+                                  helperText: _depositError.value.isEmpty
+                                      ? 'Enter 1-100 (%)'
+                                      : null,
+                                  errorText: _depositError.value.isEmpty
+                                      ? null
+                                      : _depositError.value,
+                                ),
+                                onChanged: (v) {
+                                  controller1.defaultDepositPercentage.value =
+                                      v;
+                                  final p = int.tryParse(v) ?? 0;
+                                  _depositError.value = (p < 1 || p > 100)
+                                      ? 'Deposit % must be 1-100'
+                                      : '';
+                                },
+                              ),
                             ],
                           ),
                         ),
@@ -1205,12 +1293,14 @@ ButtonStyle _saveBtnStyle() {
                         padding: const EdgeInsets.only(top: 6.0),
                         child: Text(
                           'Upgrade to Momentum or Icon to edit deposit.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ),
                   ],
                 ),
-
 
                 // Attach docs section (kept simple)
                 _sectionCard(

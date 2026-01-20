@@ -12,11 +12,11 @@ class CustomTexFormField extends StatefulWidget {
     this.controller,
     this.validator,
     this.isPassword = false,
-    this.obscureText,                // controlled obscure flag (optional)
+    this.obscureText, // controlled obscure flag (optional)
     this.maxLines = 1,
     this.radius,
     this.prefixIcon,
-    this.prefixIconConstraints,      // <-- NEW
+    this.prefixIconConstraints, // <-- NEW
     this.onChange,
     this.onTap,
     this.readOnly = false,
@@ -25,15 +25,15 @@ class CustomTexFormField extends StatefulWidget {
     this.isPhoneField = false,
     this.contentPadding,
     this.onFieldSubmitted,
-    this.keyboardType,               // <-- NEW
-    this.textAlign,                  // <-- NEW
+    this.keyboardType, // <-- NEW
+    this.textAlign, // <-- NEW
   });
 
   final String? hintText;
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final bool isPassword;
-  final bool? obscureText;           // controlled by parent if provided
+  final bool? obscureText; // controlled by parent if provided
   final int maxLines;
   final InputDecoration? inputDecoration;
   final double? radius;
@@ -47,7 +47,7 @@ class CustomTexFormField extends StatefulWidget {
   final EdgeInsetsGeometry? contentPadding;
   final void Function(String)? onFieldSubmitted;
   final TextInputType? keyboardType; // <-- NEW
-  final TextAlign? textAlign;        // <-- NEW
+  final TextAlign? textAlign; // <-- NEW
 
   @override
   State<CustomTexFormField> createState() => _CustomTexFormFieldState();
@@ -62,7 +62,8 @@ class _CustomTexFormFieldState extends State<CustomTexFormField> {
     final effectiveObscure =
         widget.obscureText ?? (widget.isPassword ? _obscureText : false);
 
-    final baseDeco = widget.inputDecoration ??
+    final baseDeco =
+        widget.inputDecoration ??
         InputDecoration(
           prefixIcon: widget.prefixIcon,
           filled: true,
@@ -71,7 +72,8 @@ class _CustomTexFormFieldState extends State<CustomTexFormField> {
             fontSize: getWidth(14),
             fontWeight: FontWeight.w500,
           ),
-          contentPadding: widget.contentPadding ??
+          contentPadding:
+              widget.contentPadding ??
               const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
           hintText: widget.hintText,
           hintStyle: const TextStyle(color: Color(0xFF84828E), fontSize: 16),
@@ -97,17 +99,18 @@ class _CustomTexFormFieldState extends State<CustomTexFormField> {
           ),
         );
 
-    final suffix = widget.suffixIcon ??
+    final suffix =
+        widget.suffixIcon ??
         (widget.isPassword && widget.obscureText == null
             ? IconButton(
-          icon: Icon(
-            effectiveObscure
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-            color: Colors.blue.withAlpha(150),
-          ),
-          onPressed: () => setState(() => _obscureText = !_obscureText),
-        )
+                icon: Icon(
+                  effectiveObscure
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: Colors.blue.withAlpha(150),
+                ),
+                onPressed: () => setState(() => _obscureText = !_obscureText),
+              )
             : null);
 
     return TextFormField(
@@ -121,16 +124,21 @@ class _CustomTexFormFieldState extends State<CustomTexFormField> {
       validator: widget.validator,
       obscureText: effectiveObscure,
       obscuringCharacter: '•',
-      keyboardType: widget.keyboardType ??
-          (widget.isPassword ? TextInputType.visiblePassword : TextInputType.text), // <-- fixed
-      textAlign: widget.textAlign ?? TextAlign.start,                                   // <-- fixed
+      keyboardType:
+          widget.keyboardType ??
+          (widget.isPassword
+              ? TextInputType.visiblePassword
+              : TextInputType.text),
+      textAlign: widget.textAlign ?? TextAlign.start,
       enableSuggestions: !effectiveObscure,
       autocorrect: !effectiveObscure,
       style: getTextStyleMsrt(),
+      // Fix for iOS SystemContextMenu crash - use material selection controls
+      selectionControls: MaterialTextSelectionControls(),
       decoration: baseDeco.copyWith(
         suffixIcon: suffix,
         prefixIcon: widget.prefixIcon,
-        prefixIconConstraints: widget.prefixIconConstraints, // <-- fixed
+        prefixIconConstraints: widget.prefixIconConstraints,
       ),
     );
   }

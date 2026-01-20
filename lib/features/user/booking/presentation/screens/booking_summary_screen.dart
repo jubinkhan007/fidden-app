@@ -36,6 +36,7 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
   late int bookingId; // <-- Will hold the booking ID
   late int shopId; // <-- Store shopId
   late String serviceNiche; // Service niche category for design request
+  late String currentStartAt; // NEW: Track the current start time
   final _openingSheet = false.obs;
 
   final controller = Get.put(BookingSummaryController());
@@ -102,11 +103,22 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
 
     // Extract shopId like you already do elsewhere
     final booking = (args['booking'] as Map<String, dynamic>?) ?? {};
-    shopId = booking['shop_id'] as int? ?? args['shopId'] as int? ?? 0;
+    shopId =
+        booking['shop_id'] as int? ??
+        args['shopId'] as int? ??
+        args['shop_id'] as int? ??
+        0;
 
     if (shopId > 0) {
       controller.fetchPolicy(shopId); // <-- fetch immediately
     }
+
+    final startAt = args['start_at'] as String? ?? '';
+    // Seed controller state if rule-based
+    if (bookingId == 0 && startAt.isNotEmpty) {
+      controller.selectedSlotIso.value = startAt;
+    }
+    currentStartAt = startAt; // Initialize with argument
 
     // Log an error if the bookingId is missing, for easier debugging
     if (bookingId == 0) {
@@ -573,9 +585,22 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                                   .toList()
                             : <int>[];
 
+                        // RULE-BASED: Pass extra parameters
+                        // final startAt = (Get.arguments as Map?)?['start_at']; // Removed: using currentStartAt state
+                        final serviceId =
+                            (Get.arguments as Map?)?['service_id'] ??
+                            (Get.arguments as Map?)?['serviceId'];
+                        // final shopId = ... already parsed in init
+                        final providerId =
+                            (Get.arguments as Map?)?['provider_id'];
+
                         controller.processPayment(
                           slotId: bookingId,
+                          startAt:
+                              currentStartAt, // DONE: Use mutable state variable
+                          serviceId: serviceId,
                           shopId: shopId,
+                          providerId: providerId,
                           couponId: _appliedCoupon?.id,
                           addOnIds: addOnIds,
                           successArgs: {
@@ -870,13 +895,13 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                           spacing: 10,
                           runSpacing: 10,
                           children: c.slots.map((s) {
-                            final isSel = c.selectedSlotId.value == s.id;
+                            final isSel = c.isSlotSelected(s);
                             final label = c.fmtTimeLocal(s.startTimeUtc);
                             return TimeChip(
                               text: label,
                               selected: isSel,
                               available: s.available,
-                              onTap: () => c.selectedSlotId.value = s.id,
+                              onTap: () => c.selectSlot(s),
                             );
                           }).toList(),
                         ),
@@ -896,16 +921,18 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                       child: ElevatedButton(
                         onPressed: canUpdate
                             ? () {
-                                final selId = c.selectedSlotId.value!;
                                 final sel = c.slots.firstWhere(
-                                  (e) => e.id == selId,
+                                  (e) => c.isSlotSelected(e),
                                 );
                                 final localStart = c.toShopTz(
                                   sel.startTimeUtc,
                                 ); // Use shop timezone, not device local
                                 setState(() {
-                                  bookingId = selId;
+                                  bookingId = sel.id; // May be 0 if rule-based
                                   selectedSlot = _slotFmt.format(localStart);
+                                  // Send the UTC ISO time to backend for the new slot
+                                  currentStartAt = sel.startTimeUtc
+                                      .toIso8601String();
                                 });
                                 Navigator.of(context).pop();
                               }

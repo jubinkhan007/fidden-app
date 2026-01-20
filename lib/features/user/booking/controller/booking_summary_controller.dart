@@ -27,6 +27,8 @@ class BookingSummaryController extends GetxController {
   final isPaying = false.obs;
 
   // NEW: holds the server booking id once we get it from paymentIntent
+  final RxnInt selectedSlotId = RxnInt();
+  final RxnString selectedSlotIso = RxnString();
   final RxInt paymentBookingId = 0.obs;
   final Rxn<ShopPolicy> policy = Rxn<ShopPolicy>();
 
@@ -44,9 +46,16 @@ class BookingSummaryController extends GetxController {
   final RxInt defaultDepositPercentage = 0.obs;
 
   double getDepositAmount(double totalAmount) {
-    if (!isDepositRequired.value || defaultDepositPercentage.value <= 0)
+    debugPrint(
+      '💰 getDepositAmount: total=$totalAmount, required=${isDepositRequired.value}, pct=${defaultDepositPercentage.value}',
+    );
+    if (!isDepositRequired.value || defaultDepositPercentage.value <= 0) {
+      debugPrint('💰 getDepositAmount: Returning 0 (not required or 0%)');
       return 0;
-    return (totalAmount * defaultDepositPercentage.value) / 100;
+    }
+    final d = (totalAmount * defaultDepositPercentage.value) / 100;
+    debugPrint('💰 getDepositAmount: Calculated=$d');
+    return d;
   }
 
   // NEW: Design Request Link
@@ -90,41 +99,161 @@ class BookingSummaryController extends GetxController {
   }
 
   Future<void> processPayment({
-    required int slotId,
-    required int shopId, // NEW
+    required int slotId, // Legacy but kept for compatibility
+    // Rule-Based Args
+    String? startAt,
+    int? serviceId,
+    required int shopId, // REQUIRED Now
+    int? providerId,
+    String? timezoneId,
     int? couponId,
     List<int>? addOnIds,
     Map<String, dynamic>? successArgs,
   }) async {
-    if (selectedPaymentMethod.value == 'paypal') {
-      await _payWithPayPal(
-        slotId: slotId,
+    isPaying.value = true;
+    try {
+      // 1. Create Booking First
+      // Pass null for providerId if it wasn't selected (Any Provider)
+      // The backend handles assignment if provider is missing but shop/service is there
+      final bookingId = await _createBooking(
+        startAt: startAt,
+        serviceId: serviceId,
         shopId: shopId,
-        couponId: couponId,
-        addOnIds: addOnIds,
-        successArgs: successArgs,
+        providerId: providerId,
+        timezoneId: timezoneId,
+        note: successArgs?['note'],
       );
+
+      if (bookingId == null) {
+        return; // Error shown in helper
+      }
+
+      paymentBookingId.value = bookingId;
+
+      // 2. Process Payment with Booking ID
+      if (selectedPaymentMethod.value == 'paypal') {
+        await _payWithPayPal(
+          bookingId: bookingId,
+          shopId: shopId,
+          couponId: couponId,
+          addOnIds: addOnIds,
+          successArgs: successArgs,
+        );
+      } else {
+        await _payWithStripe(
+          bookingId: bookingId,
+          shopId: shopId, // Pass for design requests if needed
+          couponId: couponId,
+          addOnIds: addOnIds,
+          successArgs: successArgs,
+        );
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'An unexpected error occurred: $e');
+    } finally {
+      isPaying.value = false;
+    }
+  }
+
+  // NEW: Create booking via Rule-Based API
+  Future<int?> _createBooking({
+    required String? startAt,
+    required int? serviceId,
+    required int? shopId,
+    required int? providerId,
+    String? timezoneId,
+    String? note,
+  }) async {
+    if (startAt == null || serviceId == null || shopId == null) {
+      Get.snackbar(
+        'Error',
+        'Missing booking details (start time, service, or shop)',
+      );
+      return null;
+    }
+
+    final body = {
+      'shop_id': shopId,
+      'service_id': serviceId,
+      'start_at': startAt,
+      // 'timezone_id': timezoneId, // Optional validation
+      if (providerId != null) 'provider_id': providerId,
+      if (note != null) 'note': note,
+    };
+
+    // DEBUG: Log the booking request payload
+    debugPrint('📅 _createBooking: Sending payload = $body');
+
+    final res = await NetworkCaller().postRequest(
+      AppUrls.bookings,
+      token: AuthService.accessToken,
+      body: body,
+    );
+
+    // DEBUG: Log API response
+    debugPrint(
+      '📅 _createBooking: Status=${res.statusCode}, Success=${res.isSuccess}',
+    );
+    debugPrint('📅 _createBooking: Response=${res.responseData}');
+
+    if (res.isSuccess && res.responseData is Map<String, dynamic>) {
+      final rawBookingId = res.responseData['booking_id'];
+      final rawSlotId = res.responseData['slot_id'];
+
+      final id = (rawBookingId is int)
+          ? rawBookingId
+          : int.tryParse('$rawBookingId');
+
+      return id;
     } else {
-      await _payWithStripe(
-        slotId: slotId,
-        shopId: shopId,
-        couponId: couponId,
-        addOnIds: addOnIds,
-        successArgs: successArgs,
-      );
+      // Handle Specific Errors
+      if (res.statusCode == 409) {
+        debugPrint('📅 _createBooking: 409 Conflict - Slot unavailable');
+        Get.snackbar(
+          'Slot Unavailable',
+          'This slot is no longer available. Please choose another time.',
+        );
+      } else if (res.statusCode == 400 &&
+          res.errorMessage?.contains('INVALID_TIME') == true) {
+        Get.snackbar(
+          'Invalid Time',
+          "That time is not available due to daylight savings. Please pick another time.",
+        );
+      } else {
+        Get.snackbar(
+          'Booking Error',
+          res.errorMessage ?? 'Failed to create booking.',
+        );
+      }
+      return null;
     }
   }
 
   Future<void> fetchPolicy(int shopId) async {
-    if (shopId <= 0) return;
+    if (shopId <= 0) {
+      debugPrint('💰 fetchPolicy: Invalid shopId=$shopId, skipping.');
+      return;
+    }
     try {
+      debugPrint('💰 fetchPolicy: Fetching policy for shopId=$shopId');
       final res = await NetworkCaller().getRequest(
         AppUrls.shopDetails(shopId.toString()),
         token: AuthService.accessToken,
       );
-      if (!res.isSuccess || res.responseData is! Map<String, dynamic>) return;
+      if (!res.isSuccess || res.responseData is! Map<String, dynamic>) {
+        debugPrint('💰 fetchPolicy: API failed or returned non-Map data');
+        return;
+      }
 
       final m = res.responseData as Map<String, dynamic>;
+
+      // DEBUG: Log raw deposit fields from API
+      debugPrint(
+        '💰 fetchPolicy: Raw is_deposit_required = ${m['is_deposit_required']}',
+      );
+      debugPrint(
+        '💰 fetchPolicy: Raw default_deposit_percentage = ${m['default_deposit_percentage']}',
+      );
 
       // keys must be present in your ShopDetailSerializer (backend):
       // free_cancellation_hours, cancellation_fee_percentage, no_refund_hours
@@ -144,30 +273,32 @@ class BookingSummaryController extends GetxController {
           m['is_deposit_required'] == 'true';
       defaultDepositPercentage.value =
           (m['default_deposit_percentage'] as num?)?.toInt() ?? 0;
-    } catch (_) {
-      // swallow or log
+
+      debugPrint(
+        '💰 fetchPolicy: Parsed isDepositRequired=${isDepositRequired.value}',
+      );
+      debugPrint(
+        '💰 fetchPolicy: Parsed defaultDepositPercentage=${defaultDepositPercentage.value}',
+      );
+    } catch (e) {
+      debugPrint('💰 fetchPolicy: Error = $e');
     }
   }
 
-  // --- STRIPE LOGIC (Your existing payForBooking logic moved here) ---
+  // --- STRIPE LOGIC (Updated to use bookingId) ---
   Future<void> _payWithStripe({
-    required int slotId,
+    required int bookingId,
     required int shopId,
     int? couponId,
     List<int>? addOnIds,
     Map<String, dynamic>? successArgs,
   }) async {
-    if (slotId == 0) {
-      Get.snackbar('Error', 'Missing booking id');
+    if (bookingId == 0) {
+      Get.snackbar('Error', 'Invalid booking ID');
       return;
     }
-    isPaying.value = true;
 
     try {
-      // ... [PASTE YOUR ORIGINAL payForBooking LOGIC HERE] ...
-      // Make sure to use 'AppUrls.paymentIntent(slotId)'
-      // and handle Stripe.instance.presentPaymentSheet()
-      // ---------------------------------------------------
       final body = <String, dynamic>{};
       if (couponId != null && couponId > 0) body['coupon_id'] = couponId;
       if (addOnIds != null && addOnIds.isNotEmpty)
@@ -182,7 +313,7 @@ class BookingSummaryController extends GetxController {
       }
 
       final res = await NetworkCaller().postRequest(
-        AppUrls.paymentIntent(slotId),
+        AppUrls.paymentIntent(bookingId),
         token: AuthService.accessToken,
         body: body,
       );
@@ -193,7 +324,7 @@ class BookingSummaryController extends GetxController {
       }
 
       final data = res.responseData as Map<String, dynamic>;
-      final bookingId = data['booking_id'] as int?;
+      // bookingId is already passed in argument, no need to re-read or shadow
       final clientSecret = data['client_secret'].toString();
       final ephemeralKey = data['ephemeral_key'].toString();
       final customerId = data['customer_id'].toString();
@@ -238,7 +369,7 @@ class BookingSummaryController extends GetxController {
 
   // --- NEW PAYPAL LOGIC ---
   Future<void> _payWithPayPal({
-    required int slotId,
+    required int bookingId,
     required int shopId,
     int? couponId,
     List<int>? addOnIds,
@@ -259,7 +390,7 @@ class BookingSummaryController extends GetxController {
 
       // 1. Create Order
       final res = await NetworkCaller().postRequest(
-        AppUrls.createPayPalOrder(slotId.toString()),
+        AppUrls.createPayPalOrder(bookingId.toString()),
         token: AuthService.accessToken,
         body: body,
       );
@@ -273,11 +404,10 @@ class BookingSummaryController extends GetxController {
       final data = res.responseData;
       final String approveUrl = data['approve_url'];
       final String orderId = data['order_id'];
-      final int bookingId = data['booking_id'];
 
       paymentBookingId.value = bookingId; // Store for cancel logic
 
-      // 2. Open WebView©∫
+      // 2. Open WebView
       final bool? approved = await Get.to(
         () => PayPalWebViewScreen(url: approveUrl),
       );
@@ -361,6 +491,31 @@ class BookingSummaryController extends GetxController {
       }
     } catch (e) {
       debugPrint('[cancelBooking] error: $e');
+    }
+  }
+
+  bool isSlotSelected(dynamic slot) {
+    // slot can be SlotItem from time_slots_model.dart
+    final String? slotIso = (slot as dynamic).startTimeUtcIso;
+    final int? slotId = (slot as dynamic).id;
+
+    if (slotId != null && slotId != 0) {
+      return selectedSlotId.value == slotId;
+    } else {
+      return selectedSlotIso.value != null && selectedSlotIso.value == slotIso;
+    }
+  }
+
+  void selectSlot(dynamic slot) {
+    final String? slotIso = (slot as dynamic).startTimeUtcIso;
+    final int? slotId = (slot as dynamic).id;
+
+    if (slotId != null && slotId != 0) {
+      selectedSlotId.value = slotId;
+      selectedSlotIso.value = null;
+    } else {
+      selectedSlotId.value = null;
+      selectedSlotIso.value = slotIso;
     }
   }
 }

@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:fidden/routes/app_routes.dart';
@@ -9,14 +7,12 @@ import 'core/bindings/controller_binder.dart';
 import 'core/theme/theme.dart';
 import 'core/utils/constants/app_sizes.dart';
 
-
 class PlatformUtils {
   static bool get isIOS =>
       foundation.defaultTargetPlatform == TargetPlatform.iOS;
   static bool get isAndroid =>
       foundation.defaultTargetPlatform == TargetPlatform.android;
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -32,11 +28,23 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.light,
       theme: _getLightTheme(),
       darkTheme: _getDarkTheme(),
-      defaultTransition:
-      PlatformUtils.isIOS ? Transition.cupertino : Transition.fade,
+      defaultTransition: PlatformUtils.isIOS
+          ? Transition.cupertino
+          : Transition.fade,
       locale: Get.deviceLocale,
-      builder: (context, child) => PlatformUtils.isIOS
-          ? CupertinoTheme(data: const CupertinoThemeData(brightness: Brightness.light), child: child!): child!,
+      builder: (context, child) {
+        // Wrap with MediaQuery to ensure proper context for system widgets
+        final wrappedChild = MediaQuery(
+          data: MediaQuery.of(context),
+          child: child ?? const SizedBox.shrink(),
+        );
+        return PlatformUtils.isIOS
+            ? CupertinoTheme(
+                data: const CupertinoThemeData(brightness: Brightness.light),
+                child: wrappedChild,
+              )
+            : wrappedChild;
+      },
     );
   }
 

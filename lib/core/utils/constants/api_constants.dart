@@ -5,10 +5,18 @@ import 'dart:developer';
 class AppUrls {
   AppUrls._();
 
+  // REMOTE (Phase 2)
   static const String _baseUrl = 'https://phase2.fidden.io';
+
+  // LOCAL (For testing fixes)
+  // Use http://10.0.2.2:8000 for Android Emulator
+  // Use http://127.0.0.1:8000 for iOS Simulator
+  // static const String _baseUrl = 'http://127.0.0.1:8000';
+
   static String socketUrl(String accessToken) {
     log("accessToke ${accessToken}");
     return 'wss://phase2.fidden.io/ws/chat/?token=$accessToken';
+    // return 'ws://127.0.0.1:8000/ws/chat/?token=$accessToken';
   }
 
   static String sendToShop(int shopId) => '$_baseUrl/api/threads/$shopId/send/';
@@ -194,13 +202,41 @@ class AppUrls {
   // booking
   static getServiceTime({required String businessId, required String date}) =>
       '$_baseUrl/available-schedule?businessId=$businessId&date=$date';
-  static const String createBooking = '$_baseUrl/booking/create';
+  static const String createBooking =
+      '$_baseUrl/booking/create'; // Legacy or unused?
+  static const String bookings =
+      '$_baseUrl/api/bookings/'; // NEW Rule-based booking creation
   static const String slotBooking = '$_baseUrl/api/slot-booking/';
   static const String createCustomerForm = '$_baseUrl/customer-form/create';
   static String cancelSlotBooking(int bookingId) =>
       '$_baseUrl/api/slot-booking/$bookingId/cancel/';
   static String getSlotsForShop(int shopId) =>
       '/api/shop-details/$shopId/slots/';
+
+  // NEW: Shop Providers endpoint
+  static String shopProviders(int shopId, {int? serviceId}) =>
+      '$_baseUrl/api/shop/$shopId/providers/${serviceId != null ? '?service_id=$serviceId' : ''}';
+
+  // NEW: Provider Management
+  static String createProvider(int shopId) =>
+      '$_baseUrl/api/shop/$shopId/providers/';
+  static String updateProvider(int providerId) =>
+      '$_baseUrl/api/providers/$providerId/';
+  static String deleteProvider(int providerId) =>
+      '$_baseUrl/api/providers/$providerId/';
+
+  // NEW: Rule-Based Availability endpoint
+  static String availability({
+    required int shopId,
+    required int serviceId,
+    required String date,
+    int? providerId,
+  }) {
+    var url =
+        '$_baseUrl/api/availability/?shop_id=$shopId&service_id=$serviceId&date=$date';
+    if (providerId != null) url += '&provider_id=$providerId';
+    return url;
+  }
 
   // subscription
 
@@ -293,6 +329,19 @@ class AppUrls {
 
   static String ownerCancelBooking(int bookingId) =>
       '${_baseUrl}/payments/bookings/cancel/$bookingId/';
+
+  // Unified Calendar Endpoint
+  static String calendar({
+    required int shopId,
+    required String startDate,
+    required String endDate,
+    int? providerId,
+  }) {
+    var url =
+        '$_baseUrl/api/calendar/?shop_id=$shopId&start_date=$startDate&end_date=$endDate';
+    if (providerId != null) url += '&provider_id=$providerId';
+    return url;
+  }
 
   // PayPal Endpoints
   static String createPayPalOrder(String slotId) =>

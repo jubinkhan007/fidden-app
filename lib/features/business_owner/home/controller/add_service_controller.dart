@@ -34,6 +34,11 @@ class AddServiceController extends GetxController {
   var singleServiceDetails = GetSingleServiceModel().obs;
   final RxBool requiresAge18Plus = false.obs;
 
+  /// Concurrency Control
+  final RxBool allowProcessingOverlap = false.obs;
+  TextEditingController providerBlockMinutesTEController =
+      TextEditingController();
+
   @override
   void onInit() {
     super.onInit();
@@ -75,7 +80,13 @@ class AddServiceController extends GetxController {
           );
           selectedCategoryId.value = singleServiceDetails.value.category;
           // NEW: seed the toggle from the loaded model
-          requiresAge18Plus.value = singleServiceDetails.value.requiresAge18Plus;
+          requiresAge18Plus.value =
+              singleServiceDetails.value.requiresAge18Plus;
+          // Concurrency Control
+          allowProcessingOverlap.value =
+              singleServiceDetails.value.allowProcessingOverlap;
+          providerBlockMinutesTEController.text =
+              singleServiceDetails.value.providerBlockMinutes?.toString() ?? '';
         } else {
           throw Exception('Unexpected response data format');
         }
@@ -102,12 +113,14 @@ class AddServiceController extends GetxController {
     inProgress.value = true;
     try {
       // defensive guard
-      final priceVal    = double.tryParse(priceTEController.text.trim()) ?? 0;
+      final priceVal = double.tryParse(priceTEController.text.trim()) ?? 0;
       final durationVal = int.tryParse(durationTEController.text.trim()) ?? 0;
       final capacityVal = int.tryParse(capacityTEController.text.trim()) ?? 0;
 
       if (priceVal <= 0 || durationVal <= 0 || capacityVal <= 0) {
-        AppSnackBar.showError('Price, duration and capacity must all be greater than 0.');
+        AppSnackBar.showError(
+          'Price, duration and capacity must all be greater than 0.',
+        );
         inProgress.value = false;
         return;
       }
@@ -116,7 +129,7 @@ class AddServiceController extends GetxController {
       final discountPriceText = discountPriceTEController.text;
 
       final effectiveDiscountPrice =
-      (discountPriceText.isEmpty || double.tryParse(discountPriceText) == 0)
+          (discountPriceText.isEmpty || double.tryParse(discountPriceText) == 0)
           ? price
           : discountPriceText;
 
@@ -130,8 +143,24 @@ class AddServiceController extends GetxController {
         "capacity": capacityTEController.text,
         "is_active": "true",
         // NEW: send the toggle
-        "requires_age_18_plus": requiresAge18Plus.value.toString(), // "true"/"false"
+        "requires_age_18_plus": requiresAge18Plus.value
+            .toString(), // "true"/"false"
+        "allow_processing_overlap": allowProcessingOverlap.value.toString(),
       };
+
+      if (allowProcessingOverlap.value) {
+        final blockMins = int.tryParse(
+          providerBlockMinutesTEController.text.trim(),
+        );
+        if (blockMins != null) {
+          requestBody["provider_block_minutes"] = blockMins.toString();
+        }
+      } else {
+        // Toggle is OFF: ensure backend doesn't have stale block minutes
+        // For multipart/form-data (POST), we usually omit or send empty if backend supports it.
+        // If the backend requires explicit null to clear, we'd need a JSON request.
+        // Assuming omission works for 'POST' creating a new record.
+      }
 
       await _sendPostRequestWithHeadersAndImagesOnly(
         AppUrls.createService,
@@ -211,13 +240,20 @@ class AddServiceController extends GetxController {
       }
 
       final Map<String, dynamic> body = {
-        'title'      : titleTEController.text.trim(),
-        'price'      : priceTEController.text.trim(),
+        'title': titleTEController.text.trim(),
+        'price': priceTEController.text.trim(),
         'description': descriptionTEController.text.trim(),
-        'duration'   : int.tryParse(durationTEController.text.trim()) ?? s.duration ?? 0,
-        'capacity'   : int.tryParse(capacityTEController.text.trim()) ?? s.capacity ?? 1,
-        'category'   : categoryId,
+        'duration':
+            int.tryParse(durationTEController.text.trim()) ?? s.duration ?? 0,
+        'capacity':
+            int.tryParse(capacityTEController.text.trim()) ?? s.capacity ?? 1,
+        'category': categoryId,
         'requires_age_18_plus': requiresAge18Plus.value,
+        // Concurrency Control
+        'allow_processing_overlap': allowProcessingOverlap.value,
+        'provider_block_minutes': allowProcessingOverlap.value
+            ? int.tryParse(providerBlockMinutesTEController.text.trim())
+            : null,
       };
 
       final dp = discountPriceTEController.text.trim();
@@ -225,7 +261,8 @@ class AddServiceController extends GetxController {
 
       // include disabled times chosen in the Manage Slots card (JSON is fine)
       final tag = s.id != null ? 'svc_${s.id}' : null;
-      if (tag != null && Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
+      if (tag != null &&
+          Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
         final slotsCtrl = Get.find<OwnerServiceSlotsController>(tag: tag);
         body['disabled_start_times'] = slotsCtrl.disabledStartTimesForSave;
       }
@@ -256,7 +293,8 @@ class AddServiceController extends GetxController {
       }
 
       // reset unsaved state if present
-      if (tag != null && Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
+      if (tag != null &&
+          Get.isRegistered<OwnerServiceSlotsController>(tag: tag)) {
         Get.find<OwnerServiceSlotsController>(tag: tag).markSaved();
       }
 
@@ -267,7 +305,6 @@ class AddServiceController extends GetxController {
       inProgress.value = false;
     }
   }
-
 
   Future<void> _sendPatchMultipartWithImage({
     required String url,
@@ -310,9 +347,6 @@ class AddServiceController extends GetxController {
     }
   }
 
-
-
-
   Future<void> toggleServiceStatus(String id) async {
     inProgress.value = true;
     final currentStatus = singleServiceDetails.value.isActive ?? true;
@@ -325,8 +359,8 @@ class AddServiceController extends GetxController {
       "duration": singleServiceDetails.value.duration?.toString() ?? '',
       "capacity": singleServiceDetails.value.capacity?.toString() ?? '',
       "is_active": (!currentStatus).toString(),
-      "requires_age_18_plus":
-      (singleServiceDetails.value.requiresAge18Plus).toString(),
+      "requires_age_18_plus": (singleServiceDetails.value.requiresAge18Plus)
+          .toString(),
     };
 
     try {
@@ -417,7 +451,9 @@ class AddServiceController extends GetxController {
           AppSnackBar.showSuccess('Service deleted successfully!');
         });
       } else {
-        AppSnackBar.showError(response.errorMessage ?? 'Failed to delete service');
+        AppSnackBar.showError(
+          response.errorMessage ?? 'Failed to delete service',
+        );
       }
     } catch (e) {
       AppSnackBar.showError('An error occurred: $e');

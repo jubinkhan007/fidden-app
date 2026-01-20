@@ -157,6 +157,17 @@ class BookingDetailsScreen extends StatelessWidget {
                     value: '$durationMins min',
                   ),
                 ],
+                if (b.addOns.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  KVRow(
+                    icon: Icons.add_circle_outline_rounded,
+                    label: 'Add-ons',
+                    value: b.addOns
+                        .map((a) => a['title'] ?? a['name'] ?? '')
+                        .where((n) => n.toString().isNotEmpty)
+                        .join(', '),
+                  ),
+                ],
               ],
             ),
           ),

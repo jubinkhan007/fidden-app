@@ -68,9 +68,12 @@ class OwnerBookingItem {
   final double? servicePrice;
   final double? remainingAmount;
 
-  // Hairstylist prep notes fields
+  // Hairstylist prep notes fields (Phase 2)
   final String? prepNotes; // Stylist prep notes for booking
   final String? shopNiche; // Shop niche: "hairstylist", "barber", etc.
+
+  // Add-on services (Feature)
+  final List<Map<String, dynamic>> addOns;
 
   OwnerBookingItem({
     required this.id,
@@ -95,6 +98,7 @@ class OwnerBookingItem {
     this.remainingAmount,
     this.prepNotes,
     this.shopNiche,
+    this.addOns = const [],
   });
 
   factory OwnerBookingItem.fromJson(Map<String, dynamic> j) {
@@ -136,7 +140,18 @@ class OwnerBookingItem {
       remainingAmount: _toDouble(j['remaining_amount']),
       prepNotes: j['prep_notes']?.toString(),
       shopNiche: j['shop_niche']?.toString(),
+      addOns: _parseAddOns(j['add_ons']),
     );
+  }
+
+  static List<Map<String, dynamic>> _parseAddOns(dynamic addOnsJson) {
+    if (addOnsJson == null || addOnsJson is! List) return [];
+    return addOnsJson
+        .map(
+          (e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{},
+        )
+        .where((m) => m.isNotEmpty)
+        .toList();
   }
 
   static double? _toDouble(dynamic v) {
@@ -163,6 +178,7 @@ class OwnerBookingItem {
     'shop_timezone': shopTimezone,
     'prep_notes': prepNotes,
     'shop_niche': shopNiche,
+    'add_ons': addOns,
   };
   OwnerBookingItem copyWith({
     int? id,
@@ -183,6 +199,7 @@ class OwnerBookingItem {
     String? slotTimeIso,
     String? prepNotes,
     String? shopNiche,
+    List<Map<String, dynamic>>? addOns,
   }) {
     return OwnerBookingItem(
       id: id ?? this.id,
@@ -203,6 +220,7 @@ class OwnerBookingItem {
       slotTimeIso: slotTimeIso ?? this.slotTimeIso,
       prepNotes: prepNotes ?? this.prepNotes,
       shopNiche: shopNiche ?? this.shopNiche,
+      addOns: addOns ?? this.addOns,
     );
   }
 }
