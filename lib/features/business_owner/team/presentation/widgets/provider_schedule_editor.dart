@@ -162,6 +162,24 @@ class _RangeEditorRow extends StatelessWidget {
     required this.onDelete,
   });
 
+  bool _isInvalid() {
+    final s = _parsedMinutes(range.start);
+    final e = _parsedMinutes(range.end);
+    return e <= s;
+  }
+
+  int _parsedMinutes(String ui) {
+    final reg = RegExp(r'(\d{1,2}):(\d{2})\s*([AP]M)', caseSensitive: false);
+    final m = reg.firstMatch(ui);
+    if (m == null) return 0;
+    int h = int.parse(m.group(1)!);
+    final min = int.parse(m.group(2)!);
+    final ap = m.group(3)!.toUpperCase();
+    if (ap == 'PM' && h != 12) h += 12;
+    if (ap == 'AM' && h == 12) h = 0;
+    return h * 60 + min;
+  }
+
   Future<String?> _pickTime(BuildContext context, String current) async {
     // Parse "hh:mm AM"
     TimeOfDay initial = TimeOfDay(hour: 9, minute: 0);
@@ -189,60 +207,83 @@ class _RangeEditorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final invalid = _isInvalid();
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Start Time
-          Expanded(
-            child: InkWell(
-              onTap: () async {
-                final t = await _pickTime(context, range.start);
-                if (t != null) onChanged(range.copyWith(start: t));
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+          Row(
+            children: [
+              // Start Time
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    final t = await _pickTime(context, range.start);
+                    if (t != null) onChanged(range.copyWith(start: t));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: invalid ? Colors.red : Colors.grey.shade300,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white,
+                    ),
+                    child: Text(range.start, textAlign: TextAlign.center),
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.white,
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text('to', style: TextStyle(color: Colors.grey)),
+              ),
+              // End Time
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    final t = await _pickTime(context, range.end);
+                    if (t != null) onChanged(range.copyWith(end: t));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: invalid ? Colors.red : Colors.grey.shade300,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white,
+                    ),
+                    child: Text(range.end, textAlign: TextAlign.center),
+                  ),
                 ),
-                child: Text(range.start, textAlign: TextAlign.center),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.close,
+                  color: Colors.redAccent,
+                  size: 20,
+                ),
+                onPressed: onDelete,
+              ),
+            ],
+          ),
+          if (invalid)
+            const Padding(
+              padding: EdgeInsets.only(left: 4, top: 2),
+              child: Text(
+                'Invalid interval: end time must be after start time',
+                style: TextStyle(color: Colors.red, fontSize: 11),
               ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Text('to', style: TextStyle(color: Colors.grey)),
-          ),
-          // End Time
-          Expanded(
-            child: InkWell(
-              onTap: () async {
-                final t = await _pickTime(context, range.end);
-                if (t != null) onChanged(range.copyWith(end: t));
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.white,
-                ),
-                child: Text(range.end, textAlign: TextAlign.center),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.redAccent, size: 20),
-            onPressed: onDelete,
-          ),
         ],
       ),
     );

@@ -275,7 +275,6 @@ class ServiceDetailsController extends GetxController {
       );
 
       if (res.isSuccess && res.responseData is Map<String, dynamic>) {
-        debugPrint('🎰 Service Details JSON: ${res.responseData}');
         final svc = ServiceDetailsModel.fromJson(res.responseData);
         details.value = svc;
 
@@ -328,7 +327,7 @@ class ServiceDetailsController extends GetxController {
         );
         prefetchNext7Days();
       } else {
-        AppSnackBar.showError(res.errorMessage ?? 'Failed to load service.');
+        AppSnackBar.showError(res.errorMessage);
       }
     } catch (e) {
       AppSnackBar.showError('Error loading service: $e');
@@ -370,102 +369,93 @@ class ServiceDetailsController extends GetxController {
 
     isLoadingSlots.value = true;
     try {
-      // DEBUG: Log parameters
-      debugPrint(
-        '🎰 Fetching availability for Provider: ${selectedProviderId.value}',
-      );
-
-      final uri = AppUrls.availability(
-        shopId: d.shopId ?? 0,
-        serviceId: serviceId,
-        date: key,
-        providerId: selectedProviderId.value, // NEW: pass provider filter
-      );
-
+      // 1. PRIMARY DAY
       final res = await NetworkCaller().getRequest(
-        uri,
+        AppUrls.availability(
+          shopId: d.shopId ?? 0,
+          serviceId: serviceId,
+          date: key,
+          providerId: selectedProviderId.value,
+        ),
         token: AuthService.accessToken,
       );
 
       List<SlotItem> allSlots = [];
 
-      // lib/features/user/shops/services/controller/service_details_controller.dart
       if (res.isSuccess && res.responseData is Map<String, dynamic>) {
         final parsed = SlotsResponse.fromJson(res.responseData);
         allSlots.addAll(parsed.slots);
-
-        // Store timezone if available from slots response
         if (parsed.timezoneId != null && parsed.timezoneId!.isNotEmpty) {
           shopTimeZone.value = parsed.timezoneId!;
         }
-
-        // DEBUG: Print all slots from backend to verify if 10:20 exists
-        debugPrint(
-          '🎰 --- RAW SLOTS FROM BACKEND (${parsed.slots.length}) ---',
+      } else if (res.statusCode == 400) {
+        final legacyUrl = Uri.parse(
+          AppUrls.getSlotsForShop(d.shopId ?? 0),
+        ).replace(queryParameters: {'service': '$serviceId', 'date': key});
+        final legacyRes = await NetworkCaller().getRequest(
+          legacyUrl.toString(),
         );
-        for (final s in parsed.slots) {
-          final local = fmtTimeLocal(s.startTimeUtc);
-          debugPrint(
-            'Slot ID: ${s.id} | UTC: ${s.startTimeUtc} | Local: $local | Avail: ${s.available}',
-          );
+        if (legacyRes.isSuccess &&
+            legacyRes.responseData is Map<String, dynamic>) {
+          final parsed = SlotsResponse.fromJson(legacyRes.responseData);
+          allSlots.addAll(parsed.slots);
         }
-        debugPrint('🎰 ------------------------------------------------');
       }
 
-      // Also fetch next UTC day to capture slots that span timezone boundary
-      // e.g., Dec 9 ET spans Dec 9 UTC afternoon and Dec 10 UTC morning
-      final nextDay = day.add(const Duration(days: 1));
-      final nextKey = _fmtDate(nextDay);
+      // 2. OVERFLOW: FETCH PREVIOUS & NEXT DAYS
+      // We fetch ±1 day UTC because a shop's local day can overlap across 2 UTC days
+      // depending on their offset (+12 or -12).
+      if (res.isSuccess) {
+        final daysToFetch = [
+          day.subtract(const Duration(days: 1)), // Prev
+          day.add(const Duration(days: 1)), // Next
+        ];
 
-      final nextUri = AppUrls.availability(
-        shopId: d.shopId ?? 0,
-        serviceId: serviceId,
-        date: nextKey,
-      );
+        for (final otherDay in daysToFetch) {
+          final otherKey = _fmtDate(otherDay);
+          final otherUri = AppUrls.availability(
+            shopId: d.shopId ?? 0,
+            serviceId: serviceId,
+            date: otherKey,
+            providerId: selectedProviderId.value,
+          );
 
-      final nextRes = await NetworkCaller().getRequest(
-        nextUri.toString(),
-        token: AuthService.accessToken,
-      );
+          final otherRes = await NetworkCaller().getRequest(
+            otherUri.toString(),
+            token: AuthService.accessToken,
+          );
 
-      if (nextRes.isSuccess && nextRes.responseData is Map<String, dynamic>) {
-        final nextParsed = SlotsResponse.fromJson(nextRes.responseData);
-        allSlots.addAll(nextParsed.slots);
+          if (otherRes.isSuccess &&
+              otherRes.responseData is Map<String, dynamic>) {
+            final parsed = SlotsResponse.fromJson(otherRes.responseData);
+            allSlots.addAll(parsed.slots);
+          }
+        }
       }
 
       List<SlotItem> processed = allSlots;
 
       // Mark past times unavailable based on shop's current time
-      // Convert current time to shop timezone for accurate comparison
       final nowInShopTz = toShopTz(DateTime.now().toUtc());
-      final todayInShopTz = DateTime(
-        nowInShopTz.year,
-        nowInShopTz.month,
-        nowInShopTz.day,
-      );
 
-      // Check if selected day is "today" in shop timezone
-      if (day.year == todayInShopTz.year &&
-          day.month == todayInShopTz.month &&
-          day.day == todayInShopTz.day) {
-        processed = processed.map((slot) {
-          if (!slot.available) return slot;
-          // Compare slot time with current time in shop timezone
-          final slotInShopTz = toShopTz(slot.startTimeUtc);
-          if (slotInShopTz.isBefore(nowInShopTz)) {
-            return SlotItem(
-              id: slot.id,
-              shop: slot.shop,
-              service: slot.service,
-              startTimeUtc: slot.startTimeUtc,
-              endTimeUtc: slot.endTimeUtc,
-              capacityLeft: slot.capacityLeft,
-              available: false,
-            );
-          }
-          return slot;
-        }).toList();
-      }
+      // ALWAYS filter past slots (removing the 'if isToday' check for better timezone stability)
+      processed = processed.map((slot) {
+        if (!slot.available) return slot;
+        final slotInShopTz = toShopTz(slot.startTimeUtc);
+        if (slotInShopTz.isBefore(nowInShopTz)) {
+          // Marking as unavailable (you might want to .where filter them out later if needed)
+          return SlotItem(
+            id: slot.id,
+            shop: slot.shop,
+            service: slot.service,
+            startTimeUtc: slot.startTimeUtc,
+            endTimeUtc: slot.endTimeUtc,
+            capacityLeft: slot.capacityLeft,
+            available: false,
+          );
+        }
+        return slot;
+      }).toList();
 
       // Filter slots that fall on the selected day in shop timezone
       // This handles cases where UTC date ≠ shop timezone date

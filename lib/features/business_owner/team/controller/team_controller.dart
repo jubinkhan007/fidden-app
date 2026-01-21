@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:fidden/core/models/time_range.dart'; // NEW import
+import 'package:fidden/core/models/response_data.dart';
 
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/Auth_service.dart';
@@ -105,46 +107,84 @@ class TeamController extends GetxController {
     Map<String, List<TimeRange>>? schedule,
     int maxConcurrentProcessingJobs = 1,
   }) async {
+    final error = _validateSchedule(schedule);
+    if (error != null) {
+      AppSnackBar.showError(error);
+      return false;
+    }
+
     isSaving.value = true;
     try {
       final url = AppUrls.updateProvider(providerId);
 
-      // Serialize schedule
+      // Serialize schedule with 24-hour time conversion
       Map<String, dynamic>? workingHours;
       if (schedule != null && schedule.isNotEmpty) {
-        workingHours = {};
         workingHours = {};
         schedule.forEach((k, v) {
           // Convert full day name (monday) to 3-letter (mon)
           final shortKey = k.length > 3
               ? k.substring(0, 3).toLowerCase()
               : k.toLowerCase();
-          workingHours![shortKey] = v.map((r) => [r.start, r.end]).toList();
+          // Convert AM/PM times to 24-hour format for the API
+          workingHours![shortKey] = v
+              .map((r) => [_uiTo24(r.start), _uiTo24(r.end)])
+              .toList();
         });
       }
 
-      final body = {
-        'name': name,
-        'bio': bio,
-        'services': serviceIds,
-        'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
-        if (workingHours != null) 'working_hours': workingHours,
-      };
-
       debugPrint('[updateProvider] URL: $url');
-      debugPrint('[updateProvider] Body: $body');
+      debugPrint('[updateProvider] Working Hours (24h): $workingHours');
 
-      final res = await NetworkCaller().patchRequest(
-        url,
-        token: AuthService.accessToken,
-        body: body,
-      );
+      late final ResponseData res;
+
+      // Use multipart request if image is selected, otherwise use regular PATCH
+      if (selectedImage.value != null) {
+        final multipartBody = <String, String>{
+          'name': name,
+          'bio': bio,
+          'services': serviceIds.join(','),
+          'max_concurrent_processing_jobs': maxConcurrentProcessingJobs
+              .toString(),
+          'is_active': 'true', // <-- Ensure active on update
+          if (workingHours != null) 'working_hours': jsonEncode(workingHours),
+        };
+
+        debugPrint('[updateProvider] Multipart Body: $multipartBody');
+
+        res = await NetworkCaller().multipartRequest(
+          url,
+          method: 'PATCH',
+          body: multipartBody,
+          token: AuthService.accessToken,
+          photo: selectedImage.value,
+          photoFieldName: 'profile_image',
+        );
+      } else {
+        final body = {
+          'name': name,
+          'bio': bio,
+          'services': serviceIds,
+          'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
+          'is_active': true, // <-- Ensure active on update
+          if (workingHours != null) 'working_hours': workingHours,
+        };
+
+        debugPrint('[updateProvider] Body: $body');
+
+        res = await NetworkCaller().patchRequest(
+          url,
+          token: AuthService.accessToken,
+          body: body,
+        );
+      }
 
       debugPrint('[updateProvider] isSuccess: ${res.isSuccess}');
       debugPrint('[updateProvider] errorMessage: ${res.errorMessage}');
       debugPrint('[updateProvider] responseData: ${res.responseData}');
 
       if (res.isSuccess) {
+        selectedImage.value = null;
         await fetchTeam();
         return true;
       } else {
@@ -164,9 +204,15 @@ class TeamController extends GetxController {
     required String name,
     required String bio,
     required List<int> serviceIds,
-    Map<String, List<TimeRange>>? schedule, // CHANGED to TimeRange
+    Map<String, List<TimeRange>>? schedule,
     int maxConcurrentProcessingJobs = 1,
   }) async {
+    final error = _validateSchedule(schedule);
+    if (error != null) {
+      AppSnackBar.showError(error);
+      return false;
+    }
+
     final profileC = Get.find<BusinessOwnerProfileController>();
     final shopId = profileC.profileDetails.value.data?.id;
     if (shopId == null) return false;
@@ -175,7 +221,7 @@ class TeamController extends GetxController {
     try {
       final url = AppUrls.createProvider(int.parse(shopId));
 
-      // Serialize schedule to backend format: {'monday': [['09:00 AM', '05:00 PM']]}
+      // Serialize schedule to backend format with 24-hour time conversion
       Map<String, dynamic>? workingHours;
       if (schedule != null && schedule.isNotEmpty) {
         workingHours = {};
@@ -184,26 +230,73 @@ class TeamController extends GetxController {
           final shortKey = k.length > 3
               ? k.substring(0, 3).toLowerCase()
               : k.toLowerCase();
-          workingHours![shortKey] = v.map((r) => [r.start, r.end]).toList();
+          // Convert AM/PM times to 24-hour format for the API
+          workingHours![shortKey] = v
+              .map((r) => [_uiTo24(r.start), _uiTo24(r.end)])
+              .toList();
         });
       }
 
-      final body = {
-        'name': name,
-        'bio': bio,
-        'services': serviceIds,
-        'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
-        if (workingHours != null) 'working_hours': workingHours,
-      };
+      late final ResponseData res;
 
-      final res = await NetworkCaller().postRequest(
-        url,
-        token: AuthService.accessToken,
-        body: body,
-      );
+      // Use multipart request if image is selected, otherwise use regular POST
+      if (selectedImage.value != null) {
+        final multipartBody = <String, String>{
+          'name': name,
+          'bio': bio,
+          'services': serviceIds.join(','),
+          'max_concurrent_processing_jobs': maxConcurrentProcessingJobs
+              .toString(),
+          'is_active': 'true', // <-- Ensure active on creation
+          if (workingHours != null) 'working_hours': jsonEncode(workingHours),
+        };
+
+        res = await NetworkCaller().multipartRequest(
+          url,
+          method: 'POST',
+          body: multipartBody,
+          token: AuthService.accessToken,
+          photo: selectedImage.value,
+          photoFieldName: 'profile_image',
+        );
+      } else {
+        final body = {
+          'name': name,
+          'bio': bio,
+          'services': serviceIds,
+          'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
+          'is_active': true, // <-- Ensure active on creation
+          if (workingHours != null) 'working_hours': workingHours,
+        };
+
+        res = await NetworkCaller().postRequest(
+          url,
+          token: AuthService.accessToken,
+          body: body,
+        );
+      }
 
       if (res.isSuccess) {
-        // TODO: Image upload logic if supported (separate endpoint or multipart)
+        selectedImage.value = null;
+
+        // CHECK: If inactive by default (as per logs), force activate immediately
+        if (res.responseData is Map<String, dynamic>) {
+          final data = res.responseData as Map<String, dynamic>;
+          if (data['is_active'] == false) {
+            final newId = data['id'];
+            if (newId != null && newId is int) {
+              await updateProvider(
+                providerId: newId,
+                name: name,
+                bio: bio,
+                serviceIds: serviceIds,
+                schedule: schedule, // Pass schedule to ensure it persists
+                maxConcurrentProcessingJobs: maxConcurrentProcessingJobs,
+              );
+            }
+          }
+        }
+
         await fetchTeam();
         return true;
       } else {
@@ -248,5 +341,52 @@ class TeamController extends GetxController {
 
   void clearForm() {
     selectedImage.value = null;
+  }
+
+  /// Converts 12-hour AM/PM format to 24-hour format for the API.
+  /// e.g., "1:45 PM" -> "13:45", "9:00 AM" -> "09:00"
+  String _uiTo24(String ui) {
+    final reg = RegExp(
+      r'^\s*(\d{1,2}):(\d{2})\s*([AP]M)\s*$',
+      caseSensitive: false,
+    );
+    final m = reg.firstMatch(ui.trim());
+    if (m == null) {
+      // Already in 24-hour format or unknown format
+      final m24 = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*$').firstMatch(ui.trim());
+      if (m24 != null) {
+        return '${m24.group(1)!.padLeft(2, '0')}:${m24.group(2)!}';
+      }
+      debugPrint('⚠️ [TeamController] Unknown time format: "$ui"');
+      return ui;
+    }
+    int h = int.parse(m.group(1)!);
+    final mm = m.group(2)!;
+    final ap = m.group(3)!.toUpperCase();
+    if (ap == 'PM' && h != 12) h += 12; // PM times: +12 (except 12 PM)
+    if (ap == 'AM' && h == 12) h = 0; // 12 AM = 00
+    return '${h.toString().padLeft(2, '0')}:$mm';
+  }
+
+  /// Returns total minutes from a 24-hour time string like "HH:mm"
+  int _toMinutes(String t24) {
+    final parts = t24.split(':');
+    if (parts.length < 2) return 0;
+    return (int.tryParse(parts[0]) ?? 0) * 60 + (int.tryParse(parts[1]) ?? 0);
+  }
+
+  /// Validates all schedule ranges
+  String? _validateSchedule(Map<String, List<TimeRange>>? schedule) {
+    if (schedule == null) return null;
+    for (var entry in schedule.entries) {
+      for (var range in entry.value) {
+        final start24 = _uiTo24(range.start);
+        final end24 = _uiTo24(range.end);
+        if (_toMinutes(end24) <= _toMinutes(start24)) {
+          return 'Invalid interval on ${entry.key}: ${range.start} to ${range.end}. End time must be after start time.';
+        }
+      }
+    }
+    return null;
   }
 }

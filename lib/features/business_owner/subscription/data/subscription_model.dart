@@ -1,3 +1,5 @@
+// lib/features/business_owner/subscription/data/subscription_model.dart
+
 // This class will parse the response from `/subscriptions/details/`
 class CurrentSubscription {
   final SubscriptionPlan plan;
@@ -16,7 +18,9 @@ class CurrentSubscription {
     return CurrentSubscription(
       plan: SubscriptionPlan.fromJson(json['plan']),
       status: json['status'],
-      renewsOn: json['renews_on'] != null ? DateTime.parse(json['renews_on']) : null,
+      renewsOn: json['renews_on'] != null
+          ? DateTime.parse(json['renews_on'])
+          : null,
       commissionRate: json['commission_rate'],
     );
   }

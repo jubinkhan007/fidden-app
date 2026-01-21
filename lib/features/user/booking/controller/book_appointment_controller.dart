@@ -42,10 +42,19 @@ class BookAppointmentController extends GetxController {
         AppUrls.getSlotsForShop(shopId),
       ).replace(queryParameters: {'service': serviceId, 'date': date});
 
+      log(
+        "GET_SLOTS: Fetching slots for Shop: $shopId, Service: $serviceId, Date: $date",
+      );
+      log("GET_SLOTS: URI: $uri");
+
       final response = await NetworkCaller().getRequest(uri.toString());
+
+      log("GET_SLOTS: Response Code: ${response.statusCode}");
+      log("GET_SLOTS: Response Body: ${response.responseData}");
 
       if (response.isSuccess && response.responseData is Map<String, dynamic>) {
         final parsed = SlotsResponse.fromJson(response.responseData);
+        log("GET_SLOTS: Parsed ${parsed.slots.length} slots");
 
         // Categorize the flat list of slots into morning, afternoon, and evening
         for (var slot in parsed.slots) {
@@ -58,8 +67,14 @@ class BookAppointmentController extends GetxController {
             eveningSlots.add(slot);
           }
         }
+        log(
+          "GET_SLOTS: Categorized - Morning: ${morningSlots.length}, Afternoon: ${afternoonSlots.length}, Evening: ${eveningSlots.length}",
+        );
+      } else {
+        log("GET_SLOTS: Failed or Invalid Response Data");
       }
-    } catch (e) {
+    } catch (e, stack) {
+      log("GET_SLOTS: Error: $e", error: e, stackTrace: stack);
       AppSnackBar.showError("Failed to load time slots. $e");
     } finally {
       isLoading.value = false;
