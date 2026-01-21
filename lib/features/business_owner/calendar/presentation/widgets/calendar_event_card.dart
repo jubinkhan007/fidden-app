@@ -263,6 +263,16 @@ class CalendarEventCard extends StatelessWidget {
       addBadge("BAL DUE", Colors.amber[100]!, Colors.amber[900]!);
     }
 
+    // NEW: Session Type Tag (CLASS | 1:1) from event.sessionType
+    if (event.sessionType != null) {
+      final type = event.sessionType!.toLowerCase();
+      if (type == 'class') {
+        addBadge("CLASS", Colors.teal[50]!, Colors.teal[800]!);
+      } else if (type == '1to1' || type == '1:1') {
+        addBadge("1:1", Colors.indigo[50]!, Colors.indigo[800]!);
+      }
+    }
+
     return badges;
   }
 

@@ -421,4 +421,19 @@ class AppUrls {
   static const String mySkinProfile = '$_baseUrl/api/my-skin-profile/';
   static const String myHealthDisclosure =
       '$_baseUrl/api/my-health-disclosure/';
+
+  // ========== Fitness Trainer Endpoints 🏋️‍♂️ ==========
+  static const String fitnessDashboard = '$_baseUrl/api/fitness/dashboard/';
+  static const String fitnessPackages = '$_baseUrl/api/fitness/packages/';
+  static String fitnessPackageDetail(int id) =>
+      '$_baseUrl/api/fitness/packages/$id/';
+
+  static const String workoutTemplates =
+      '$_baseUrl/api/fitness/workout-templates/';
+  static String workoutTemplateDetail(int id) =>
+      '$_baseUrl/api/fitness/workout-templates/$id/';
+
+  static const String nutritionPlans = '$_baseUrl/api/fitness/nutrition-plans/';
+  static String nutritionPlanDetail(int id) =>
+      '$_baseUrl/api/fitness/nutrition-plans/$id/';
 }

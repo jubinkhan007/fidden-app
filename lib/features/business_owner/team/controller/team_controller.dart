@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:fidden/core/models/time_range.dart'; // NEW import
+import 'package:fidden/core/models/response_data.dart';
 
 import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/services/Auth_service.dart';
@@ -113,7 +115,6 @@ class TeamController extends GetxController {
       Map<String, dynamic>? workingHours;
       if (schedule != null && schedule.isNotEmpty) {
         workingHours = {};
-        workingHours = {};
         schedule.forEach((k, v) {
           // Convert full day name (monday) to 3-letter (mon)
           final shortKey = k.length > 3
@@ -123,28 +124,54 @@ class TeamController extends GetxController {
         });
       }
 
-      final body = {
-        'name': name,
-        'bio': bio,
-        'services': serviceIds,
-        'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
-        if (workingHours != null) 'working_hours': workingHours,
-      };
-
       debugPrint('[updateProvider] URL: $url');
-      debugPrint('[updateProvider] Body: $body');
 
-      final res = await NetworkCaller().patchRequest(
-        url,
-        token: AuthService.accessToken,
-        body: body,
-      );
+      late final ResponseData res;
+
+      // Use multipart request if image is selected, otherwise use regular PATCH
+      if (selectedImage.value != null) {
+        final multipartBody = <String, String>{
+          'name': name,
+          'bio': bio,
+          'services': serviceIds.join(','),
+          'max_concurrent_processing_jobs': maxConcurrentProcessingJobs.toString(),
+          if (workingHours != null) 'working_hours': jsonEncode(workingHours),
+        };
+
+        debugPrint('[updateProvider] Multipart Body: $multipartBody');
+
+        res = await NetworkCaller().multipartRequest(
+          url,
+          method: 'PATCH',
+          body: multipartBody,
+          token: AuthService.accessToken,
+          photo: selectedImage.value,
+          photoFieldName: 'profile_image',
+        );
+      } else {
+        final body = {
+          'name': name,
+          'bio': bio,
+          'services': serviceIds,
+          'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
+          if (workingHours != null) 'working_hours': workingHours,
+        };
+
+        debugPrint('[updateProvider] Body: $body');
+
+        res = await NetworkCaller().patchRequest(
+          url,
+          token: AuthService.accessToken,
+          body: body,
+        );
+      }
 
       debugPrint('[updateProvider] isSuccess: ${res.isSuccess}');
       debugPrint('[updateProvider] errorMessage: ${res.errorMessage}');
       debugPrint('[updateProvider] responseData: ${res.responseData}');
 
       if (res.isSuccess) {
+        selectedImage.value = null;
         await fetchTeam();
         return true;
       } else {
@@ -188,22 +215,44 @@ class TeamController extends GetxController {
         });
       }
 
-      final body = {
-        'name': name,
-        'bio': bio,
-        'services': serviceIds,
-        'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
-        if (workingHours != null) 'working_hours': workingHours,
-      };
+      late final ResponseData res;
 
-      final res = await NetworkCaller().postRequest(
-        url,
-        token: AuthService.accessToken,
-        body: body,
-      );
+      // Use multipart request if image is selected, otherwise use regular POST
+      if (selectedImage.value != null) {
+        final multipartBody = <String, String>{
+          'name': name,
+          'bio': bio,
+          'services': serviceIds.join(','),
+          'max_concurrent_processing_jobs': maxConcurrentProcessingJobs.toString(),
+          if (workingHours != null) 'working_hours': jsonEncode(workingHours),
+        };
+
+        res = await NetworkCaller().multipartRequest(
+          url,
+          method: 'POST',
+          body: multipartBody,
+          token: AuthService.accessToken,
+          photo: selectedImage.value,
+          photoFieldName: 'profile_image',
+        );
+      } else {
+        final body = {
+          'name': name,
+          'bio': bio,
+          'services': serviceIds,
+          'max_concurrent_processing_jobs': maxConcurrentProcessingJobs,
+          if (workingHours != null) 'working_hours': workingHours,
+        };
+
+        res = await NetworkCaller().postRequest(
+          url,
+          token: AuthService.accessToken,
+          body: body,
+        );
+      }
 
       if (res.isSuccess) {
-        // TODO: Image upload logic if supported (separate endpoint or multipart)
+        selectedImage.value = null;
         await fetchTeam();
         return true;
       } else {

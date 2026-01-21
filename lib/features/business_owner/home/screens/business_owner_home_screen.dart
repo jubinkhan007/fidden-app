@@ -12,6 +12,7 @@ import 'package:fidden/features/business_owner/mua/presentation/widgets/mua_dash
 import 'package:fidden/features/business_owner/hairstylist/presentation/widgets/hairstylist_dashboard_content.dart';
 import 'package:fidden/features/business_owner/esthetician/presentation/widgets/esthetician_dashboard_content.dart';
 import 'package:fidden/features/business_owner/massage/presentation/widgets/massage_dashboard_content.dart';
+import 'package:fidden/features/business_owner/fitness_trainer_dashboard/presentation/screens/fitness_trainer_dashboard_screen.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 import 'package:flutter/material.dart';
@@ -137,6 +138,12 @@ class BusinessOwnerHomeScreen extends StatelessWidget {
 
                           if (niche == 'massage_therapist') {
                             return const MassageDashboardContent();
+                          }
+
+                          if (niche == 'fitness_trainer') {
+                            return FitnessTrainerDashboardScreen(
+                              shopId: myShopId.value ?? 0,
+                            );
                           }
 
                           // For other niches, use the layout strategy pattern

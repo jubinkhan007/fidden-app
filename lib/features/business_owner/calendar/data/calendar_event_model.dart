@@ -30,6 +30,11 @@ abstract class CalendarEventModel with _$CalendarEventModel {
     // Blocked specific
     @JsonKey(name: 'blocked_reason') String? blockedReason,
     @Default(null) String? note,
+
+    // Fitness / Session Type
+    @Default(null)
+    @JsonKey(name: 'session_type')
+    String? sessionType, // "class" | "1to1" | null
   }) = _CalendarEventModel;
 
   factory CalendarEventModel.fromJson(Map<String, dynamic> json) =>

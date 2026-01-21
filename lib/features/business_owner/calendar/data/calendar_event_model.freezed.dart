@@ -23,7 +23,8 @@ mixin _$CalendarEventModel {
 // Joint fields
  ProviderLite? get provider;// Booking specific
  CustomerLite? get customer; ServiceLite? get service;// Blocked specific
-@JsonKey(name: 'blocked_reason') String? get blockedReason; String? get note;
+@JsonKey(name: 'blocked_reason') String? get blockedReason; String? get note;// Fitness / Session Type
+@JsonKey(name: 'session_type') String? get sessionType;
 /// Create a copy of CalendarEventModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -36,16 +37,16 @@ $CalendarEventModelCopyWith<CalendarEventModel> get copyWith => _$CalendarEventM
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CalendarEventModel&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startAt, startAt) || other.startAt == startAt)&&(identical(other.endAt, endAt) || other.endAt == endAt)&&(identical(other.startAtUtc, startAtUtc) || other.startAtUtc == startAtUtc)&&(identical(other.endAtUtc, endAtUtc) || other.endAtUtc == endAtUtc)&&(identical(other.timezoneId, timezoneId) || other.timezoneId == timezoneId)&&(identical(other.calendarStatus, calendarStatus) || other.calendarStatus == calendarStatus)&&const DeepCollectionEquality().equals(other.badges, badges)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.customer, customer) || other.customer == customer)&&(identical(other.service, service) || other.service == service)&&(identical(other.blockedReason, blockedReason) || other.blockedReason == blockedReason)&&(identical(other.note, note) || other.note == note));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CalendarEventModel&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startAt, startAt) || other.startAt == startAt)&&(identical(other.endAt, endAt) || other.endAt == endAt)&&(identical(other.startAtUtc, startAtUtc) || other.startAtUtc == startAtUtc)&&(identical(other.endAtUtc, endAtUtc) || other.endAtUtc == endAtUtc)&&(identical(other.timezoneId, timezoneId) || other.timezoneId == timezoneId)&&(identical(other.calendarStatus, calendarStatus) || other.calendarStatus == calendarStatus)&&const DeepCollectionEquality().equals(other.badges, badges)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.customer, customer) || other.customer == customer)&&(identical(other.service, service) || other.service == service)&&(identical(other.blockedReason, blockedReason) || other.blockedReason == blockedReason)&&(identical(other.note, note) || other.note == note)&&(identical(other.sessionType, sessionType) || other.sessionType == sessionType));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,eventType,id,title,startAt,endAt,startAtUtc,endAtUtc,timezoneId,calendarStatus,const DeepCollectionEquality().hash(badges),provider,customer,service,blockedReason,note);
+int get hashCode => Object.hash(runtimeType,eventType,id,title,startAt,endAt,startAtUtc,endAtUtc,timezoneId,calendarStatus,const DeepCollectionEquality().hash(badges),provider,customer,service,blockedReason,note,sessionType);
 
 @override
 String toString() {
-  return 'CalendarEventModel(eventType: $eventType, id: $id, title: $title, startAt: $startAt, endAt: $endAt, startAtUtc: $startAtUtc, endAtUtc: $endAtUtc, timezoneId: $timezoneId, calendarStatus: $calendarStatus, badges: $badges, provider: $provider, customer: $customer, service: $service, blockedReason: $blockedReason, note: $note)';
+  return 'CalendarEventModel(eventType: $eventType, id: $id, title: $title, startAt: $startAt, endAt: $endAt, startAtUtc: $startAtUtc, endAtUtc: $endAtUtc, timezoneId: $timezoneId, calendarStatus: $calendarStatus, badges: $badges, provider: $provider, customer: $customer, service: $service, blockedReason: $blockedReason, note: $note, sessionType: $sessionType)';
 }
 
 
@@ -56,7 +57,7 @@ abstract mixin class $CalendarEventModelCopyWith<$Res>  {
   factory $CalendarEventModelCopyWith(CalendarEventModel value, $Res Function(CalendarEventModel) _then) = _$CalendarEventModelCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'event_type') String eventType, int id, String title,@JsonKey(name: 'start_at') String startAt,@JsonKey(name: 'end_at') String endAt,@JsonKey(name: 'start_at_utc') DateTime startAtUtc,@JsonKey(name: 'end_at_utc') DateTime endAtUtc,@JsonKey(name: 'timezone_id') String timezoneId,@JsonKey(name: 'calendar_status') String calendarStatus, List<String> badges, ProviderLite? provider, CustomerLite? customer, ServiceLite? service,@JsonKey(name: 'blocked_reason') String? blockedReason, String? note
+@JsonKey(name: 'event_type') String eventType, int id, String title,@JsonKey(name: 'start_at') String startAt,@JsonKey(name: 'end_at') String endAt,@JsonKey(name: 'start_at_utc') DateTime startAtUtc,@JsonKey(name: 'end_at_utc') DateTime endAtUtc,@JsonKey(name: 'timezone_id') String timezoneId,@JsonKey(name: 'calendar_status') String calendarStatus, List<String> badges, ProviderLite? provider, CustomerLite? customer, ServiceLite? service,@JsonKey(name: 'blocked_reason') String? blockedReason, String? note,@JsonKey(name: 'session_type') String? sessionType
 });
 
 
@@ -73,7 +74,7 @@ class _$CalendarEventModelCopyWithImpl<$Res>
 
 /// Create a copy of CalendarEventModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? eventType = null,Object? id = null,Object? title = null,Object? startAt = null,Object? endAt = null,Object? startAtUtc = null,Object? endAtUtc = null,Object? timezoneId = null,Object? calendarStatus = null,Object? badges = null,Object? provider = freezed,Object? customer = freezed,Object? service = freezed,Object? blockedReason = freezed,Object? note = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? eventType = null,Object? id = null,Object? title = null,Object? startAt = null,Object? endAt = null,Object? startAtUtc = null,Object? endAtUtc = null,Object? timezoneId = null,Object? calendarStatus = null,Object? badges = null,Object? provider = freezed,Object? customer = freezed,Object? service = freezed,Object? blockedReason = freezed,Object? note = freezed,Object? sessionType = freezed,}) {
   return _then(_self.copyWith(
 eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
 as String,id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
@@ -90,6 +91,7 @@ as ProviderLite?,customer: freezed == customer ? _self.customer : customer // ig
 as CustomerLite?,service: freezed == service ? _self.service : service // ignore: cast_nullable_to_non_nullable
 as ServiceLite?,blockedReason: freezed == blockedReason ? _self.blockedReason : blockedReason // ignore: cast_nullable_to_non_nullable
 as String?,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String?,sessionType: freezed == sessionType ? _self.sessionType : sessionType // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -211,10 +213,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'event_type')  String eventType,  int id,  String title, @JsonKey(name: 'start_at')  String startAt, @JsonKey(name: 'end_at')  String endAt, @JsonKey(name: 'start_at_utc')  DateTime startAtUtc, @JsonKey(name: 'end_at_utc')  DateTime endAtUtc, @JsonKey(name: 'timezone_id')  String timezoneId, @JsonKey(name: 'calendar_status')  String calendarStatus,  List<String> badges,  ProviderLite? provider,  CustomerLite? customer,  ServiceLite? service, @JsonKey(name: 'blocked_reason')  String? blockedReason,  String? note)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'event_type')  String eventType,  int id,  String title, @JsonKey(name: 'start_at')  String startAt, @JsonKey(name: 'end_at')  String endAt, @JsonKey(name: 'start_at_utc')  DateTime startAtUtc, @JsonKey(name: 'end_at_utc')  DateTime endAtUtc, @JsonKey(name: 'timezone_id')  String timezoneId, @JsonKey(name: 'calendar_status')  String calendarStatus,  List<String> badges,  ProviderLite? provider,  CustomerLite? customer,  ServiceLite? service, @JsonKey(name: 'blocked_reason')  String? blockedReason,  String? note, @JsonKey(name: 'session_type')  String? sessionType)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CalendarEventModel() when $default != null:
-return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_that.startAtUtc,_that.endAtUtc,_that.timezoneId,_that.calendarStatus,_that.badges,_that.provider,_that.customer,_that.service,_that.blockedReason,_that.note);case _:
+return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_that.startAtUtc,_that.endAtUtc,_that.timezoneId,_that.calendarStatus,_that.badges,_that.provider,_that.customer,_that.service,_that.blockedReason,_that.note,_that.sessionType);case _:
   return orElse();
 
 }
@@ -232,10 +234,10 @@ return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'event_type')  String eventType,  int id,  String title, @JsonKey(name: 'start_at')  String startAt, @JsonKey(name: 'end_at')  String endAt, @JsonKey(name: 'start_at_utc')  DateTime startAtUtc, @JsonKey(name: 'end_at_utc')  DateTime endAtUtc, @JsonKey(name: 'timezone_id')  String timezoneId, @JsonKey(name: 'calendar_status')  String calendarStatus,  List<String> badges,  ProviderLite? provider,  CustomerLite? customer,  ServiceLite? service, @JsonKey(name: 'blocked_reason')  String? blockedReason,  String? note)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'event_type')  String eventType,  int id,  String title, @JsonKey(name: 'start_at')  String startAt, @JsonKey(name: 'end_at')  String endAt, @JsonKey(name: 'start_at_utc')  DateTime startAtUtc, @JsonKey(name: 'end_at_utc')  DateTime endAtUtc, @JsonKey(name: 'timezone_id')  String timezoneId, @JsonKey(name: 'calendar_status')  String calendarStatus,  List<String> badges,  ProviderLite? provider,  CustomerLite? customer,  ServiceLite? service, @JsonKey(name: 'blocked_reason')  String? blockedReason,  String? note, @JsonKey(name: 'session_type')  String? sessionType)  $default,) {final _that = this;
 switch (_that) {
 case _CalendarEventModel():
-return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_that.startAtUtc,_that.endAtUtc,_that.timezoneId,_that.calendarStatus,_that.badges,_that.provider,_that.customer,_that.service,_that.blockedReason,_that.note);case _:
+return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_that.startAtUtc,_that.endAtUtc,_that.timezoneId,_that.calendarStatus,_that.badges,_that.provider,_that.customer,_that.service,_that.blockedReason,_that.note,_that.sessionType);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -252,10 +254,10 @@ return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'event_type')  String eventType,  int id,  String title, @JsonKey(name: 'start_at')  String startAt, @JsonKey(name: 'end_at')  String endAt, @JsonKey(name: 'start_at_utc')  DateTime startAtUtc, @JsonKey(name: 'end_at_utc')  DateTime endAtUtc, @JsonKey(name: 'timezone_id')  String timezoneId, @JsonKey(name: 'calendar_status')  String calendarStatus,  List<String> badges,  ProviderLite? provider,  CustomerLite? customer,  ServiceLite? service, @JsonKey(name: 'blocked_reason')  String? blockedReason,  String? note)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'event_type')  String eventType,  int id,  String title, @JsonKey(name: 'start_at')  String startAt, @JsonKey(name: 'end_at')  String endAt, @JsonKey(name: 'start_at_utc')  DateTime startAtUtc, @JsonKey(name: 'end_at_utc')  DateTime endAtUtc, @JsonKey(name: 'timezone_id')  String timezoneId, @JsonKey(name: 'calendar_status')  String calendarStatus,  List<String> badges,  ProviderLite? provider,  CustomerLite? customer,  ServiceLite? service, @JsonKey(name: 'blocked_reason')  String? blockedReason,  String? note, @JsonKey(name: 'session_type')  String? sessionType)?  $default,) {final _that = this;
 switch (_that) {
 case _CalendarEventModel() when $default != null:
-return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_that.startAtUtc,_that.endAtUtc,_that.timezoneId,_that.calendarStatus,_that.badges,_that.provider,_that.customer,_that.service,_that.blockedReason,_that.note);case _:
+return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_that.startAtUtc,_that.endAtUtc,_that.timezoneId,_that.calendarStatus,_that.badges,_that.provider,_that.customer,_that.service,_that.blockedReason,_that.note,_that.sessionType);case _:
   return null;
 
 }
@@ -267,7 +269,7 @@ return $default(_that.eventType,_that.id,_that.title,_that.startAt,_that.endAt,_
 @JsonSerializable()
 
 class _CalendarEventModel implements CalendarEventModel {
-  const _CalendarEventModel({@JsonKey(name: 'event_type') required this.eventType, required this.id, required this.title, @JsonKey(name: 'start_at') required this.startAt, @JsonKey(name: 'end_at') required this.endAt, @JsonKey(name: 'start_at_utc') required this.startAtUtc, @JsonKey(name: 'end_at_utc') required this.endAtUtc, @JsonKey(name: 'timezone_id') required this.timezoneId, @JsonKey(name: 'calendar_status') required this.calendarStatus, final  List<String> badges = const [], this.provider = null, this.customer = null, this.service = null, @JsonKey(name: 'blocked_reason') this.blockedReason, this.note = null}): _badges = badges;
+  const _CalendarEventModel({@JsonKey(name: 'event_type') required this.eventType, required this.id, required this.title, @JsonKey(name: 'start_at') required this.startAt, @JsonKey(name: 'end_at') required this.endAt, @JsonKey(name: 'start_at_utc') required this.startAtUtc, @JsonKey(name: 'end_at_utc') required this.endAtUtc, @JsonKey(name: 'timezone_id') required this.timezoneId, @JsonKey(name: 'calendar_status') required this.calendarStatus, final  List<String> badges = const [], this.provider = null, this.customer = null, this.service = null, @JsonKey(name: 'blocked_reason') this.blockedReason, this.note = null, @JsonKey(name: 'session_type') this.sessionType = null}): _badges = badges;
   factory _CalendarEventModel.fromJson(Map<String, dynamic> json) => _$CalendarEventModelFromJson(json);
 
 @override@JsonKey(name: 'event_type') final  String eventType;
@@ -300,6 +302,8 @@ class _CalendarEventModel implements CalendarEventModel {
 // Blocked specific
 @override@JsonKey(name: 'blocked_reason') final  String? blockedReason;
 @override@JsonKey() final  String? note;
+// Fitness / Session Type
+@override@JsonKey(name: 'session_type') final  String? sessionType;
 
 /// Create a copy of CalendarEventModel
 /// with the given fields replaced by the non-null parameter values.
@@ -314,16 +318,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CalendarEventModel&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startAt, startAt) || other.startAt == startAt)&&(identical(other.endAt, endAt) || other.endAt == endAt)&&(identical(other.startAtUtc, startAtUtc) || other.startAtUtc == startAtUtc)&&(identical(other.endAtUtc, endAtUtc) || other.endAtUtc == endAtUtc)&&(identical(other.timezoneId, timezoneId) || other.timezoneId == timezoneId)&&(identical(other.calendarStatus, calendarStatus) || other.calendarStatus == calendarStatus)&&const DeepCollectionEquality().equals(other._badges, _badges)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.customer, customer) || other.customer == customer)&&(identical(other.service, service) || other.service == service)&&(identical(other.blockedReason, blockedReason) || other.blockedReason == blockedReason)&&(identical(other.note, note) || other.note == note));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CalendarEventModel&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startAt, startAt) || other.startAt == startAt)&&(identical(other.endAt, endAt) || other.endAt == endAt)&&(identical(other.startAtUtc, startAtUtc) || other.startAtUtc == startAtUtc)&&(identical(other.endAtUtc, endAtUtc) || other.endAtUtc == endAtUtc)&&(identical(other.timezoneId, timezoneId) || other.timezoneId == timezoneId)&&(identical(other.calendarStatus, calendarStatus) || other.calendarStatus == calendarStatus)&&const DeepCollectionEquality().equals(other._badges, _badges)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.customer, customer) || other.customer == customer)&&(identical(other.service, service) || other.service == service)&&(identical(other.blockedReason, blockedReason) || other.blockedReason == blockedReason)&&(identical(other.note, note) || other.note == note)&&(identical(other.sessionType, sessionType) || other.sessionType == sessionType));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,eventType,id,title,startAt,endAt,startAtUtc,endAtUtc,timezoneId,calendarStatus,const DeepCollectionEquality().hash(_badges),provider,customer,service,blockedReason,note);
+int get hashCode => Object.hash(runtimeType,eventType,id,title,startAt,endAt,startAtUtc,endAtUtc,timezoneId,calendarStatus,const DeepCollectionEquality().hash(_badges),provider,customer,service,blockedReason,note,sessionType);
 
 @override
 String toString() {
-  return 'CalendarEventModel(eventType: $eventType, id: $id, title: $title, startAt: $startAt, endAt: $endAt, startAtUtc: $startAtUtc, endAtUtc: $endAtUtc, timezoneId: $timezoneId, calendarStatus: $calendarStatus, badges: $badges, provider: $provider, customer: $customer, service: $service, blockedReason: $blockedReason, note: $note)';
+  return 'CalendarEventModel(eventType: $eventType, id: $id, title: $title, startAt: $startAt, endAt: $endAt, startAtUtc: $startAtUtc, endAtUtc: $endAtUtc, timezoneId: $timezoneId, calendarStatus: $calendarStatus, badges: $badges, provider: $provider, customer: $customer, service: $service, blockedReason: $blockedReason, note: $note, sessionType: $sessionType)';
 }
 
 
@@ -334,7 +338,7 @@ abstract mixin class _$CalendarEventModelCopyWith<$Res> implements $CalendarEven
   factory _$CalendarEventModelCopyWith(_CalendarEventModel value, $Res Function(_CalendarEventModel) _then) = __$CalendarEventModelCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'event_type') String eventType, int id, String title,@JsonKey(name: 'start_at') String startAt,@JsonKey(name: 'end_at') String endAt,@JsonKey(name: 'start_at_utc') DateTime startAtUtc,@JsonKey(name: 'end_at_utc') DateTime endAtUtc,@JsonKey(name: 'timezone_id') String timezoneId,@JsonKey(name: 'calendar_status') String calendarStatus, List<String> badges, ProviderLite? provider, CustomerLite? customer, ServiceLite? service,@JsonKey(name: 'blocked_reason') String? blockedReason, String? note
+@JsonKey(name: 'event_type') String eventType, int id, String title,@JsonKey(name: 'start_at') String startAt,@JsonKey(name: 'end_at') String endAt,@JsonKey(name: 'start_at_utc') DateTime startAtUtc,@JsonKey(name: 'end_at_utc') DateTime endAtUtc,@JsonKey(name: 'timezone_id') String timezoneId,@JsonKey(name: 'calendar_status') String calendarStatus, List<String> badges, ProviderLite? provider, CustomerLite? customer, ServiceLite? service,@JsonKey(name: 'blocked_reason') String? blockedReason, String? note,@JsonKey(name: 'session_type') String? sessionType
 });
 
 
@@ -351,7 +355,7 @@ class __$CalendarEventModelCopyWithImpl<$Res>
 
 /// Create a copy of CalendarEventModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? eventType = null,Object? id = null,Object? title = null,Object? startAt = null,Object? endAt = null,Object? startAtUtc = null,Object? endAtUtc = null,Object? timezoneId = null,Object? calendarStatus = null,Object? badges = null,Object? provider = freezed,Object? customer = freezed,Object? service = freezed,Object? blockedReason = freezed,Object? note = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? eventType = null,Object? id = null,Object? title = null,Object? startAt = null,Object? endAt = null,Object? startAtUtc = null,Object? endAtUtc = null,Object? timezoneId = null,Object? calendarStatus = null,Object? badges = null,Object? provider = freezed,Object? customer = freezed,Object? service = freezed,Object? blockedReason = freezed,Object? note = freezed,Object? sessionType = freezed,}) {
   return _then(_CalendarEventModel(
 eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
 as String,id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
@@ -368,6 +372,7 @@ as ProviderLite?,customer: freezed == customer ? _self.customer : customer // ig
 as CustomerLite?,service: freezed == service ? _self.service : service // ignore: cast_nullable_to_non_nullable
 as ServiceLite?,blockedReason: freezed == blockedReason ? _self.blockedReason : blockedReason // ignore: cast_nullable_to_non_nullable
 as String?,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String?,sessionType: freezed == sessionType ? _self.sessionType : sessionType // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

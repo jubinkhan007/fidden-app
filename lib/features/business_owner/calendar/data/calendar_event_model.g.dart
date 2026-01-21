@@ -33,6 +33,7 @@ _CalendarEventModel _$CalendarEventModelFromJson(Map<String, dynamic> json) =>
           : ServiceLite.fromJson(json['service'] as Map<String, dynamic>),
       blockedReason: json['blocked_reason'] as String?,
       note: json['note'] as String? ?? null,
+      sessionType: json['session_type'] as String? ?? null,
     );
 
 Map<String, dynamic> _$CalendarEventModelToJson(_CalendarEventModel instance) =>
@@ -52,6 +53,7 @@ Map<String, dynamic> _$CalendarEventModelToJson(_CalendarEventModel instance) =>
       'service': instance.service,
       'blocked_reason': instance.blockedReason,
       'note': instance.note,
+      'session_type': instance.sessionType,
     };
 
 _ProviderLite _$ProviderLiteFromJson(Map<String, dynamic> json) =>
