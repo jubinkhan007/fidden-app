@@ -32,11 +32,14 @@ class DashboardStatsCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Icon(icon, color: color, size: 20),

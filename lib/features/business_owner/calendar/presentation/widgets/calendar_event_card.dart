@@ -1,4 +1,5 @@
 import 'package:fidden/features/business_owner/calendar/data/calendar_event_model.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -9,6 +10,11 @@ class CalendarEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // DEBUG: Log calendar event data
+    debugPrint('📅 [CalendarEventCard] Event ID: ${event.id}');
+    debugPrint('📅 [CalendarEventCard] Title: ${event.title}');
+    debugPrint('📅 [CalendarEventCard] Badges from API: ${event.badges}');
+
     // Determine Color based on CalendarStatus
     final statusColor = _getStatusColor(
       event.calendarStatus.toCalendarStatus(),
@@ -220,6 +226,7 @@ class CalendarEventCard extends StatelessWidget {
 
     // Helper
     void addBadge(String text, Color bg, Color fg) {
+      debugPrint('🏷️  [Badge] Adding badge: $text');
       badges.add(
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -241,9 +248,14 @@ class CalendarEventCard extends StatelessWidget {
 
     // Provided list
     final bList = event.badges.map((e) => e.toUpperCase()).toList();
+    debugPrint('🏷️  [Badge] Processing badges: $bList');
 
-    // DEP_DUE
-    if (bList.contains("DEP_DUE")) {
+    // Check for mutually exclusive badges
+    final isPaid = bList.contains("PAID");
+    debugPrint('🏷️  [Badge] isPaid: $isPaid');
+
+    // DEP_DUE (don't show if already paid)
+    if (bList.contains("DEP_DUE") && !isPaid) {
       addBadge("DEP DUE", Colors.orange[100]!, Colors.orange[900]!);
     }
     // FORMS
@@ -251,18 +263,19 @@ class CalendarEventCard extends StatelessWidget {
       addBadge("FORMS", Colors.purple[100]!, Colors.purple[900]!);
     }
     // PAID
-    if (bList.contains("PAID")) {
+    if (isPaid) {
       addBadge("PAID", Colors.green[100]!, Colors.green[900]!);
     }
     // NEW
     if (bList.contains("NEW")) {
       addBadge("NEW", Colors.blue[100]!, Colors.blue[900]!);
     }
-    // BAL_DUE
-    if (bList.contains("BAL_DUE")) {
+    // BAL_DUE (don't show if already paid)
+    if (bList.contains("BAL_DUE") && !isPaid) {
       addBadge("BAL DUE", Colors.amber[100]!, Colors.amber[900]!);
     }
 
+    debugPrint('🏷️  [Badge] Total badges rendered: ${badges.length}');
     return badges;
   }
 

@@ -4,6 +4,7 @@ import 'package:fidden/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'core/bindings/controller_binder.dart';
+import 'core/commom/widgets/app_snackbar.dart';
 import 'core/theme/theme.dart';
 import 'core/utils/constants/app_sizes.dart';
 
@@ -22,6 +23,7 @@ class MyApp extends StatelessWidget {
     AppSizes().init(context);
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: AppSnackBar.messengerKey,
       initialRoute: AppRoute.init,
       getPages: AppRoute.routes,
       initialBinding: ControllerBinder(),

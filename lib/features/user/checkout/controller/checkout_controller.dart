@@ -14,6 +14,7 @@ class CheckoutController extends GetxController {
   final selectedTipOption = '15'.obs; // Default to 15%
   final customTipAmount = 0.0.obs;
   final paymentResponse = Rxn<CheckoutPaymentResponse>();
+  final errorMessage = ''.obs; // Stores specific error messages from API
 
   /// Calculate current tip amount based on selection
   double get tipAmount {
@@ -79,6 +80,7 @@ class CheckoutController extends GetxController {
   Future<bool> fetchCheckoutDetails(int bookingId) async {
     try {
       isLoading(true);
+      errorMessage.value = ''; // Clear previous error
       final response = await NetworkCaller().getRequest(
         AppUrls.checkoutDetails(bookingId),
         token: AuthService.accessToken,
@@ -95,11 +97,13 @@ class CheckoutController extends GetxController {
         return true;
       } else {
         final detail = response.responseData?['detail'] ?? response.errorMessage;
-        AppSnackBar.showError(detail ?? 'Failed to load checkout details');
+        errorMessage.value = detail ?? 'Failed to load checkout details';
+        AppSnackBar.showError(errorMessage.value);
         return false;
       }
     } catch (e) {
-      AppSnackBar.showError('Error: $e');
+      errorMessage.value = 'Error: $e';
+      AppSnackBar.showError(errorMessage.value);
       return false;
     } finally {
       isLoading(false);
@@ -163,5 +167,6 @@ class CheckoutController extends GetxController {
     paymentResponse.value = null;
     selectedTipOption.value = '15';
     customTipAmount.value = 0.0;
+    errorMessage.value = '';
   }
 }

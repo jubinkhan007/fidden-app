@@ -70,6 +70,7 @@ class NetworkCaller {
     File? photo,
     String photoFieldName = 'shop_img',
     List<File>? documents,
+    Map<String, List<String>>? arrayFields, // NEW: For sending array values
   }) {
     return _makeRequestWithRetry(() async {
       log('Multipart Request: $endpoint');
@@ -77,7 +78,27 @@ class NetworkCaller {
       final effectiveToken = token ?? await AuthService.getValidAccessToken();
 
       final request = http.MultipartRequest(method, Uri.parse(endpoint));
+
+      // Debug: Log each field being added
+      body.forEach((key, value) {
+        log('📤 Multipart field [$key]: "$value" (type: ${value.runtimeType})');
+      });
+
       request.fields.addAll(body);
+
+      // Handle array fields by adding them with indexed keys
+      // Django REST Framework accepts: services[0]=1, services[1]=2, etc.
+      // OR just: services=1, services=2 (but Dart's Map doesn't support duplicate keys)
+      // So we use the indexed approach which works reliably
+      if (arrayFields != null) {
+        arrayFields.forEach((key, values) {
+          for (var i = 0; i < values.length; i++) {
+            final indexedKey = '$key[$i]';
+            log('📤 Multipart array field [$indexedKey]: "${values[i]}"');
+            request.fields[indexedKey] = values[i];
+          }
+        });
+      }
 
       if (photo != null) {
         request.files.add(

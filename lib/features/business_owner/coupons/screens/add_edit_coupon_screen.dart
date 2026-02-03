@@ -275,7 +275,10 @@ void dispose() {
       ok = await ctrl.createCoupon(draft);
     }
 
-    if (ok) Get.back(); // return to list
+    if (ok) {
+      // Use Navigator to avoid GetX snackbar controller race.
+      Navigator.of(context, rootNavigator: true).pop();
+    } // return to list
   }
 
   void _onMore(String v) async {
@@ -289,7 +292,10 @@ void dispose() {
       case 'delete':
         final c = Get.arguments as Coupon;
         final ok = await Get.find<CouponController>().deleteCoupon(c.id);
-        if (ok) Get.back();
+        if (ok) {
+          // Use Navigator to avoid GetX snackbar controller race.
+          Navigator.of(context, rootNavigator: true).pop();
+        }
         break;
     }
   }

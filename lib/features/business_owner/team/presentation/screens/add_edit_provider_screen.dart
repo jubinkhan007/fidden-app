@@ -269,12 +269,8 @@ class _AddEditProviderScreenState extends State<AddEditProviderScreen> {
                   }
 
                   if (success) {
-                    Get.back();
-                    AppSnackBar.showSuccess(
-                      widget.provider != null
-                          ? 'Team member updated successfully'
-                          : 'Team member added successfully',
-                    );
+                    // Pass result back - the previous screen will show the snackbar
+                    Get.back(result: widget.provider != null ? 'updated' : 'added');
                   }
                 },
                 child: Text(

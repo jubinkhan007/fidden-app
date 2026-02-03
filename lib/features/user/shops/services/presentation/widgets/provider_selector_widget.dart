@@ -111,6 +111,55 @@ class _ProviderChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
 
+    // "Any Available" is rendered as a distinct prominent pill
+    if (isAny) {
+      return GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? primaryColor : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isSelected ? primaryColor : Colors.grey.shade300,
+              width: isSelected ? 2.0 : 1.0,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.shuffle_rounded,
+                size: 20,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Any Available',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Regular provider chips
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -127,22 +176,11 @@ class _ProviderChip extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isSelected ? primaryColor : Colors.grey.shade300,
-                  width: isSelected ? 3.0 : 1.0, // Thicker border for selected
+                  width: isSelected ? 3.0 : 1.0,
                 ),
               ),
               child: ClipOval(
-                child: isAny
-                    ? Container(
-                        color: isSelected
-                            ? primaryColor.withOpacity(0.1)
-                            : Colors.grey.shade100,
-                        child: Icon(
-                          Icons.shuffle_rounded,
-                          size: 24,
-                          color: isSelected ? primaryColor : Colors.grey,
-                        ),
-                      )
-                    : imageUrl != null
+                child: imageUrl != null
                     ? CachedNetworkImage(
                         imageUrl: imageUrl!,
                         fit: BoxFit.cover,
@@ -152,12 +190,14 @@ class _ProviderChip extends StatelessWidget {
                         ),
                         errorWidget: (_, __, ___) => Container(
                           color: Colors.grey.shade200,
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: primaryColor,
+                          child: Center(
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
+                              ),
                             ),
                           ),
                         ),

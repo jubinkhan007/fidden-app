@@ -898,23 +898,53 @@ class _ShopRow extends StatelessWidget {
                 textOverflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.star_rounded,
-                    color: Color(0xFFFFC107),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${rating.toStringAsFixed(1)}  (${reviews} reviews)',
-                    style: TextStyle(
-                      color: Colors.grey.shade800,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              // Rating or "New" badge
+              Builder(
+                builder: (context) {
+                  final hasReviews = reviews > 0;
+                  final showRating = hasReviews && rating > 0;
+
+                  if (showRating) {
+                    return Row(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFFFC107),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${rating.toStringAsFixed(1)} ($reviews)',
+                          style: TextStyle(
+                            color: Colors.grey.shade800,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    // Show "New" badge
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'New',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2E7D32),
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             ],
           ),

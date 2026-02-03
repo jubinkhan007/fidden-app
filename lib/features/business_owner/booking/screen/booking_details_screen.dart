@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fidden/core/utils/time_display_helper.dart';
@@ -56,6 +57,13 @@ class BookingDetailsScreen extends StatelessWidget {
         : (b.userEmail.isNotEmpty ? b.userEmail : 'Customer');
 
     final int? durationMins = int.tryParse(b.serviceDuration);
+
+    // DEBUG: Log payment information
+    debugPrint('💰 [BookingDetails] Booking ID: ${b.id}');
+    debugPrint('💰 [BookingDetails] Service Price: ${b.servicePrice}');
+    debugPrint('💰 [BookingDetails] Deposit Amount: ${b.depositAmount}');
+    debugPrint('💰 [BookingDetails] Remaining Amount: ${b.remainingAmount}');
+    debugPrint('💰 [BookingDetails] Deposit Status: ${b.depositStatus}');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -207,6 +215,14 @@ class BookingDetailsScreen extends StatelessWidget {
                       icon: Icons.lock_rounded,
                       label: 'Deposit',
                       value: '\$${b.depositAmount!.toStringAsFixed(2)}',
+                    ),
+                  ],
+                  if (b.remainingAmount != null) ...[
+                    const SizedBox(height: 12),
+                    KVRow(
+                      icon: Icons.account_balance_wallet_rounded,
+                      label: 'Remaining',
+                      value: '\$${b.remainingAmount!.toStringAsFixed(2)}',
                     ),
                   ],
                   if (b.depositStatus != null) ...[

@@ -232,7 +232,7 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
                                   topRight: Radius.circular(18),
                                 ),
                                 child: Container(
-                                  height: 180,
+                                  height: 155, // Reduced ~15% from 180
                                   width: double.infinity,
                                   color: const Color(
                                     0xFFF0F4F8,
@@ -333,23 +333,58 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
                                 const SizedBox(height: 10),
                                 Row(
                                   children: [
-                                    const Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      "${shop.avgRating?.toStringAsFixed(1) ?? "0.0"} "
-                                      "(${shop.reviewCount ?? 0} reviews)",
-                                      style: TextStyle(
-                                        color: Colors.grey.shade800,
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
+                                    // Show rating with star OR "New" badge - never 0.0
+                                    ...() {
+                                      final hasReviews = (shop.reviewCount ?? 0) > 0;
+                                      final rating = shop.avgRating ?? 0.0;
+                                      final showRating = hasReviews && rating > 0;
+
+                                      if (showRating) {
+                                        return [
+                                          const Icon(
+                                            Icons.star,
+                                            color: Colors.amber,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "${rating.toStringAsFixed(1)} (${shop.reviewCount})",
+                                            style: TextStyle(
+                                              color: Colors.grey.shade800,
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ];
+                                      } else {
+                                        // Show "New" badge only - no "0.0" or "No reviews yet"
+                                        return [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFE8F5E9),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Text(
+                                              'New',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFF2E7D32),
+                                              ),
+                                            ),
+                                          ),
+                                        ];
+                                      }
+                                    }(),
                                     const Spacer(),
-                                    if (controller.isLocationAvailable.value)
+                                    // Distance in miles format: "X.X mi"
+                                    if (controller.isLocationAvailable.value &&
+                                        shop.distance != null &&
+                                        shop.distance! > 0)
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 10,
@@ -362,7 +397,8 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
                                           ),
                                         ),
                                         child: Text(
-                                          "${((shop.distance ?? 0)).toStringAsFixed(2)} km",
+                                          // Convert km to miles (1 km = 0.621371 mi)
+                                          "${(shop.distance! * 0.621371).toStringAsFixed(1)} mi",
                                           style: TextStyle(
                                             color: Colors.blue.shade700,
                                             fontWeight: FontWeight.w600,
@@ -397,7 +433,7 @@ class _AllShopsScreenState extends State<AllShopsScreen> {
         itemBuilder: (context, index) {
           return Container(
             margin: const EdgeInsets.only(bottom: 16),
-            height: 220,
+            height: 195, // Reduced to match card height reduction
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),

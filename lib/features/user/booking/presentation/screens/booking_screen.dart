@@ -150,7 +150,7 @@ class _TabSwitcher extends StatelessWidget {
         children: [
           Expanded(
             child: _PillButton(
-              label: "Active booking",
+              label: "Active",
               selected: isActive,
               onTap: onActive,
             ),
@@ -183,12 +183,12 @@ class _PillButton extends StatelessWidget {
         backgroundColor: selected ? Colors.white : Colors.transparent,
         foregroundColor: selected ? const Color(0xff0F172A) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        padding: EdgeInsets.symmetric(vertical: getHeight(10)),
+        padding: EdgeInsets.symmetric(vertical: getHeight(12)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: getWidth(14),
+          fontSize: getWidth(15),
           fontWeight: FontWeight.w600,
         ),
       ),

@@ -63,19 +63,49 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
         final data = _controller.checkoutData.value;
         if (data == null) {
+          final errorMsg = _controller.errorMessage.value;
+          final isNotInitiated = errorMsg.toLowerCase().contains('not been initiated');
+          
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text('Failed to load checkout details'),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => _controller.fetchCheckoutDetails(widget.bookingId),
-                  child: const Text('Retry'),
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isNotInitiated ? Icons.schedule : Icons.error_outline,
+                    size: 64,
+                    color: isNotInitiated ? Colors.orange : Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isNotInitiated ? 'Checkout Not Ready' : 'Failed to load checkout details',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isNotInitiated
+                        ? 'The shop is preparing your checkout. Please wait a moment and try again, or contact the shop if this persists.'
+                        : errorMsg,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => _controller.fetchCheckoutDetails(widget.bookingId),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                  if (isNotInitiated) ...[
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Text('Go Back'),
+                    ),
+                  ],
+                ],
+              ),
             ),
           );
         }

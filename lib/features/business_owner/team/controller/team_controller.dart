@@ -140,17 +140,25 @@ class TeamController extends GetxController {
 
       // Use multipart request if image is selected, otherwise use regular PATCH
       if (selectedImage.value != null) {
+        // Don't include 'services' in body - use arrayFields instead
         final multipartBody = <String, String>{
           'name': name,
           'bio': bio,
-          'services': serviceIds.join(','),
           'max_concurrent_processing_jobs': maxConcurrentProcessingJobs
               .toString(),
           'is_active': 'true', // <-- Ensure active on update
           if (workingHours != null) 'working_hours': jsonEncode(workingHours),
         };
 
+        // Convert serviceIds to List<String> for arrayFields
+        final servicesAsStrings = serviceIds
+            .map((id) => id.toString())
+            .toList();
+
         debugPrint('[updateProvider] Multipart Body: $multipartBody');
+        debugPrint(
+          '[updateProvider] Services (arrayFields): $servicesAsStrings',
+        );
 
         res = await NetworkCaller().multipartRequest(
           url,
@@ -159,6 +167,7 @@ class TeamController extends GetxController {
           token: AuthService.accessToken,
           photo: selectedImage.value,
           photoFieldName: 'profile_image',
+          arrayFields: {'services': servicesAsStrings}, // NEW: use arrayFields
         );
       } else {
         final body = {
@@ -241,15 +250,28 @@ class TeamController extends GetxController {
 
       // Use multipart request if image is selected, otherwise use regular POST
       if (selectedImage.value != null) {
+        debugPrint('🔍 [addProvider] serviceIds raw: $serviceIds');
+        debugPrint(
+          '🔍 [addProvider] serviceIds type: ${serviceIds.runtimeType}',
+        );
+
+        // Don't include 'services' in body - use arrayFields instead
         final multipartBody = <String, String>{
           'name': name,
           'bio': bio,
-          'services': serviceIds.join(','),
           'max_concurrent_processing_jobs': maxConcurrentProcessingJobs
               .toString(),
           'is_active': 'true', // <-- Ensure active on creation
           if (workingHours != null) 'working_hours': jsonEncode(workingHours),
         };
+
+        // Convert serviceIds to List<String> for arrayFields
+        final servicesAsStrings = serviceIds
+            .map((id) => id.toString())
+            .toList();
+        debugPrint('🔍 [addProvider] servicesAsStrings: $servicesAsStrings');
+
+        debugPrint('🔍 [addProvider] Full multipartBody: $multipartBody');
 
         res = await NetworkCaller().multipartRequest(
           url,
@@ -258,6 +280,7 @@ class TeamController extends GetxController {
           token: AuthService.accessToken,
           photo: selectedImage.value,
           photoFieldName: 'profile_image',
+          arrayFields: {'services': servicesAsStrings}, // NEW: use arrayFields
         );
       } else {
         final body = {

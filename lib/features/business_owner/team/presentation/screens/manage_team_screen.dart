@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/core/commom/widgets/custom_text.dart';
 import 'package:fidden/features/business_owner/team/controller/team_controller.dart';
 import 'package:fidden/features/business_owner/team/presentation/screens/add_edit_provider_screen.dart';
@@ -16,8 +17,20 @@ class ManageTeamScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('My Team'), centerTitle: true),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Get.to(() => const AddEditProviderScreen());
+        onPressed: () async {
+          final result = await Get.to(() => const AddEditProviderScreen());
+          if (result == 'added' || result == 'updated') {
+            // Wait for the frame to complete and overlay to be ready
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Future.delayed(const Duration(milliseconds: 200), () {
+                AppSnackBar.showSuccess(
+                  result == 'updated'
+                      ? 'Team member updated successfully'
+                      : 'Team member added successfully',
+                );
+              });
+            });
+          }
         },
         label: const Text('Add Member'),
         icon: const Icon(Icons.add),
@@ -108,14 +121,27 @@ class ManageTeamScreen extends StatelessWidget {
                       textCancel: 'Cancel',
                       confirmTextColor: Colors.white,
                       onConfirm: () async {
-                        Get.back(); // close dialog
+                        // Use Navigator to avoid GetX snackbar controller race.
+                        Navigator.of(context, rootNavigator: true).pop();
                         await controller.deleteProvider(provider.id);
                       },
                     );
                   },
                 ),
-                onTap: () {
-                  Get.to(() => AddEditProviderScreen(provider: provider));
+                onTap: () async {
+                  final result = await Get.to(() => AddEditProviderScreen(provider: provider));
+                  if (result == 'added' || result == 'updated') {
+                    // Wait for the frame to complete and overlay to be ready
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      Future.delayed(const Duration(milliseconds: 200), () {
+                        AppSnackBar.showSuccess(
+                          result == 'updated'
+                              ? 'Team member updated successfully'
+                              : 'Team member added successfully',
+                        );
+                      });
+                    });
+                  }
                 },
               ),
             );

@@ -5,11 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fidden/features/notifications/controller/notification_controller.dart';
 import 'package:fidden/features/splash/controller/splash_controller.dart';
 import 'package:fidden/features/user/home/controller/home_controller.dart';
-import 'package:fidden/features/user/home/data/category_model.dart';
 import 'package:fidden/features/user/home/data/promotion_offers_model.dart';
 import 'package:fidden/features/user/home/data/trending_service_model.dart';
 import 'package:fidden/features/user/home/presentation/screen/widgets/sticky_map_button.dart';
 import 'package:fidden/features/user/map/map_screen.dart';
+import 'package:fidden/features/user/profile/controller/profile_controller.dart';
 import 'package:fidden/features/user/search/presentation/screens/search_result_screen.dart';
 import 'package:fidden/features/user/shops/data/all_shops_model.dart';
 import 'package:fidden/features/user/shops/presentation/screens/all_shops_screen.dart';
@@ -240,6 +240,29 @@ class _HomeSkeleton extends StatelessWidget {
 class _Header extends StatelessWidget {
   const _Header({required this.r});
   final R r;
+
+  /// Extract first name from full name
+  String _getFirstName(String? fullName) {
+    if (fullName == null || fullName.trim().isEmpty) return '';
+    return fullName.trim().split(' ').first;
+  }
+
+  /// Format location as "City, ST" style
+  String _formatLocation(String? addr) {
+    if (addr == null || addr.trim().isEmpty) return '';
+    // Address comes as "State, Country" - just return as-is or abbreviate
+    final parts = addr.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    if (parts.isEmpty) return '';
+    if (parts.length == 1) return parts.first;
+    // Return "City, ST" style - first part + abbreviated second if short
+    final city = parts.first;
+    final state = parts.length > 1 ? parts[1] : '';
+    if (state.length <= 3) {
+      return '$city, $state';
+    }
+    return '$city, ${state.substring(0, 2).toUpperCase()}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -266,14 +289,26 @@ class _Header extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Hi, Welcome',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: r.sp(22),
-                      ),
-                    ),
+                    // Greeting with user's first name
+                    Obx(() {
+                      final profileCtrl = Get.isRegistered<ProfileController>()
+                          ? Get.find<ProfileController>()
+                          : null;
+                      final firstName = _getFirstName(
+                        profileCtrl?.profileDetails.value.data?.name,
+                      );
+                      final greeting = firstName.isNotEmpty
+                          ? 'Welcome back, $firstName'
+                          : 'Welcome back';
+                      return Text(
+                        greeting,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: r.sp(22),
+                        ),
+                      );
+                    }),
                     SizedBox(height: r.h(10)),
                     Row(
                       children: [
@@ -283,23 +318,38 @@ class _Header extends StatelessWidget {
                           color: const Color(0xFFFFE082),
                         ),
                         SizedBox(width: r.w(6)),
-
-                        //Use Obx here
+                        // Location with "City, ST" format
                         Obx(() {
                           final addr = SplashController.address.value.trim();
+                          final formatted = _formatLocation(addr);
                           return Text(
-                            addr.isNotEmpty
-                                ? addr
-                                : "Location not available", // fallback text
+                            formatted.isNotEmpty ? formatted : "Location unavailable",
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: r.sp(14),
                             ),
                           );
                         }),
+                        SizedBox(width: r.w(8)),
+                        // "Change" action
+                        GestureDetector(
+                          onTap: () {
+                            // Navigate to location settings or show location picker
+                            Get.to(() => const MapScreen());
+                          },
+                          child: Text(
+                            'Change',
+                            style: TextStyle(
+                              color: const Color(0xFFFFE082),
+                              fontSize: r.sp(13),
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                              decorationColor: const Color(0xFFFFE082),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    //SizedBox(height: 2,)
                   ],
                 ),
               ),
@@ -883,7 +933,7 @@ class _TrendingCard extends StatelessWidget {
                     ),
                     const Spacer(),
 
-                    // Price + rating row
+                    // Price + rating/New badge row
                     Row(
                       children: [
                         Flexible(
@@ -898,27 +948,52 @@ class _TrendingCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Icon(
-                          Icons.star,
-                          size: r.w(16),
-                          color: const Color(0xFFF7B500),
-                        ),
-                        SizedBox(width: r.w(4)),
-                        Text(
-                          service.avgRating?.toStringAsFixed(1) ?? '0.0',
-                          style: TextStyle(
-                            fontSize: r.sp(14),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(width: r.w(8)),
-                        Text(
-                          '(${service.reviewCount} Reviews)',
-                          style: TextStyle(
-                            fontSize: r.sp(13),
-                            color: const Color(0xFF6B6F7C),
-                          ),
-                        ),
+                        // Show "New" badge if no reviews or rating is 0, otherwise show rating
+                        ...() {
+                          final hasReviews = (service.reviewCount ?? 0) > 0;
+                          final rating = service.avgRating ?? 0.0;
+                          final showRating = hasReviews && rating > 0;
+
+                          if (showRating) {
+                            return [
+                              Icon(
+                                Icons.star,
+                                size: r.w(16),
+                                color: const Color(0xFFF7B500),
+                              ),
+                              SizedBox(width: r.w(4)),
+                              Text(
+                                rating.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontSize: r.sp(14),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ];
+                          } else {
+                            // Show "New" badge
+                            return [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: r.w(10),
+                                  vertical: r.h(4),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F5E9),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'New',
+                                  style: TextStyle(
+                                    fontSize: r.sp(12),
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF2E7D32),
+                                  ),
+                                ),
+                              ),
+                            ];
+                          }
+                        }(),
                       ],
                     ),
                   ],
@@ -1097,26 +1172,49 @@ class _ShopItem extends StatelessWidget {
             ),
           ),
           SizedBox(height: r.h(4)),
-          Row(
-            children: [
-              Icon(Icons.star, size: r.w(14), color: const Color(0xFFF7B500)),
-              SizedBox(width: r.w(4)),
-              Text(
-                shop.avgRating?.toStringAsFixed(1) ?? '0.0',
-                style: TextStyle(
-                  fontSize: r.sp(12),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(width: r.w(4)),
-              Text(
-                '(${shop.reviewCount})',
-                style: TextStyle(
-                  fontSize: r.sp(12),
-                  color: const Color(0xFF6B6F7C),
-                ),
-              ),
-            ],
+          // Show "New" badge if no reviews/rating, otherwise show rating
+          Builder(
+            builder: (context) {
+              final hasReviews = (shop.reviewCount ?? 0) > 0;
+              final rating = shop.avgRating ?? 0.0;
+              final showRating = hasReviews && rating > 0;
+
+              if (showRating) {
+                return Row(
+                  children: [
+                    Icon(Icons.star, size: r.w(14), color: const Color(0xFFF7B500)),
+                    SizedBox(width: r.w(4)),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontSize: r.sp(12),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                // Show "New" badge only
+                return Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: r.w(8),
+                    vertical: r.h(2),
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'New',
+                    style: TextStyle(
+                      fontSize: r.sp(11),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF2E7D32),
+                    ),
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),

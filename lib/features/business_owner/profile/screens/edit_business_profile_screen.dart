@@ -488,11 +488,11 @@ class _EditBusinessOwnerProfileScreenState
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
           children: [
             const Icon(Icons.access_time, color: Colors.grey),
-            const SizedBox(width: 10),
+            const SizedBox(width: 6),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -501,9 +501,15 @@ class _EditBusinessOwnerProfileScreenState
                   Text(
                     label,
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text(value, style: const TextStyle(fontSize: 16)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value, style: const TextStyle(fontSize: 16)),
+                  ),
                 ],
               ),
             ),
@@ -674,7 +680,7 @@ class _EditBusinessOwnerProfileScreenState
         backgroundColor: Colors.white,
         elevation: 0.5,
         leading: IconButton(
-          onPressed: () => Get.back(),
+          onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
         title: CustomText(

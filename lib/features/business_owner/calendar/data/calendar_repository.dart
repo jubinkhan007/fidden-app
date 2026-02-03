@@ -39,10 +39,19 @@ class CalendarRepository {
       final dynamic data = response.responseData;
       if (data is! List) return [];
 
+      debugPrint('📡 [CalendarRepository] API Response: ${data.length} events');
+
       // Parse list
-      return data
-          .map((e) => CalendarEventModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final events = data.map((e) {
+        final json = e as Map<String, dynamic>;
+        debugPrint('📡 [CalendarRepository] Event ID: ${json['id']}');
+        debugPrint('📡 [CalendarRepository]   Title: ${json['title']}');
+        debugPrint('📡 [CalendarRepository]   Badges: ${json['badges']}');
+        debugPrint('📡 [CalendarRepository]   Raw JSON: $json');
+        return CalendarEventModel.fromJson(json);
+      }).toList();
+
+      return events;
     } catch (e) {
       debugPrint("Error fetching calendar events: $e");
       // Re-throw to let controller handle UI feedback

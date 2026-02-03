@@ -29,7 +29,7 @@ class UserNavBarController extends GetxController {
     ProfileScreen(),
   ];
 
-  final List<String> labels = const ['Home', "Booking", "Inbox", 'Profile'];
+  final List<String> labels = const ['Home', "Bookings", "Inbox", 'Profile'];
 
   final List activeIcons = [
     Image.asset(IconPath.homeActive, height: getWidth(24), width: getWidth(24)),

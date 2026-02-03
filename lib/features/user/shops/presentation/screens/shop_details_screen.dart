@@ -12,7 +12,6 @@ import 'package:fidden/features/user/shops/presentation/widgets/social_links_row
 import 'package:fidden/features/user/shops/presentation/screens/full_gallery_screen.dart';
 import 'package:fidden/features/user/shops/services/presentation/screens/service_details_screen.dart';
 import 'package:fidden/features/user/wishlist/controller/wishlist_controller.dart';
-import 'package:fidden/features/user/wishlist/data/wishlist_models.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -260,29 +259,60 @@ class ShopDetailsScreen extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: getHeight(6)),
-                    Row(
-                      children: [
-                        Image.asset(
-                          IconPath.ratingIcon,
-                          height: getHeight(16),
-                          width: getWidth(16),
-                        ),
-                        SizedBox(width: getWidth(8)),
-                        Text(
-                          "${data.avgRating?.toStringAsFixed(1) ?? '0.0'} ",
-                          style: TextStyle(
-                            fontSize: getWidth(14),
-                            color: _brand.withOpacity(.7),
-                          ),
-                        ),
-                        Text(
-                          "(${data.reviewCount ?? 0})",
-                          style: TextStyle(
-                            fontSize: getWidth(14),
-                            color: _brand.withOpacity(.7),
-                          ),
-                        ),
-                      ],
+                    // Rating row - show "New" badge if no reviews
+                    Builder(
+                      builder: (context) {
+                        final hasReviews = (data.reviewCount ?? 0) > 0;
+                        final rating = data.avgRating ?? 0.0;
+                        final showRating = hasReviews && rating > 0;
+
+                        if (showRating) {
+                          return Row(
+                            children: [
+                              Image.asset(
+                                IconPath.ratingIcon,
+                                height: getHeight(16),
+                                width: getWidth(16),
+                              ),
+                              SizedBox(width: getWidth(8)),
+                              Text(
+                                "${rating.toStringAsFixed(1)} ",
+                                style: TextStyle(
+                                  fontSize: getWidth(14),
+                                  color: _brand.withOpacity(.7),
+                                ),
+                              ),
+                              Text(
+                                "(${data.reviewCount})",
+                                style: TextStyle(
+                                  fontSize: getWidth(14),
+                                  color: _brand.withOpacity(.7),
+                                ),
+                              ),
+                            ],
+                          );
+                        } else {
+                          // Show "New" badge
+                          return Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: getWidth(10),
+                              vertical: getHeight(4),
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'New',
+                              style: TextStyle(
+                                fontSize: getWidth(12),
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF2E7D32),
+                              ),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -356,51 +386,104 @@ class ShopDetailsScreen extends StatelessWidget {
         );
       }),
       bottomNavigationBar: Obx(() {
-        bool isServiceSelected = controller.selectedServiceId.value != null;
-        return Padding(
+        final selectedCount = controller.selectedServiceIds.length;
+        final hasSelection = selectedCount > 0;
+        final totalPrice = controller.totalPrice;
+        final totalDuration = controller.formattedDuration;
+
+        return Container(
           padding: EdgeInsets.fromLTRB(
-            getWidth(24),
-            0,
-            getWidth(24),
-            getHeight(16),
+            getWidth(16),
+            getHeight(12),
+            getWidth(16),
+            getHeight(28),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
-            child: SizedBox(
-              width: double.infinity,
-              height: getHeight(54),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  backgroundColor: isServiceSelected ? _cta : Colors.grey,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 0,
-                ),
-                onPressed: isServiceSelected
-                    ? () {
-                        Get.to(
-                          () => ServiceDetailsScreen(
-                            serviceId: controller.selectedServiceId.value!,
-                          ),
-                        );
-                      }
-                    : () {
-                        Get.snackbar(
-                          'No Service Selected',
-                          'Please select a service to continue.',
-                        );
-                      },
-                child: Text(
-                  "Book Now",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: getWidth(16),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
               ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              children: [
+                // Summary info (visible when services selected)
+                if (hasSelection)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$selectedCount service${selectedCount > 1 ? 's' : ''} • \$${totalPrice.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: getWidth(15),
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF111827),
+                          ),
+                        ),
+                        SizedBox(height: getHeight(2)),
+                        Text(
+                          totalDuration,
+                          style: TextStyle(
+                            fontSize: getWidth(13),
+                            color: const Color(0xFF6B7280),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: Text(
+                      'Select services to continue',
+                      style: TextStyle(
+                        fontSize: getWidth(14),
+                        color: const Color(0xFF9CA3AF),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                // Continue button
+                SizedBox(
+                  height: getHeight(50),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: getWidth(24)),
+                      backgroundColor: hasSelection ? _cta : const Color(0xFFD1D5DB),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: hasSelection
+                        ? () {
+                            // Navigate to availability with first selected service
+                            // (multi-service booking flow would pass all selected)
+                            Get.to(
+                              () => ServiceDetailsScreen(
+                                serviceId: controller.selectedServiceIds.first,
+                              ),
+                            );
+                          }
+                        : null,
+                    child: Text(
+                      hasSelection ? "Continue" : "Select",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: getWidth(15),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -671,7 +754,7 @@ class _AboutSectionState extends State<_AboutSection> {
 class _ServiceSection extends StatelessWidget {
   final Color priceColor;
   final Color subtitleColor;
-  final ShopDetailsController controller; // Pass the controller
+  final ShopDetailsController controller;
 
   const _ServiceSection({
     required this.priceColor,
@@ -679,18 +762,22 @@ class _ServiceSection extends StatelessWidget {
     required this.controller,
   });
 
-  void _openServiceDetails(Service s) {
-    final id = s.id;
-    if (id != null) {
-      Get.to(() => ServiceDetailsScreen(serviceId: id));
-    } else {
-      Get.snackbar('Unavailable', 'This service has no ID.');
-    }
+  /// Format duration for display - standardize to 30/45/60 min display
+  String _formatDuration(int? mins) {
+    if (mins == null || mins <= 0) return '';
+    // Round to nearest standard duration for display
+    if (mins <= 30) return '30 min';
+    if (mins <= 45) return '45 min';
+    if (mins <= 60) return '60 min';
+    // For longer durations, show actual rounded value
+    final hours = mins ~/ 60;
+    final remainder = mins % 60;
+    if (remainder == 0) return '${hours}h';
+    return '${hours}h ${remainder} min';
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = controller.categories;
     final services = controller.shopDetails.value.services ?? [];
 
     if (services.isEmpty) {
@@ -705,6 +792,15 @@ class _ServiceSection extends StatelessWidget {
       );
     }
 
+    // Derive category chips ONLY from shop's actual services
+    final serviceCategories = <int, String>{};
+    for (final s in services) {
+      if (s.categoryId != null && s.categoryName != null) {
+        serviceCategories[s.categoryId!] = s.categoryName!;
+      }
+    }
+    final categoryList = serviceCategories.entries.toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -715,148 +811,207 @@ class _ServiceSection extends StatelessWidget {
         ),
         SizedBox(height: getHeight(12)),
 
-        // New: Category Tabs
-        SizedBox(
-          height: getHeight(40),
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: categories.length + 1, // +1 for "All"
-            separatorBuilder: (_, __) => SizedBox(width: getWidth(8)),
-            itemBuilder: (context, index) {
-              return Obx(() {
-                final isSelected =
-                    controller.selectedServiceCategoryTabIndex.value == index;
-                return ActionChip(
-                  label: Text(
-                    index == 0 ? "All" : categories[index - 1].name ?? '',
-                  ),
-                  onPressed: () {
-                    controller.selectServiceCategoryTab(index);
-                  },
-                  backgroundColor: isSelected
-                      ? Get.theme.primaryColor
-                      : const Color(0xffEDEFFB),
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black,
-                  ),
-                );
-              });
-            },
+        // Category Tabs - derived ONLY from shop services
+        if (categoryList.isNotEmpty)
+          SizedBox(
+            height: getHeight(40),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: categoryList.length + 1, // +1 for "All"
+              separatorBuilder: (_, __) => SizedBox(width: getWidth(8)),
+              itemBuilder: (context, index) {
+                return Obx(() {
+                  final isSelected =
+                      controller.selectedServiceCategoryTabIndex.value == index;
+                  return ActionChip(
+                    label: Text(
+                      index == 0 ? "All" : categoryList[index - 1].value,
+                    ),
+                    onPressed: () {
+                      controller.selectServiceCategoryTab(index);
+                    },
+                    backgroundColor: isSelected
+                        ? Get.theme.primaryColor
+                        : const Color(0xffEDEFFB),
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black,
+                    ),
+                  );
+                });
+              },
+            ),
           ),
-        ),
         SizedBox(height: getHeight(16)),
 
-        // Service List now wrapped in Obx to be reactive
+        // Premium Service Rows (no checkboxes)
         Obx(
           () => ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: controller.filteredServices.length,
-            separatorBuilder: (_, __) => SizedBox(height: getHeight(12)),
+            separatorBuilder: (_, __) => SizedBox(height: getHeight(8)),
             itemBuilder: (_, i) {
               final s = controller.filteredServices[i];
+              final serviceId = s.id;
+              if (serviceId == null) return const SizedBox.shrink();
+
+              final isSelected = controller.isServiceSelected(serviceId);
               final price = (s.discountPrice != null && s.discountPrice! > 0)
-                  ? s.discountPrice
-                  : s.price;
+                  ? s.discountPrice!
+                  : (s.price ?? 0);
+              final duration = _formatDuration(s.duration);
 
               final ImageProvider avatarImage =
                   (s.serviceImg != null && s.serviceImg!.isNotEmpty)
-                  ? NetworkImage(s.serviceImg!)
-                  : const AssetImage(ImagePath.profileImage);
+                      ? NetworkImage(s.serviceImg!)
+                      : const AssetImage(ImagePath.profileImage);
 
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () {
-                    // Toggle selection on tap
-                    if (controller.selectedServiceId.value == s.id) {
-                      controller.selectedServiceId.value = null;
-                    } else {
-                      controller.selectedServiceId.value = s.id;
-                    }
-                  },
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: getHeight(6)),
-                    child: Row(
-                      children: [
-                        Obx(
-                          () => Checkbox(
-                            value: controller.selectedServiceId.value == s.id,
-                            onChanged: (bool? value) {
-                              if (value == true) {
-                                controller.selectedServiceId.value = s.id;
-                              } else {
-                                if (controller.selectedServiceId.value ==
-                                    s.id) {
-                                  controller.selectedServiceId.value = null;
-                                }
-                              }
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: getWidth(28),
-                                    backgroundImage: avatarImage,
-                                    backgroundColor: const Color(0xffE5E7EB),
-                                  ),
-                                  SizedBox(width: getWidth(12)),
-                                  SizedBox(
-                                    width: getWidth(150),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          s.title ?? '',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: getWidth(16),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        SizedBox(height: getHeight(2)),
-                                        Text(
-                                          s.description ?? '',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: getWidth(13),
-                                            color: subtitleColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                "\$${price?.toStringAsFixed(0) ?? '0'}",
-                                style: TextStyle(
-                                  fontSize: getWidth(16),
-                                  fontWeight: FontWeight.w600,
-                                  color: priceColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              return _PremiumServiceRow(
+                title: s.title ?? '',
+                subtitle: duration.isNotEmpty ? duration : (s.description ?? ''),
+                price: price,
+                imageProvider: avatarImage,
+                isSelected: isSelected,
+                onTap: () => controller.toggleService(serviceId),
               );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Premium service row with accent bar and "Added ✓" indicator
+class _PremiumServiceRow extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final double price;
+  final ImageProvider imageProvider;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _PremiumServiceRow({
+    required this.title,
+    required this.subtitle,
+    required this.price,
+    required this.imageProvider,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final brandColor = Get.theme.primaryColor;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? brandColor.withOpacity(0.06)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? brandColor.withOpacity(0.3) : const Color(0xFFE5E7EB),
+            width: 1,
+          ),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Accent bar on left when selected
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: isSelected ? 4 : 0,
+                decoration: BoxDecoration(
+                  color: brandColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    bottomLeft: Radius.circular(12),
+                  ),
+                ),
+              ),
+              // Service content
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(getWidth(12)),
+                  child: Row(
+                    children: [
+                      // Service image
+                      CircleAvatar(
+                        radius: getWidth(26),
+                        backgroundImage: imageProvider,
+                        backgroundColor: const Color(0xFFE5E7EB),
+                      ),
+                      SizedBox(width: getWidth(12)),
+                      // Service info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: getWidth(15),
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF111827),
+                              ),
+                            ),
+                            if (subtitle.isNotEmpty) ...[
+                              SizedBox(height: getHeight(2)),
+                              Text(
+                                subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: getWidth(13),
+                                  color: const Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: getWidth(8)),
+                      // Price and selection indicator
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '\$${price.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: getWidth(16),
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF111827),
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            SizedBox(height: getHeight(2)),
+                            Text(
+                              'Added ✓',
+                              style: TextStyle(
+                                fontSize: getWidth(12),
+                                fontWeight: FontWeight.w600,
+                                color: brandColor,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

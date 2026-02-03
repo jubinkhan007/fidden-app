@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:fidden/core/commom/widgets/app_snackbar.dart';
 import 'package:fidden/features/business_owner/profile/controller/busines_owner_profile_controller.dart';
 import 'package:fidden/routes/app_routes.dart';
 
@@ -95,12 +96,12 @@ class DeepLinkService extends GetxService {
           await Get.find<BusinessOwnerProfileController>()
               .checkStripeStatusIfPossible();
         }
-        Get.snackbar('Subscription', 'Purchase completed');
+        AppSnackBar.showSuccess('Purchase completed', title: 'Subscription');
         return;
       }
 
       if (path == '/cancel') {
-        Get.snackbar('Subscription', 'Checkout cancelled');
+        AppSnackBar.showError('Checkout cancelled', title: 'Subscription');
         return;
       }
     }
@@ -115,9 +116,15 @@ class DeepLinkService extends GetxService {
           Get.find<BusinessOwnerProfileController>()
               .checkStripeStatusIfPossible();
         }
-        Get.snackbar('Stripe', 'Onboarding flow returned to app');
+        AppSnackBar.showSuccess(
+          'Onboarding flow returned to app',
+          title: 'Stripe',
+        );
       } else if (uri.path == '/refresh') {
-        Get.snackbar('Stripe', 'Onboarding not completed. You can retry.');
+        AppSnackBar.showError(
+          'Onboarding not completed. You can retry.',
+          title: 'Stripe',
+        );
       }
       return;
     }
@@ -303,5 +310,4 @@ class DeepLinkService extends GetxService {
   }
 
 }
-
 
